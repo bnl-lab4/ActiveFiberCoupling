@@ -1,5 +1,6 @@
 import serial
 from motion import move
+import photodiode_in
 
 def run(ser):
     print("Manual control (typed input) mode. Type 'exit' to return to menu.")
@@ -10,5 +11,6 @@ def run(ser):
         try:
             axis, value = user_input.split()
             move(axis, float(value), ser)
+            #photodiode_in.print_avg_stdv()
         except Exception as e:
             print(f"Invalid input: {e}")
