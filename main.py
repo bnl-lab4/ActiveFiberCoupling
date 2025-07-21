@@ -20,9 +20,10 @@ import algo_three_cross_sections
 import algo_calculate
 import algo_cross_section_search
 import algo_new_calculate
+import algo_continuous_search
 
 SERIAL_PORT = '/dev/ttyACM0'
-#SERIAL_PORT1 = '/dev/ttyACM1'
+SERIAL_PORT1 = '/dev/ttyACM1'
 BAUD_RATE = 115200
 
 # Open serial connection
@@ -38,17 +39,17 @@ def initialize_serial():
             rtscts=False,
             dsrdtr=False,
         )
-        #ser1 = serial.Serial(SERIAL_PORT1, BAUD_RATE, timeout=1)
+        ser1 = serial.Serial(SERIAL_PORT1, BAUD_RATE, timeout=1)
         time.sleep(2)  # Give the device time to initialize
         print(f"Connected to {SERIAL_PORT} at {BAUD_RATE} baud.")
-        #print(f"Connected to {SERIAL_PORT1} at {BAUD_RATE} baud.")
-        return ser
+        print(f"Connected to {SERIAL_PORT1} at {BAUD_RATE} baud.")
+        return ser, ser1
     except serial.SerialException as e:
         print(f"Error opening serial port: {e}")
         exit(1)
 
 def main():
-    ser = initialize_serial()
+    ser, ser1 = initialize_serial()
 
     try:
         while True:
@@ -64,7 +65,8 @@ def main():
             print("9. Calculate")
             print("10. Cross section search")
             print("11. New calculate")
-            print("12. Exit")
+            print("12. Continuous search")
+            print("13. Exit")
 
             choice = input("Enter your choice: ").strip()
 
@@ -72,7 +74,17 @@ def main():
             
             with open("data1.txt", "a") as file:
                 if choice == '1':
-                    manual_control.run(ser)
+                    '''
+                    print("\nSelect a controller (0 or 1)")
+                    new_choice = input("Enter your choice: ").strip()
+                    if new_choice == '0':
+                        manual_control.run(ser)
+                    elif new_choice == '1':
+                        manual_control.run(ser1)
+                    else:
+                        print("Invalid choice. Try again.")
+                    '''
+                    manual_control.run(ser, ser1)
                 elif choice == '2':
                     manual_keycontrol.run(ser)
                 elif choice == '3':
@@ -95,6 +107,8 @@ def main():
                 elif choice == '11':
                     algo_new_calculate.run(ser, file)
                 elif choice == '12':
+                    algo_continuous_search.run(ser, file)
+                elif choice == '13':
                     break
                 else:
                     print("Invalid choice. Try again.")

@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import csv
 
-import fitting.py
+import fittingtoo
 
 def scan(ser, step, file):
     xpos = 0
