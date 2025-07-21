@@ -17,12 +17,43 @@ def scan(ser, step, file):
     powers = []
     move('x', xpos, ser)
     move('z', zpos, ser)
+    
     while zpos <= 74:
         while xpos <= 74:
             move('x', xpos, ser)
             count += 1
             print("Count: ", count)
-            #time.sleep(0.075)
+            x_voltages.append(xpos)
+            z_voltages.append(zpos)
+            powers.append(get_exposure(100))
+            xpos += step
+        move('z', zpos + step, ser)
+        count += 1
+        print("Count: ", count)
+        time.sleep(0.075)
+
+        while xpos >= 0:
+            move('x', xpos, ser)
+            count += 1
+            time.sleep(0.075)
+            print("Count: ", count)
+            x_voltages.append(xpos)
+            z_voltages.append(zpos)
+            powers.append(get_exposure(100))
+            xpos -= step
+        xpos = 0
+        move('z', zpos + step, ser)
+        count += 1
+        print("Count: ", count)
+        time.sleep(0.075)
+        
+    """
+    while zpos <= 74:
+        while xpos <= 74:
+            move('x', xpos, ser)
+            count += 1
+            print("Count: ", count)
+            time.sleep(0.075)
             #power = getPower(1000)
             power = get_exposure(100)
             x_voltages.append(xpos)
@@ -34,7 +65,8 @@ def scan(ser, step, file):
         move('z', zpos, ser)
         count += 1
         print("Count: ", count)
-        #time.sleep(0.075)
+        time.sleep(0.075)
+    """
 
     print(x_voltages)
     file.write(f"X Voltages: {x_voltages}\n")
@@ -78,7 +110,7 @@ def align_max_intensity(x_voltages, z_voltages, powers, file):
 
 def run(ser, file):
     print("Starting scan")
-    step = 5
+    step = 1
 
     x_voltages, z_voltages, powers = scan(ser, step, file)
 
