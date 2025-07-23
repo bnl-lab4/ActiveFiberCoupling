@@ -1,12 +1,12 @@
 from motion import move
 from photodiode_in import getPower
-from photodiode_in import get_exposure
+from better_photodiode_in import get_exposure
 import time
 import numpy as np
 import matplotlib.pyplot as plt
 import csv
 
-def scan(ser, step, file, plane = 0):
+def scan(ser, step, file, choice, plane = 0):
     
     xpos = 0
     zpos = 0
@@ -27,7 +27,7 @@ def scan(ser, step, file, plane = 0):
             print("Count: ", count)
             #time.sleep(0.075)
             
-            power = get_exposure(100)
+            power = get_exposure(100, choice)
             x_voltages.append(xpos)
             z_voltages.append(zpos)
             powers.append(power)
@@ -75,7 +75,7 @@ def find_max_intensity(x_voltages, z_voltages, powers, file, plane = 0):
 
     return(x_max, z_max, power_max)
 
-def run(ser, file):
+def run(ser, file, choice):
 
     print("Starting scan")
     step = 5
@@ -83,13 +83,13 @@ def run(ser, file):
     # Scan Plane 1
     move('y', 0, ser)
     #time.sleep(1)
-    x_voltages1, z_voltages1, powers1 = scan(ser, step, file, 1)
+    x_voltages1, z_voltages1, powers1 = scan(ser, step, file, choice, 1)
     #intensity_plot(x_voltages1, z_voltages1, powers1, 1)
 
     # Scan Plane 3
     move('y', 75, ser)
     #time.sleep(1)    
-    x_voltages3, z_voltages3, powers3 = scan(ser, step, file, 3)
+    x_voltages3, z_voltages3, powers3 = scan(ser, step, file, choice, 3)
     #intensity_plot(x_voltages3, z_voltages3, powers3, 3)
 
     x1, z1, p1 = find_max_intensity(x_voltages1, z_voltages1, powers1, file, 1) # First plane max point (y = 0.0)
@@ -110,7 +110,7 @@ def run(ser, file):
     move('x', (x_slope * y2) + x1, ser)
     move('y', y2, ser)
     move('z', (z_slope * y2) + z1, ser)
-    p2 = get_exposure(100)
+    p2 = get_exposure(100, choice)
 
     # Finding maximum power intensity
     y_values = [y1, y2, y3]
@@ -136,7 +136,7 @@ def run(ser, file):
             move('x', (x_slope * y1) + x1, ser)
             move('y', y1, ser)
             move('z', (z_slope * y1) + z1, ser)
-            p1 = get_exposure(100)
+            p1 = get_exposure(100, choice)
         else: y1 = 0; p1 = -1
         
         # Finding power and y-value of right-bound point (C)
@@ -145,7 +145,7 @@ def run(ser, file):
             move('x', (x_slope * y3) + x1, ser)
             move('y', y3, ser)
             move('z', (z_slope * y3) + z1, ser)
-            p3 = get_exposure(100)
+            p3 = get_exposure(100, choice)
         else: y3 = 0; p3 = -1
 
         # Finding maximum power intensity

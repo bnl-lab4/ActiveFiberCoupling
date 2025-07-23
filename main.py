@@ -22,6 +22,9 @@ import algo_cross_section_search
 import algo_continuous_search
 import new_algo_one_cross_section_with_plots
 import data_algo_calculate
+import data_algo_continuous_search
+import data_2_algo_calculate
+import data_2_algo_continuous_search
 
 SERIAL_PORT = '/dev/ttyACM0'
 SERIAL_PORT1 = '/dev/ttyACM1'
@@ -73,7 +76,7 @@ def main():
 
             #file = open("run_data.txt", "w")
             
-            with open("data1.txt", "a") as file:
+            with open("poster_data_4.txt", "a") as file:
                 if choice == '1':
                     '''
                     print("\nSelect a controller (0 or 1)")
@@ -101,11 +104,14 @@ def main():
                     algo_three_cross_sections.run(ser, file)
                 elif choice == '8':
                     #algo_calculate.run(ser, file, 0)
-                    data_algo_calculate.run(ser, file)
+                    #data_algo_calculate.run(ser, file)
+                    data_2_algo_calculate.run(ser, file, 0)
                 elif choice == '9':
                     algo_calculate.run(ser1, file, 1)
                 elif choice == '10':
-                    algo_continuous_search.run(ser, file, 0)
+                    #algo_continuous_search.run(ser, file, 0)
+                    #data_algo_continuous_search.run(ser, file)
+                    data_2_algo_continuous_search.run(ser, file, 0)
                 elif choice == '11':
                     algo_continuous_search.run(ser1, file, 1)
                 elif choice == '12':
