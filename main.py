@@ -20,7 +20,7 @@ import algo_three_cross_sections
 import algo_calculate
 import algo_cross_section_search
 import algo_continuous_search
-import new_algo_one_cross_section_with_plots
+import third_algo_one_cross_section_with_plots
 import data_algo_calculate
 import data_algo_continuous_search
 import data_2_algo_calculate
@@ -55,6 +55,11 @@ def initialize_serial():
 def main():
     ser, ser1 = initialize_serial()
 
+    # For random, grid, hill clibing, cross search, one cross
+    # section, three cross sections, and fitting algorithm:
+    # They only work for 0 unless you manually change ser here
+    # and change to (0,1) in photodiode_in
+
     try:
         while True:
             print("\nSelect an option:")
@@ -76,7 +81,7 @@ def main():
 
             #file = open("run_data.txt", "w")
             
-            with open("poster_data_4.txt", "a") as file:
+            with open("chara_data.txt", "a") as file:
                 if choice == '1':
                     '''
                     print("\nSelect a controller (0 or 1)")
@@ -107,15 +112,17 @@ def main():
                     #data_algo_calculate.run(ser, file)
                     data_2_algo_calculate.run(ser, file, 0)
                 elif choice == '9':
-                    algo_calculate.run(ser1, file, 1)
+                    #algo_calculate.run(ser1, file, 1)
+                    data_2_algo_calculate.run(ser, file, 1)
                 elif choice == '10':
                     #algo_continuous_search.run(ser, file, 0)
                     #data_algo_continuous_search.run(ser, file)
                     data_2_algo_continuous_search.run(ser, file, 0)
                 elif choice == '11':
-                    algo_continuous_search.run(ser1, file, 1)
+                    #algo_continuous_search.run(ser1, file, 1)
+                    data_2_algo_continuous_search.run(ser, file, 1)
                 elif choice == '12':
-                    new_algo_one_cross_section_with_plots.run(ser, file)
+                    third_algo_one_cross_section_with_plots.run(ser, file)
                 elif choice == '13':
                     break
                 else:

@@ -13,6 +13,11 @@ def gaussfit(xpos,zpos,intensity):
 	# Stack x and z as input for curve_fit, making it a single coordinate system
 	coords = np.vstack((xpos, zpos))
 
+	scale_factor = 4 / 75
+	
+	xpos = [x * scale_factor for x in xpos]
+	zpos = [z * scale_factor for z in zpos]
+
 	# Initial parameter guess: [A, x0, z0, wx, wz, B]
 	initial_guess = [
 		np.max(intensity),        # A
@@ -45,12 +50,16 @@ def waistfit(wavelength,waists):
 	#y-posi: 0,37.5,75
 	#wavelength: 635nm
 	
+	wavelength = wavelength * (10^-6)
 	ypos = [0,37.5,75]
+	scale_factor = 4 / 75
+
+	ypos = [v * scale_factor for v in ypos]
 	
 	# Initial guesses: [w0, y0, zR]
 	w0_guess = np.min(waists)
 	y0_guess = ypos[np.argmin(waists)]
-	zR_guess = math.pi*(w0_guess**2)/wavelength  # ballpark
+	zR_guess = abs(math.pi*(w0_guess**2)/wavelength)  # ballpark
 
 	ypos = np.array(ypos)
 	waists = np.array(waists)
@@ -120,13 +129,12 @@ def run(wavelength,xpos,zpos,intensity):
 	#print("intensity shape:", intensity.shape)
 	
 	#optimizedparams = []
-	waists = []
 	
 	#for i in range(3):	
 	#fill in with the arrays from before that collect the respective things
 	optimizedparams = gaussfit(xpos,zpos,intensity)
 	#the fourth parameter in the array should be the waist radii, put these in an array
-	
+	print(f"returned waist {optimizedparams[3]}")
 	return optimizedparams[3]
 	
 	#waists.append(optimizedparams[3])
