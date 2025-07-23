@@ -21,6 +21,7 @@ import algo_calculate
 import algo_cross_section_search
 import algo_new_calculate
 import new_algo_continuous_search
+import new_algo_one_cross_section_with_plots
 
 SERIAL_PORT = '/dev/ttyACM0'
 SERIAL_PORT1 = '/dev/ttyACM1'
@@ -55,17 +56,17 @@ def main():
         while True:
             print("\nSelect an option:")
             print("1. Manual control (typed input)")
-            print("2. Manual key control (keystrokes -- not working)")
-            print("3. Random search algorithm")
-            print("4. Grid search algorithm")
-            print("5. Hill climbing algorithm")
-            print("6. Cross search algorithm")
-            print("7. One cross section")
-            print("8. Three cross sections")
-            print("9. Calculate")
-            print("10. Cross section search")
-            print("11. New calculate")
-            print("12. Continuous search")
+            print("2. Random search algorithm")
+            print("3. Grid search algorithm")
+            print("4. Hill climbing algorithm")
+            print("5. Cross search algorithm")
+            print("6. One cross section")
+            print("7. Three cross sections")
+            print("8. Coarse search for 0 (calculate function)")
+            print("9. Coarse search for 1 (calculate function)")
+            print("10. Fine search for 0 (continuous search function)")
+            print("11. Fine search for 1 (continuous search function)")
+            print("12. Fitting algorithm")
             print("13. Exit")
 
             choice = input("Enter your choice: ").strip()
@@ -86,28 +87,28 @@ def main():
                     '''
                     manual_control.run(ser, ser1)
                 elif choice == '2':
-                    manual_keycontrol.run(ser)
-                elif choice == '3':
                     algo_randomsearch.run(ser, file)
-                elif choice == '4':
+                elif choice == '3':
                     algo_gridsearch.run(ser, file)
-                elif choice == '5':
+                elif choice == '4':
                     algo_hill_climbing.run(ser, file)
-                elif choice == '6':
+                elif choice == '5':
                     algo_crossSearch.run(ser)
                     #algo_crossSearch.run(ser1)
-                elif choice == '7':
+                elif choice == '6':
                     algo_one_cross_section.run(ser, file)
-                elif choice == '8':
+                elif choice == '7':
                     algo_three_cross_sections.run(ser, file)
-                elif choice == '9':
+                elif choice == '8':
                     algo_calculate.run(ser, file)
+                elif choice == '9':
+                    algo_calculate.run(ser1, file)
                 elif choice == '10':
-                    algo_cross_section_search.run(ser, file)
-                elif choice == '11':
-                    algo_new_calculate.run(ser, file)
-                elif choice == '12':
                     new_algo_continuous_search.run(ser, file)
+                elif choice == '11':
+                    new_algo_continuous_search.run(ser1, file)
+                elif choice == '12':
+                    new_algo_one_cross_section_with_plots.run(ser, file)
                 elif choice == '13':
                     break
                 else:
