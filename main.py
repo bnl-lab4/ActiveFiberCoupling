@@ -20,7 +20,7 @@ import algo_three_cross_sections
 import algo_calculate
 import algo_cross_section_search
 import algo_new_calculate
-import algo_continuous_search
+import new_algo_continuous_search
 
 SERIAL_PORT = '/dev/ttyACM0'
 SERIAL_PORT1 = '/dev/ttyACM1'
@@ -107,7 +107,7 @@ def main():
                 elif choice == '11':
                     algo_new_calculate.run(ser, file)
                 elif choice == '12':
-                    algo_continuous_search.run(ser, file)
+                    new_algo_continuous_search.run(ser, file)
                 elif choice == '13':
                     break
                 else:

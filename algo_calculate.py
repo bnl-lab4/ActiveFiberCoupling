@@ -80,7 +80,7 @@ def find_max_intensity(x_voltages, z_voltages, powers, file):
 
 def run(ser, file):
     print("Starting scan")
-    step = 1
+    step = 5
 
     y_values = [0, 37.5, 75]
 
