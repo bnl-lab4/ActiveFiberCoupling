@@ -22,7 +22,7 @@ def scan(ser, step, file):
             move('x', xpos, ser)
             count += 1
             print("Count: ", count)
-            time.sleep(0.075)
+            #time.sleep(0.075)
             #power = getPower(1000)
             power = get_exposure(100)
             x_voltages.append(xpos)
@@ -34,7 +34,7 @@ def scan(ser, step, file):
         move('z', zpos, ser)
         count += 1
         print("Count: ", count)
-        time.sleep(0.075)
+        #time.sleep(0.075)
 
     print(x_voltages)
     file.write(f"X Voltages: {x_voltages}\n")
@@ -80,7 +80,7 @@ def find_max_intensity(x_voltages, z_voltages, powers, file):
 
 def run(ser, file):
     print("Starting scan")
-    step = 10
+    step = 1
 
     y_values = [0, 37.5, 75]
 
@@ -181,7 +181,10 @@ def run(ser, file):
     print(f"Final y: {y2}")
     print(f"Final power: {p2}")
 
-    
+    move('x', x, ser)
+    move('y', y2, ser)
+    move('z', z, ser)
+     
     '''
     powers_max = max(all_powers)
     powers_max_index = all_powers.index(powers_max)
