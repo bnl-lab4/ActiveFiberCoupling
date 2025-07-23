@@ -1,9 +1,9 @@
 from motion import move
-from photodiode_in import get_exposure
+from better_photodiode_in import get_exposure
 
 # Main Function Code
 
-def run(ser, file):
+def run(ser, file, choice):
 
     # Initialize configurable variables
 
@@ -78,7 +78,7 @@ def run(ser, file):
                     move('z', z_pos, ser)
                     
                     # Measure and record power intensity
-                    p_value = get_exposure(100) 
+                    p_value = get_exposure(100, choice) 
                     powers_list.append(p_value)
                     # Print current point count [OPTIONAL]
                     count += 1

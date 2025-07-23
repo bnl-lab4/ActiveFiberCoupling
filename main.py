@@ -19,9 +19,9 @@ import algo_one_cross_section
 import algo_three_cross_sections
 import algo_calculate
 import algo_cross_section_search
-import algo_new_calculate
 import algo_continuous_search
 import new_algo_one_cross_section_with_plots
+import data_algo_calculate
 
 SERIAL_PORT = '/dev/ttyACM0'
 SERIAL_PORT1 = '/dev/ttyACM1'
@@ -100,13 +100,14 @@ def main():
                 elif choice == '7':
                     algo_three_cross_sections.run(ser, file)
                 elif choice == '8':
-                    algo_calculate.run(ser, file)
+                    #algo_calculate.run(ser, file, 0)
+                    data_algo_calculate.run(ser, file)
                 elif choice == '9':
-                    algo_calculate.run(ser1, file)
+                    algo_calculate.run(ser1, file, 1)
                 elif choice == '10':
-                    algo_continuous_search.run(ser, file)
+                    algo_continuous_search.run(ser, file, 0)
                 elif choice == '11':
-                    algo_continuous_search.run(ser1, file)
+                    algo_continuous_search.run(ser1, file, 1)
                 elif choice == '12':
                     new_algo_one_cross_section_with_plots.run(ser, file)
                 elif choice == '13':
