@@ -19,7 +19,7 @@ def get_power():
         power.append(DAQ.getADC(0,0))
     return round(((np.average(power)-0.016)/1.02),8)
 
-def getPower(n, choice):
+def getPower(n, DAQ_in):
     power = 0
     count = 0
     #print("Getting powers")
@@ -32,12 +32,12 @@ def getPower(n, choice):
     #power = abs(power)
     return round(((power-0.016)/1.02),4)
 
-def get_exposure(n, choice):
+def get_exposure(n, DAQ_in):
     power = 0
     count = 0
     #print("Getting powers")
     for i in range(n):
-        power+=DAQ.getADC(0,choice)
+        power+=DAQ.getADC(0,DAQ_in)
         #power+=DAQ.getADC(0,1)
         count += 1
         #print(f"For loop iteration {count} done")

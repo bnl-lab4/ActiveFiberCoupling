@@ -2,20 +2,14 @@ import serial
 from motion import move
 import photodiode_in
 
-def run(ser0, ser1):
-    print("Manual control (typed input) mode. Type 'exit' to return to menu.")
+def run(ser, pdn, ch, file):
+    print("'q' returns to menu, 'ENTER' returns integrated PD. Enter command as [axis] [voltage], e.g. >>y 15.2.")
     while True:
-        user_input = input("Enter command (e.g., 0 x 1.2): ").strip()
-        if user_input.lower() == 'exit':
+        user_input = input(">> ").strip()
+        if user_input.lower() == 'q':
             break
         try:
-            #axis, value = user_input.split()
-            ser, axis, value = user_input.split()
-            if ser == '0':
-                ser = ser0
-            elif ser == '1':
-                ser = ser1
-            move(axis, float(value), ser)
-            #photodiode_in.print_avg_stdv()
+            axis, value = user_input.split()
+            move(axis, float(value), ser, ch, file) 
         except Exception as e:
-            print(f"Invalid input: {e}")
+            photodiode_in.getPower(pdn, ch, file)

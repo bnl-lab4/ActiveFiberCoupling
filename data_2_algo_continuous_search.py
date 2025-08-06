@@ -3,12 +3,12 @@ from better_photodiode_in import get_exposure
 
 # Main Function Code
 
-def run(ser, file, choice):
+def run(ser, file, DAQ_in, ch):
 
     # Initialize configurable variables
 
-    length = 3 # Initial cube length of search volume.
-    division = 5 # Number of sectors per length
+    length = 10 # Initial cube length of search volume.
+    division = 3 # Number of sectors per length
     subplot_final = 5 # Total number of subplots to iterate
 
     # Initialize measurable variables
@@ -63,22 +63,22 @@ def run(ser, file, choice):
             
             x_pos = max_x + (div_len * i) + mid # New x-position
             if x_pos >= 74: x_pos = 74
-            move('x', x_pos, ser)
+            move('x', x_pos, ser, ch, file)
 
             for j in list(range(division)):
                 
                 y_pos = max_y + (div_len * j) + mid # New y-position
                 if y_pos >= 74: y_pos = 0
-                move('y', y_pos, ser)
+                move('y', y_pos, ser, ch, file)
 
                 for k in list(range(division)):
                     
                     z_pos = max_z + (div_len * k) + mid # New z-position
                     if z_pos >= 74: z_pos = 74
-                    move('z', z_pos, ser)
+                    move('z', z_pos, ser, ch, file)
                     
                     # Measure and record power intensity
-                    p_value = get_exposure(100, choice)
+                    p_value = get_exposure(5000, DAQ_in)
                     if p_value > max_power:
                         max_power = p_value
                         index = (i * div_squared) + (j * division) + k
@@ -107,9 +107,9 @@ def run(ser, file, choice):
     max_z += mid
 
     # Move to final point
-    move('x', max_x, ser)
-    move('y', max_y, ser)
-    move('z', max_z, ser)
+    move('x', max_x, ser, ch, file)
+    move('y', max_y, ser, ch, file)
+    move('z', max_z, ser, ch, file)
 
     # Display and record final point
     print(f"New Point [Cont.]: ({max_x:.3f}, {max_y:.3f}, {max_z:.3f}, {max_power:.3f})\n")

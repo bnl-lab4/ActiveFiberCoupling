@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import numpy as np
 import time
 
@@ -42,8 +44,8 @@ def get_exposure(n):
         count += 1
         #print(f"For loop iteration {count} done")
         #power = abs(power)
-    return abs(round(((power-0.016)/1.02),4))
+    return round(((power-0.016)/1.02),4) * -1
 
 while True:
-    power = get_exposure(100)
+    power = get_exposure(500)
     print(f"Integration power: {power}")

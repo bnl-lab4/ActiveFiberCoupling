@@ -15,8 +15,8 @@ def scan(ser, step, file):
     z_voltages = []
     #z_voltages = np.array([])
     powers = []
-    move('x', xpos, ser, 0, file)
-    move('z', zpos, ser, 0, file)
+    move('x', xpos, ser)
+    move('z', zpos, ser)
     '''
     while zpos <= 74:
         while xpos <= 74:
@@ -48,9 +48,9 @@ def scan(ser, step, file):
         time.sleep(0.075)
     '''    
     
-    while zpos <= 75:
-        while xpos <= 75:
-            move('x', xpos, ser, 0, file)
+    while zpos <= 74:
+        while xpos <= 74:
+            move('x', xpos, ser)
             count += 1
             print("Count: ", count)
             #time.sleep(0.075)
@@ -62,7 +62,7 @@ def scan(ser, step, file):
             xpos += step
         xpos = 0
         zpos += step
-        move('z', zpos, ser, 0, file)
+        move('z', zpos, ser)
         count += 1
         print("Count: ", count)
         #time.sleep(0.075)
@@ -110,7 +110,7 @@ def align_max_intensity(x_voltages, z_voltages, powers, file):
 
 def run(ser, file):
     print("Starting scan")
-    step = 5
+    step = 2
 
     x_voltages, z_voltages, powers = scan(ser, step, file)
 

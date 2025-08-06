@@ -19,18 +19,29 @@ def get_power():
         power.append(DAQ.getADC(0,0))
     return round(((np.average(power)-0.016)/1.02),8)
 
-def getPower(n):
+def getPower(n, ch, file):
     power = 0
     count = 0
-    #print("Getting powers")
+    print(f"Doing {n} PD integrations...")
+    timer_start = time.perf_counter()
     for i in range(n):
-        power+=DAQ.getADC(0,0)
+        power += abs(DAQ.getADC(0,ch))
         #power+=DAQ.getADC(0,1)
         count += 1
         #print(f"For loop iteration {count} done")
-    power/=n
+    #power/=n
     #power = abs(power)
-    return round(((power-0.016)/1.02),4)
+    #return round(((power-0.016)/1.02),4)
+    timer_end = time.perf_counter()
+    exptime = timer_end - timer_start
+    print(f"Exposure (s): {exptime}")
+    exptime = str(exptime)
+    timestamp = str(timer_start)
+    file.write(f"\n{timestamp}: \n")
+    file.write(f"Exposure: {exptime}\n")
+    print(f"Power (ADU): {power}")
+    power = str(power)
+    file.write(f"Power: {power}\n\n")
 
 def get_exposure(n):
     power = 0
@@ -46,7 +57,7 @@ def get_exposure(n):
 
 #for i in range(100):
  #   print_avg_stdv()
-power = get_exposure(1000)
-avg_power = getPower(1000)
-print(f"Integration power: {power}")
-print(f"Average power: {avg_power}")
+#power = get_exposure(1000)
+#avg_power = getPower(1000)
+#print(f"Integration power: {power}")
+#print(f"Average power: {avg_power}")
