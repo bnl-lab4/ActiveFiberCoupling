@@ -1,52 +1,16 @@
-import numpy as np
-import time
+import socket
+import photodiode_in as phd
 
-import piplates.DAQC2plate as DAQ
+#s = None
 
-def print_avg_stdv():
-    powers = []
+def getPower(time, *args, **kwargs):
+    #    global s
+    #print(time)
+    #s.sendall(str(time).encode('utf-8'))
+    #power = float(s.recv(1024).decode('utf-8'))
+    #print(power)
+    #return power
+    return phd.getPower(time)
 
-    for i in range(10):
-        p = getPower(10000)
-        powers.append(p)
-
-    print("Average:", np.average(powers))
-    #print("STDV:", np.std(powers))
-
-def get_power():
-    power = []
-    for i in range(100):
-        power.append(DAQ.getADC(0,0))
-    return round(((np.average(power)-0.016)/1.02),8)
-
-def getPower(n, DAQ_in):
-    power = 0
-    count = 0
-    #print("Getting powers")
-    for i in range(n):
-        power+=DAQ.getADC(0,0)
-        #power+=DAQ.getADC(0,1)
-        count += 1
-        #print(f"For loop iteration {count} done")
-    power/=n
-    #power = abs(power)
-    return round(((power-0.016)/1.02),4)
-
-def get_exposure(n, DAQ_in):
-    power = 0
-    count = 0
-    #print("Getting powers")
-    for i in range(n):
-        power+=DAQ.getADC(0,DAQ_in)
-        #power+=DAQ.getADC(0,1)
-        count += 1
-        #print(f"For loop iteration {count} done")
-        #power = abs(power)
-    return abs(round(((power-0.016)/1.02),4))
-
-#for i in range(100):
- #   print_avg_stdv()
-#power = get_exposure(1000)
-#avg_power = getPower(1000)
-#print(f"Integration power: {power}")
-#print(f"Average power: {avg_power}")
+def get_exposure(time, *args, **kwargs):
+    return getPower(time)

@@ -11,5 +11,6 @@ def run(ser, pdn, ch, file):
         try:
             axis, value = user_input.split()
             move(axis, float(value), ser, ch, file) 
+            print(photodiode_in.getPower(pdn, ch, file))
         except Exception as e:
             photodiode_in.getPower(pdn, ch, file)

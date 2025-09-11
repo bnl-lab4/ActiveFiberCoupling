@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import csv
 
 import fittingvtwo
+import data_2_algo_calculate
+import data_2_algo_continuous_search
 
 def coursescan(ser,file):
     intensity = []
@@ -84,12 +86,15 @@ def align_max_intensity(x_voltages, z_voltages, powers, file):
     x_max = x_voltages[power_max_index]
     z_max = z_voltages[power_max_index]
 
+
     print(f"Max power: {power_max}")
     file.write(f"Max power: {power_max}\n")
     print(f"X position: {x_max}")
     file.write(f"X position: {x_max}\n")
     print(f"Z position: {z_max}")
     file.write(f"Z position: {z_max}\n")
+    
+    return x_max,z_max,power_max
 
 #If only one cross section works
 def runone(ser, file):
@@ -173,16 +178,20 @@ def estimatefocal(coeffone,coefftwo):
     #estimate the zposition (70% sure this is useless because we're not fitting xdata
     #focalpointz = mtop * focalpointy + btop
 
+'''
 def run(ser, file):
 #def run(x_voltages,z_voltages,powers):
-    '''
-    coursearr = []
-    x = 0
-    while x < 50:
-        coursearr.append(x)
-        x += 1
-    '''
-
+'''
+     
+    #remove
+    #coursearr = []
+    #x = 0
+    #while x < 50:
+    #    coursearr.append(x)
+    #    x += 1
+    
+'''
+    
     #oneintensity,coursearr = coursescan(ser,file)
     #oneintensity = [.6,.5088,.5627,.6049,.5951,.5843,.601,.5618,.5882,.5804,.5814,.5725,.6059,.5676,.6098,.6157,.6039,.602,.6,.6039,.6294,.6127,.6206,.6539,.3647,.3186,.3422,.3667,.399,.3549,.399,.401,.3657,.3373,.5686,17.8314,261.4412,453.2588,53.7216,.4941,.5186,.3667,.3843,.3176,.4304,.3392]   
     #popt = fittingvtwo.onegaussfit(coursearr,oneintensity)
@@ -233,8 +242,10 @@ def run(ser, file):
     move('y',focalpointy * 75/20,ser,0,file)
     input("Press enter to continue")
 
+    start = time.time()
     x_voltages, z_voltages, powers = scan(ser,step,file)
     #unsure if I should put these lines in so commented. May be needed if alignment needs to happen after finding the focal point y
+    end = time.time()
 
     optimized = fittingvtwo.run(wavelength,x_voltages,z_voltages,powers)
     print(f"x0 {optimized[1]}")
@@ -244,13 +255,31 @@ def run(ser, file):
     move('x',optimized[1]*75/20,ser,0,file)
     move('z',optimized[2]*75/20,ser,0,file)
     move('y',focalpointy*75/20,ser,0,file)
+    
+    print(f"time: {end - start}")
 
     #intensity_plot(x_voltages, z_voltages, powers)
 
     #align_max_intensity(x_voltages, z_voltages, powers, file)
 
     print("Scan done")
+'''
 
+def run(ser, file):
+    start = time.time()
+    step = 5
+    
+    x_voltages, z_voltages, powers = scan(ser,step,file)
+    
+    x_max, z_max, power_max = align_max_intensity(x_voltages, z_voltages, powers, file)
+    
+    move('x',x_max,ser,0,file)
+    move('z',z_max,ser,0,file)
+    
+    end = time.time()
+    print(f"time: {end - start}")
+    return (end - start), power_max
+    
 '''
 scale = 20 / 75
 

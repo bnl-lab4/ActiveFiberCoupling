@@ -24,10 +24,10 @@ def scan(ser, step, ch, file, DAQ_in, plane = 0):
             
             move('x', xpos, ser, ch, file)
             count += 1
-            print("Count: ", count)
             #time.sleep(0.075)
             
             power = get_exposure(5000, DAQ_in)
+            print(f"Count: {count},  ({xpos}, {zpos}), {power}")
             x_voltages.append(xpos)
             z_voltages.append(zpos)
             powers.append(power)
