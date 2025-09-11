@@ -37,7 +37,7 @@ def getPower(n):
 def get_exposure(n):
     power = 0
     count = 0
-    #print("Getting powers")
+    #print("Getting powers")xpos
     for i in range(n):
         power+=DAQ.getADC(0,0)
         #power+=DAQ.getADC(0,1)

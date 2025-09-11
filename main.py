@@ -35,6 +35,7 @@ import zero_axes
 import photodiode_in
 import algo_focal_estimator
 import algo_PSO
+import warnings
 
 SERIAL_PORT0 = '/dev/ttyACM0'
 SERIAL_PORT1 = '/dev/ttyACM1'
@@ -42,26 +43,32 @@ BAUD_RATE = 115200
 
 # Open serial connection
 def initialize_serial():
+    #ser0 = serial.Serial(port=SERIAL_PORT,
+    #    baudrate=BAUD_RATE,
+    #    bytesize=serial.EIGHTBITS,
+    #    parity=serial.PARITY_NONE,
+    #    stopbits=serial.STOPBITS_ONE,
+    #    timeout=2,
+    #    xonxoff=False,
+    #    rtscts=False,
+    #    dsrdtr=False,
+    #)
+    ser0 = None
+    ser1 = None
     try:
-        #ser0 = serial.Serial(port=SERIAL_PORT,
-        #    baudrate=BAUD_RATE,
-        #    bytesize=serial.EIGHTBITS,
-        #    parity=serial.PARITY_NONE,
-        #    stopbits=serial.STOPBITS_ONE,
-        #    timeout=2,
-        #    xonxoff=False,
-        #    rtscts=False,
-        #    dsrdtr=False,
-        #)
         ser0 = serial.Serial(SERIAL_PORT0, BAUD_RATE, timeout=1)
-        ser1 = serial.Serial(SERIAL_PORT1, BAUD_RATE, timeout=1)
-        time.sleep(2)  # Give the device time to initialize
         print(f"Connected to {SERIAL_PORT0} at {BAUD_RATE} baud.")
-        print(f"Connected to {SERIAL_PORT1} at {BAUD_RATE} baud.")
-        return ser0, ser1
     except serial.SerialException as e:
-        print(f"Error opening serial port: {e}")
-        exit(1)
+        warnings.warn(f"Error opening serial port: {e}")
+
+    try:
+        ser1 = serial.Serial(SERIAL_PORT1, BAUD_RATE, timeout=1)
+        print(f"Connected to {SERIAL_PORT1} at {BAUD_RATE} baud.")
+    except serial.SerialException as e:
+        warnings.warn(f"Error opening serial port: {e}")
+
+    time.sleep(2)  # Give the device time to initialize
+    return ser0, ser1
 
 def main():
     ser0, ser1 = initialize_serial()
@@ -74,6 +81,13 @@ def main():
 
     try:
         while True:
+            if ser0 is None or ser1 is None:
+                print("\n" + "*"*60 + "\n")
+                if ser0 is None:
+                    print("WARNING: ser0 has not initialized properly!")
+                if ser1 is None:
+                    print("WARNING: ser1 has not initialized properly!")
+                print("\n" + "*"*60)
             print("\nManual Control Options")
             print("0:        Ch 0 w/PD input")
             print("1:        Ch 1 w/PD input")
@@ -178,12 +192,11 @@ def main():
                 elif choice == 'reload':
                     for module in list(sys.modules.values()):
                         try:
-                            #   print(f'{module.__file__.split("/")}\n')
                             if module.__file__.split('/')[4] == 'ActiveFiberCoupling':
                                 importlib.reload(module)
                                 print(f'{module.__name__} reloaded.')
-                        except:
-                            pass
+                        except Error as e:
+                            warnings.warn("RELOAD NOT SUCCESFUL\n" + e)
                 elif choice == 'q':
                     break
                 else:
@@ -191,8 +204,10 @@ def main():
 
 
     finally:
-        ser0.close()
-        ser1.close()
+        if ser0 is not None:
+            ser0.close()
+        if ser1 is not None:
+            ser1.close()
         print("Serial connection closed.")
 
 if __name__ == '__main__':
