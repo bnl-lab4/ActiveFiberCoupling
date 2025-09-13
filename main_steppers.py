@@ -1,3 +1,6 @@
+################ TODO
+# logging control
+#####################
 #!/usr/bin/python
 
 
@@ -13,7 +16,6 @@ import piplates.DAQC2plate as DAQ
 
 # Import alignment algorithms and control modes
 from MovementClasses import StageDevices
-import main_menu
 import manual_control
 import manual_keycontrol
 import algo_randomsearch
@@ -44,16 +46,27 @@ BAUD_RATE = 115200
 STEPPER_DICT = dict(x=None, y=None, z=None)
 
 
-def display_menu():
-    max_choice_length = max(map(len, list(MENU_DICT.keys())))
-    whitespace = max_choice_length + 2
-    for key, value in MENU_DICT.items():
-        if key.startswith('_'):
-            print('\n' + value)
-        else:
-            print(f"{key}:{' ' * whitespace}{value[0]}")
-    return
+def reload_modules():
+    print('\n')
+    for module in list(sys.modules.values()):
+        try:
+            module_path = module.__file__
+        except AttributeError:
+            continue
+        if module_path is None:
+            continue
+        if module.__file__ == '/home/bnl/ActiveFiberCoupling/main_steppers.py':
+            # do not try to reload this file
+            continue
 
+        module_dirpath = ('/').join(module_path.split('/')[:-1])
+        if module_dirpath == '/home/bnl/ActiveFiberCoupling':
+            # if module is in this directory
+            try:
+                importlib.reload(module)
+                print(f'Reloaded: {module.__name__}')
+            except Exception as e:
+                warnings.warn(f"RELOAD NOT SUCCESFUL: {module_dirpath}\n{e}")
 
 def main():
     stage0 = StageDevices('stage0', SERIAL_PORT0, STEPPER_DICT, require_connection=False)
@@ -75,28 +88,81 @@ def main():
             'args'   : (stage1, Texp),
             'kwargs' : {}
                 },
-        'center p0' : ('Center piezo axes of stage 0', ),
-        'center p1' : ('Center piezo axes of stage 1', ),
-        'center s0' : ('Center stepper axes of stage 0', ),
-        'center s1' : ('Center stepper axes of stage 1', ),
-        'zero p0' : ('Zero piezo axes of stage 0', ),
-        'zero p1' : ('Zero piezo axes of stage 1', ),
-        'zero s0' : ('Zero stepper axes of stage 0', ),
-        'zero s1' : ('Zero stepper axes of stage 1', ),
+        'center p0' : {
+            'text'   : 'Center piezo axes of stage 0',
+            'func'   : center_axes.run,
+            'args'   : (stage0, 'piezos'),
+            'kwargs' : {}
+                },
+        'center p1' : {
+            'text'   : 'Center piezo axes of stage 1',
+            'func'   : center_axes.run,
+            'args'   : (stage0, 'piezos'),
+            'kwargs' : {}
+                },
+        'center s0' : {
+            'text'   : 'Center stepper axes of stage 0',
+            'func'   : center_axes.run,
+            'args'   : (stage0, 'steppers'),
+            'kwargs' : {}
+                },
+        'center s1' : {
+            'text'   : 'Center stepper axes of stage 1',
+            'func'   : center_axes.run,
+            'args'   : (stage0, 'steppers'),
+            'kwargs' : {}
+                },
+        'zero p0' : {
+            'text'   : 'Zero piezo axes of stage 0',
+            'func'   : zero_axes.run,
+            'args'   : (stage0, 'piezos'),
+            'kwargs' : {}
+                },
+        'zero p1' : {
+            'text'   : 'Zero piezo axes of stage 1',
+            'func'   : zero_axes.run,
+            'args'   : (stage0, 'piezos'),
+            'kwargs' : {}
+                },
+        'zero s0' : {
+            'text'   : 'Zero stepper axes of stage 0',
+            'func'   : zero_axes.run,
+            'args'   : (stage0, 'steppers'),
+            'kwargs' : {}
+                },
+        'zero s1' : {
+            'text'   : 'Zero stepper axes of stage 1',
+            'func'   : zero_axes.run,
+            'args'   : (stage0, 'steppers'),
+            'kwargs' : {}
+                },
+        'reload'  : {
+            'text'   : 'Reload all ActiveFiberCoupling modules',
+            'func'   : reload_modules,
+            'args'   : (),
+            'kwargs' : {}
+                }
             }
 
-   # For random, grid, hill clibing, cross search, one cross
-    # section, three cross sections, and fitting algorithm:
-    # They only work for 0 unless you manually change ser here
-    # and change to (0,1) in photodiode_in
+    def display_menu():
+        max_choice_length = max(map(lambda s: len(s) if not s.startswith('_') else 0,
+                                    list(MENU_DICT.keys())))    # excepting section titles, sorry
+        whitespace = max_choice_length + 2    # for aligning descriptions
+        for key, value in MENU_DICT.items():
+            if key.startswith('_'):
+                print('\n' + value)
+            else:
+                print(f"{key}:{' ' * (whitespace - len(key))}{value['text']}")
+        return
+
 
     while True:
-        main_menu.display_menu() 
+        display_menu() 
         user_input = input(">> ").strip()
         if user_input.lower() == 'q':
             break
         if user_input not in MENU_DICT.keys() or user_input.startswith('_'):
-            print('Invalid input')
+            print('\nInvalid input')
         else:
             MENU_DICT[user_input]['func'](*MENU_DICT[user_input]['args'],
                                           **MENU_DICT[user_input]['kwargs'])

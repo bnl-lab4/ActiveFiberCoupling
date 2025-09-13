@@ -18,19 +18,15 @@ class MovementType(enum.Enum):
     GENERAL = "general"
 
 class Position:
-    MICRONS_PER_VOLT = 20 / 75
-    MICRONS_PER_STEP = 2.5 # I think
-
+    _MICRONS_PER_VOLT = 20 / 75
+    _MICRONS_PER_STEP = 2.5 # I think
     def __init__(self, value, unit):
-        MICRONS_PER_VOLT = 20 / 75
-        MICRONS_PER_STEP = 2.5 # I think
-
         if unit == "microns":
             self._microns = float(value)
         elif unit == "volts":
-            self._microns = float(value) * MICRONS_PER_VOLT
+            self._microns = float(value) * self._MICRONS_PER_VOLT
         elif unit == "steps":
-            self._microns = float(value) * MICRONS_PER_STEP
+            self._microns = float(value) * self._MICRONS_PER_STEP
         else:
             raise ValueError("Unsupported unit: unit must be 'microns', 'volts', or 'steps'")
         
@@ -87,20 +83,20 @@ class Position:
 
     @property
     def volts(self):
-        return self._microns / self.MICRONS_PER_VOLT
+        return self._microns / self._MICRONS_PER_VOLT
 
     @volts.setter
     def volts(self, value):
-        self._microns = value * self.MICRONS_PER_VOLT
+        self._microns = value * self._MICRONS_PER_VOLT
         return
 
     @property
     def steps(self):
-        return self._microns / self.MICRONS_PER_STEP
+        return self._microns / self._MICRONS_PER_STEP
 
     @steps.setter
     def steps(self, value):
-        self._microns = value * self.MICRONS_PER_STEP
+        self._microns = value * self._MICRONS_PER_STEP
     
 
 class MoveResult:
@@ -119,7 +115,7 @@ class MoveResult:
 
 class StageAxis:
     
-    CENTER = Position(37.5, "volts")
+    _PIEZO_CENTER = Position(37.5, "volts")
 
     def __init__(self, axis: str, piezo, stepper):
         self.axis = axis
@@ -145,23 +141,24 @@ class StageAxis:
         return MoveResult(steps, 'steps', 'stepper')
 
     def goto(self, position: Position, which: Optional[MovementType] = None) -> float:
-        # get stepper and piezo positions as Position objects
-        stepper_position = Position(0, 'steps')
-
-        self.piezo.flush()
-        self.piezo.flushInput()
-        self.piezo.flushOutput()
-        self.piezo.write(f"{self.axis}voltage?\n".encode())
-        self.piezo.readline().decode('utf-8').strip()
-        piezo_position = self.piezo.read(8).decode('utf-8').strip()[2:-1] 
-        piezo_position = Position(float(piezo_position), 'volts')
-
         if which == MovementType.GENERAL or which is None:
+            # get stepper and piezo positions as Position objects
+            stepper_position = Position(0, 'steps')
+
+            self.piezo.read(8)          #seems to clear better than flushing?
+            self.piezo.flush()
+            self.piezo.flushInput()
+            self.piezo.flushOutput()
+            self.piezo.write(f"{self.axis}voltage?\n".encode())
+            self.piezo.readline().decode('utf-8').strip()
+            piezo_position = self.piezo.read(8).decode('utf-8').strip()[2:-1] 
+            piezo_position = Position(float(piezo_position), 'volts')
+
             # decide whether the position can be reached with only the piezos
             if 0 < (stepper_position - movement).volts < 75:
                return self._move_piezo(position.volts)
-            self._move_piezo(self.CENTER.volts)
-            result = self._move_stepper((position - (piezo_position + self.CENTER)).steps)
+            self._move_piezo(_PIEZO_CENTER.volts)
+            result = self._move_stepper((position - (piezo_position + _PIEZO_CENTER)).steps)
             result.centered_piezos = True
             return result
 
@@ -171,25 +168,26 @@ class StageAxis:
             return self._move_stepper(position.steps)
 
     def move(self, movement: Position, which: Optional[MovementType] = None) -> float:
-        # get stepper and piezo positions as Position objects
-        stepper_position = Position(0, 'steps')
-
-        self.piezo.flush()
-        self.piezo.flushInput()
-        self.piezo.flushOutput()
-        self.piezo.write(f"{self.axis}voltage?\n".encode())
-        self.piezo.readline().decode('utf-8').strip()
-        piezo_position = self.piezo.read(8).decode('utf-8').strip()[2:-1] 
-        piezo_position = Position(float(piezo_position), 'volts')
-
-        axis_position = stepper_position + piezo_position
-
         if which == MovementType.GENERAL or which is None:
+            # get stepper and piezo positions as Position objects
+            stepper_position = Position(0, 'steps')
+
+            self.piezo.read(8)          #seems to clear better than flushing?
+            self.piezo.flush()
+            self.piezo.flushInput()
+            self.piezo.flushOutput()
+            self.piezo.write(f"{self.axis}voltage?\n".encode())
+            self.piezo.readline().decode('utf-8').strip()
+            piezo_position = self.piezo.read(8).decode('utf-8').strip()[2:-1] 
+            piezo_position = Position(float(piezo_position), 'volts')
+
+            axis_position = stepper_position + piezo_position
+
             if 0 < (axis_position + movement).volts < 75:
                 return self._move_piezo((piezo_position + movement).volts)
-            self._move_piezo(self.CENTER.volts)
+            self._move_piezo(_PIEZO_CENTER.volts)
             result = self._move_stepper((stepper_position + movement -\
-                    (piezo_position - self.CENTER)).steps)
+                    (piezo_position - _PIEZO_CENTER)).steps)
             result.centered_piezos = True
             return result
 
