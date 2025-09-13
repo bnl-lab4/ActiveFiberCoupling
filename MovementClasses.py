@@ -1,5 +1,5 @@
 ########### TODO:
-# each axis gets a class, then each stage gets a parent class
+# add SiPM child class
 ####################
 import logging
 import time
@@ -113,8 +113,8 @@ class MoveResult:
 
     @property
     def text(self):
-        return f"set {result.mechanism} to {result.position} {result.units}" +\
-                    f"{'after centering piezos' if result.centered_piezos else ''}")
+        return f"set {self.mechanism} to {self.position} {self.units}" +\
+                    f"{'after centering piezos' if self.centered_piezos else ''}"
 
 
 class StageAxis:
@@ -148,6 +148,9 @@ class StageAxis:
         # get stepper and piezo positions as Position objects
         stepper_position = Position(0, 'steps')
 
+        self.piezo.flush()
+        self.piezo.flushInput()
+        self.piezo.flushOutput()
         self.piezo.write(f"{self.axis}voltage?\n".encode())
         self.piezo.readline().decode('utf-8').strip()
         piezo_position = self.piezo.read(8).decode('utf-8').strip()[2:-1] 
@@ -171,6 +174,9 @@ class StageAxis:
         # get stepper and piezo positions as Position objects
         stepper_position = Position(0, 'steps')
 
+        self.piezo.flush()
+        self.piezo.flushInput()
+        self.piezo.flushOutput()
         self.piezo.write(f"{self.axis}voltage?\n".encode())
         self.piezo.readline().decode('utf-8').strip()
         piezo_position = self.piezo.read(8).decode('utf-8').strip()[2:-1] 
