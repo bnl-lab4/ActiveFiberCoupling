@@ -2,8 +2,9 @@ import serial
 from motion import move
 import photodiode_in
 from MovementClasses import MovementType, Position
+from SensorClasses import Sensor, SensorType
 
-def run(stage, expTime):
+def run(stage, ExposureTime):
     print("""'q' returns to menu, 'ENTER' returns integrated SiPM (not yet).
 Enter command as [axis] [value] [device], e.g. >>y 15.2 piezo or >>x -10 p.
 Switch between goto (default) and move modes with 'goto' and 'move'.""")
@@ -11,22 +12,32 @@ Switch between goto (default) and move modes with 'goto' and 'move'.""")
     which_dict = dict(p=(MovementType.PIEZO, 'volts'), s=(MovementType.STEPPER, 'steps'),
                       piezo=(MovementType.PIEZO, 'volts'), stepper=(MovementType.STEPPER, 'steps'))
     axes = ('x', 'y', 'z')
+    Texp = ExposureTime
+
     while True:
-        user_input = input(">> ").strip()
-        if user_input.lower() == 'q':
+        user_input = input(">> ").strip().lower()
+        if user_input == 'q':
             break
-        if user_input.lower() == 'move':
+        if user_input == '':
+            power = stage.sensor.integrate(Texp)
+            print(f"Power: {power:.6f}\nIntegrated for {Texp}")
+            continue
+        if user_input == 'move':
             if goto: print('Switched to move mode.')
             else: print('Already in move mode.')
             goto = False
             continue
-        if user_input.lower() == 'goto':
+        if user_input == 'goto':
             if goto: print('Already in goto mode.')
             else: print('Switched to goto mode.')
             goto = True
             continue
 
         user_input = user_input.split()
+        if len(user_input) == 2 and set(user_input[0].lower()) == set('texp'):
+            Texp = int(user_input[1])
+            print(f'Exposure "time" set to {Texp}')
+            continue
         if len(user_input) != 3:
             print('Invalid input: Enter command as [axis] [value] [device].')
             continue

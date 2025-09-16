@@ -1,11 +1,12 @@
 ########### TODO:
-# add SiPM child class
+#
 ####################
 import logging
 import time
 import serial
 import warnings
 import enum
+from SensorClasses import Sensor, SensorType
 from typing import Dict, List, Optional
 
 
@@ -112,7 +113,6 @@ class MoveResult:
         return f"set {self.mechanism} to {self.position} {self.units}" +\
                     f"{'after centering piezos' if self.centered_piezos else ''}"
 
-
 class StageAxis:
     
     _PIEZO_CENTER = Position(37.5, "volts")
@@ -167,6 +167,8 @@ class StageAxis:
         if which == MovementType.STEPPER:
             return self._move_stepper(position.steps)
 
+        raise ValueError("which must be a MovementType enum or None.")
+
     def move(self, movement: Position, which: Optional[MovementType] = None) -> float:
         if which == MovementType.GENERAL or which is None:
             # get stepper and piezo positions as Position objects
@@ -195,16 +197,20 @@ class StageAxis:
             return self._move_piezo((piezo_position + movement).volts)
         if which == MovementType.STEPPER:
             return self._move_stepper((stepper_position + movement).steps)
+
+        raise ValueError("which must be a MovementType enum or None.")
             
             
 
 class StageDevices:
     
-    def __init__(self, name: str, piezo_port: str, stepper_ports: Dict[str, str],
+    def __init__(self, name: str, piezo_port: str, stepper_ports: Dict[str, str], sensor: Sensor = None,
                  piezo_baud_rate: int = 115200, require_connection: bool = False):
         self.name = name
+        self.sensor = sensor
         self.axes = {axis : None for axis in stepper_ports.keys()}
         self.piezo_port = piezo_port
+
 
         piezo = None
         try:
@@ -219,8 +225,11 @@ class StageDevices:
         # while also creating the axis objects
         for axis in self.axes.keys():
             try:
-                stepper = None # connect(stepper_ports[axis])
-                log.info(f"Connected to {stepper_ports[axis]} as axis {axis}.")
+                stepper = stepper_ports[axis] # connect(stepper_ports[axis])
+                if stepper is None:
+                    log.info(f"No connection for {axis} provided")
+                else:
+                    log.info(f"Connected to {stepper_ports[axis]} as axis {axis}.")
             except ConnectionException as e:
                 if require_connection:
                     raise e
@@ -233,11 +242,24 @@ class StageDevices:
 
     def move(self, axis: str, movement: Position, which: Optional[MovementType] = None):
         result = self.axes[axis].move(movement, which)
-        log.info(f"Stage {self.name}, Axis {axis} via move():" + result.text)
+        log.info(f"{self.name}, Axis {axis} :" + result.text)
         return result
 
 
     def goto(self, axis: str, position: Position, which: Optional[MovementType] = None):
         result = self.axes[axis].goto(position, which)
-        log.info(f"Stage {self.name}, Axis {axis} via goto():" + result.text)
+        log.info(f"{self.name}, Axis {axis} :" + result.text)
         return result
+
+    def read(self):
+        if self.sensor is None:
+            warnings.warn("No sensor assigned to this stage")
+            return None
+        return self.sensor.read()
+
+    def integrate(self, Texp: int, avg: bool = True):
+        if self.sensor is None:
+            warnings.warn("No sensor assigned to this stage")
+            return None
+        return self.sensor.integrate(Texp, acg)
+
