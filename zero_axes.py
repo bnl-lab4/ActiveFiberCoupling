@@ -1,7 +1,7 @@
-from MovementClasses import StageDevices, Position, MovementType
+from MovementClasses import StageDevices, StageAxis, Distance, MovementType
 
-PIEZO_ZERO = Position(0.0, 'volts')
-STEPPER_ZERO = Position(0.0, 'steps')
+PIEZO_CENTER = StageAxis.PIEZO_CENTER
+STEPPER_CENTER = StageAxis.STEPPER_CENTER
 
 def run(stage: StageDevices, which: MovementType):
     if which == MovementType.PIEZO or which == MovementType.GENERAL:

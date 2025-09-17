@@ -11,44 +11,27 @@ from motion import move
 import numpy as np
 import importlib
 import logging
+import warnings
 
 #Device Imports
 import piplates.DAQC2plate as DAQ
 
 # Import alignment algorithms and control modes
-from MovementClasses import StageDevices, MovementType
+from MovementClasses import StageDevices, MovementType, Distance
 from SensorClasses import Sensor, SensorType
 import manual_control
-import manual_keycontrol
-import algo_randomsearch
-import algo_gridsearch
-import algo_hill_climbing
-import algo_crossSearch
-import algo_one_cross_section
-import algo_three_cross_sections
-import algo_calculate
-import algo_cross_section_search
-import algo_continuous_search
-import third_algo_one_cross_section_with_plots
-import data_algo_calculate
-import data_algo_continuous_search
-import data_2_algo_calculate
-import data_2_algo_continuous_search
 import center_axes
 import zero_axes
-import photodiode_in
-import algo_focal_estimator
-import algo_PSO
-import warnings
+import grid_search
 
 # Configure logging
 # TODO custom formatter to truncate filepaths that are in ActiveFiberCoupling?
 formatter = logging.Formatter("%(asctime)s - %(module)s - %(funcName)s :: %(message)s")
 root_logger = logging.getLogger()
 root_logger.setLevel(level=logging.INFO)        # set logging level
-console_handler = logging.StreamHandler()       # show logging in console
-console_handler.setFormatter(formatter)         #
-root_logger.addHandler(console_handler)         #
+console_handler = logging.StreamHandler()       # show logging in console   |
+console_handler.setFormatter(formatter)         #                           |
+root_logger.addHandler(console_handler)         #                           V
 
 # Device info
 PHOTODIODE0 = dict(addr = 0, channel = 1)
@@ -64,7 +47,7 @@ ExposureTime = 500      # default number of times to integrate photodiode input 
                 # in DAQ.getADC() function calls (approx 1ms?)
 
 
-def reload_modules():
+def reload_modules():       #   not working?
     print('\n')
     for module in list(sys.modules.values()):
         try:
@@ -159,9 +142,34 @@ def main():
             'kwargs' : {}
                 },
         'reload'  : {
-            'text'   : 'Reload all ActiveFiberCoupling modules',
+            'text'   : 'Reload all ActiveFiberCoupling modules (might be broken)',
             'func'   : reload_modules,
             'args'   : (),
+            'kwargs' : {}
+                },
+        '_optimization' : 'Optimization Algorithms',
+        'grid p0'    : {
+            'text'   : 'Grid search with piezos of stage 0',
+            'func'   : grid_search.run,
+            'args'   : (stage0, MovementType.PIEZO, ExposureTime),
+            'kwargs' : dict(spacing = Distance(15, "volts"), plot=False, planes=3)
+                },
+        'grid p1'    : {
+            'text'   : 'Grid search with piezos of stage 1',
+            'func'   : grid_search.run,
+            'args'   : (stage1, MovementType.PIEZO, ExposureTime),
+            'kwargs' : {}
+                },
+        'grid s0'    : {
+            'text'   : 'Grid search with steppers of stage 0',
+            'func'   : grid_search.run,
+            'args'   : (stage0, MovementType.STEPPER, ExposureTime),
+            'kwargs' : {}
+                },
+        'grid s1'    : {
+            'text'   : 'Grid search with steppers of stage 1',
+            'func'   : grid_search.run,
+            'args'   : (stage1, MovementType.STEPPER, ExposureTime),
             'kwargs' : {}
                 }
             }

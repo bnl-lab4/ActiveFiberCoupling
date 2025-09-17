@@ -56,8 +56,8 @@ class Photodiode:
     def read(self):
         # getADC has several waits in it, we could prbably slim it down
         power = DAQ.getADC(self.addr, self.channel)
-        log.debug(f"Photodiode addr:{self.addr} channel:{self.channel} read power {power:.6f}")
-        return power
+#       log.debug(f"Photodiode addr:{self.addr} channel:{self.channel} read power {power:.6f}")
+        return -power       # NOTE THE MINUS SIGN
 
     def integrate(self, Texp: int, avg: bool = True):
         power = 0
@@ -65,7 +65,7 @@ class Photodiode:
             power += self.read()
         if avg:
             power /= Texp
-        log.info(f"Photodiode addr:{self.addr} channel {self.channel}  " +\
+        log.debug(f"Photodiode addr:{self.addr} channel {self.channel}  " +\
                 f"integrated power {power:.6f}{' averaged' if avg else ''} over {Texp} interations")
         return power
 

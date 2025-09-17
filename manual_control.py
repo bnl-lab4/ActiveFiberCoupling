@@ -1,11 +1,11 @@
 import serial
 from motion import move
 import photodiode_in
-from MovementClasses import MovementType, Position
+from MovementClasses import MovementType, Distance
 from SensorClasses import Sensor, SensorType
 
 def run(stage, ExposureTime):
-    print("""'q' returns to menu, 'ENTER' returns integrated SiPM (not yet).
+    print("""'q' returns to menu, 'ENTER' returns integrated signal.
 Enter command as [axis] [value] [device], e.g. >>y 15.2 piezo or >>x -10 p.
 Switch between goto (default) and move modes with 'goto' and 'move'.""")
     goto = True
@@ -51,6 +51,6 @@ Switch between goto (default) and move modes with 'goto' and 'move'.""")
             continue
         
         if goto:
-            stage.goto(axis, Position(value, which_dict[device][1]), which_dict[device][0])
+            stage.goto(axis, Distance(value, which_dict[device][1]), which_dict[device][0])
         else:
-            stage.move(axis, Position(value, which_dict[device][1]), which_dict[device][0])
+            stage.move(axis, Distance(value, which_dict[device][1]), which_dict[device][0])
