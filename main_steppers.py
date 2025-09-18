@@ -1,5 +1,4 @@
 ################ TODO
-# improve logging control
 # convert main menu to YAML
 # reduce main menu entried by taking stage and device as inputs (e.g. p0)
 #   allow arbitrary kwarg entries with choices
@@ -30,13 +29,38 @@ import zero_axes
 import grid_search
 
 # Configure logging
-# TODO custom formatter to truncate filepaths that are in ActiveFiberCoupling?
-formatter = logging.Formatter("%(asctime)s - %(module)s - %(funcName)s :: %(message)s")
-root_logger = logging.getLogger()
-root_logger.setLevel(level=logging.INFO)        # set logging level
-console_handler = logging.StreamHandler()       # show logging in console   |
-console_handler.setFormatter(formatter)         #                           |
-root_logger.addHandler(console_handler)         #                           V
+LOG_TO_CONSOLE = True # toggle to log to console
+LOG_TO_FILE = True # toggle to log to file
+LOG_FILENAME = "./log_output.txt" #need filepath
+LOG_LEVEL = "INFO" # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+def setup_logging(log_to_console: bool = LOG_TO_CONSOLE, log_to_file: bool = LOG_TO_FILE, filename = LOG_FILENAME, log_level: str = LOG_LEVEL):
+	
+	#Map string to logging level
+	level = getattr(logging, log_level.upper(), logging.INFO)
+	formatter - logging.formatter("%(asctime)s - %(module)s - %(funcName)s :: %(message)s")
+	root_logger = logging.getLogger()
+	root_logger.setLevel(level)
+
+	#clears existing handlers to avoid duplicates
+	if root_logger.hasHandlers():
+		root_logger.handlers.clear()
+
+	# Check and add console logging
+	if log_to_console:
+		console_handler = logging.StreamHandler()
+		console_handler.setFormatter(formatter)
+		root_logger.addHandler(console_handler)
+
+	# Check and add file handling
+	if log_to_file and filename:
+		file_handler = logging.FileHandler(filename)
+		file_handler.setFormatter(formatter)
+		root_logger.addHandler(file_handler)
+	
+	if not (log_to_console or log_to_file):
+		logging.disable(logging.CRITICAL)
+
 
 # Device info
 PHOTODIODE0 = dict(addr = 0, channel = 1)
