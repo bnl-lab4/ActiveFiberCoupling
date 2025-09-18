@@ -1,0 +1,18 @@
+---
+# {serial number} : [ {stagemin}, {stagemax} ] in full steps
+"00485175" : [ 1100, 3150 ]
+"00485159" : [ 1060, 2900 ]
+"00485185" : [ 1130, 2870 ]
+---
+#   all movement limits assuming 32 microsteps per step (step mode 5)
+"rx limit switch reverse" : True
+"current limit" : 15      # 480mA, in units of 32mA
+"max speed" : 64000000     # 200 full pulses/s
+"max acceleration" : 1280000  # 400 full pulses/s^2
+"max deceleration" : 1280000  # 400 full pulses/s^2
+"auto homing" : False       # homing will be controlled manually
+"homing speed towards" : 64000000  # 200 full pulses/s
+"homing speed away" : 16000000      # 50 full pulses/s
+"soft error response" : 0        # deenergize
+"control mode" : 0      # Serial/I2C/USB control
+"command timeout" : 0   # disable command timeout

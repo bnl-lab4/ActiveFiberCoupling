@@ -1,5 +1,9 @@
 ################ TODO
-# logging control
+# improve logging control
+# convert main menu to YAML
+# reduce main menu entried by taking stage and device as inputs (e.g. p0)
+#   allow arbitrary kwarg entries with choices
+#   kwargs in YAML will be defaults
 #####################
 #!/usr/bin/python
 
@@ -12,6 +16,7 @@ import numpy as np
 import importlib
 import logging
 import warnings
+import contextlib
 
 #Device Imports
 import piplates.DAQC2plate as DAQ
@@ -41,7 +46,8 @@ PIEZO_PORT0 = '/dev/ttyACM0'
 PIEZO_PORT1 = '/dev/ttyACM1'
 BAUD_RATE = 115200
 
-STEPPER_DICT = dict(x=None, y=None, z=None)
+STEPPER_DICT0 = dict(x = '00485185', y = '00485159', z = '00485175')
+STEPPER_DICT1 = dict(x = None, y = None, z = None)
 
 ExposureTime = 500      # default number of times to integrate photodiode input ADC
                 # in DAQ.getADC() function calls (approx 1ms?)
@@ -70,132 +76,133 @@ def reload_modules():       #   not working?
                 warnings.warn(f"RELOAD NOT SUCCESFUL: {module_dirpath}\n{e}")
 
 def main():
-    photodiode0 = Sensor(PHOTODIODE0, SensorType.PHOTODIODE)
-    photodiode1 = None
-#   sipm1 = Sensor(SIPM1, SensorType.SIPM)
+    with contextlib.ExitStack() as stack:
+        photodiode0 = stack.enter_context(Sensor(PHOTODIODE0, SensorType.PHOTODIODE))
+        photodiode1 = None
+    #   sipm1 = Sensor(SIPM1, SensorType.SIPM)
 
-    stage0 = StageDevices('stage0', PIEZO_PORT0, STEPPER_DICT,
-                          sensor = photodiode0, require_connection = False)
-    stage1 = StageDevices('stage1', PIEZO_PORT1, STEPPER_DICT,
-                          sensor = photodiode1, require_connection = False)
-   
-    MENU_DICT = {
-        '_manual_control' : "Manual Control Options",
-        '0' : {
-            'text'   : 'Stage 0 manual control',
-            'func'   : manual_control.run,
-            'args'   : (stage0, ExposureTime),
-            'kwargs' : {}
-                },
-        '1' : {
-            'text'   : 'Stage 1 manual control',
-            'func'   : manual_control.run,
-            'args'   : (stage1, ExposureTime),
-            'kwargs' : {}
-                },
-        'center p0' : {
-            'text'   : 'Center piezo axes of stage 0',
-            'func'   : center_axes.run,
-            'args'   : (stage0, MovementType.PIEZO),
-            'kwargs' : {}
-                },
-        'center p1' : {
-            'text'   : 'Center piezo axes of stage 1',
-            'func'   : center_axes.run,
-            'args'   : (stage0, MovementType.PIEZO),
-            'kwargs' : {}
-                },
-        'center s0' : {
-            'text'   : 'Center stepper axes of stage 0',
-            'func'   : center_axes.run,
-            'args'   : (stage0, MovementType.STEPPER),
-            'kwargs' : {}
-                },
-        'center s1' : {
-            'text'   : 'Center stepper axes of stage 1',
-            'func'   : center_axes.run,
-            'args'   : (stage0, MovementType.STEPPER),
-            'kwargs' : {}
-                },
-        'zero p0' : {
-            'text'   : 'Zero piezo axes of stage 0',
-            'func'   : zero_axes.run,
-            'args'   : (stage0, MovementType.PIEZO),
-            'kwargs' : {}
-                },
-        'zero p1' : {
-            'text'   : 'Zero piezo axes of stage 1',
-            'func'   : zero_axes.run,
-            'args'   : (stage0, MovementType.PIEZO),
-            'kwargs' : {}
-                },
-        'zero s0' : {
-            'text'   : 'Zero stepper axes of stage 0',
-            'func'   : zero_axes.run,
-            'args'   : (stage0, MovementType.STEPPER),
-            'kwargs' : {}
-                },
-        'zero s1' : {
-            'text'   : 'Zero stepper axes of stage 1',
-            'func'   : zero_axes.run,
-            'args'   : (stage0, MovementType.STEPPER),
-            'kwargs' : {}
-                },
-        'reload'  : {
-            'text'   : 'Reload all ActiveFiberCoupling modules (might be broken)',
-            'func'   : reload_modules,
-            'args'   : (),
-            'kwargs' : {}
-                },
-        '_optimization' : 'Optimization Algorithms',
-        'grid p0'    : {
-            'text'   : 'Grid search with piezos of stage 0',
-            'func'   : grid_search.run,
-            'args'   : (stage0, MovementType.PIEZO, ExposureTime),
-            'kwargs' : dict(spacing = Distance(15, "volts"), plot=False, planes=3)
-                },
-        'grid p1'    : {
-            'text'   : 'Grid search with piezos of stage 1',
-            'func'   : grid_search.run,
-            'args'   : (stage1, MovementType.PIEZO, ExposureTime),
-            'kwargs' : {}
-                },
-        'grid s0'    : {
-            'text'   : 'Grid search with steppers of stage 0',
-            'func'   : grid_search.run,
-            'args'   : (stage0, MovementType.STEPPER, ExposureTime),
-            'kwargs' : {}
-                },
-        'grid s1'    : {
-            'text'   : 'Grid search with steppers of stage 1',
-            'func'   : grid_search.run,
-            'args'   : (stage1, MovementType.STEPPER, ExposureTime),
-            'kwargs' : {}
+        stage0 = stack.enter_context(StageDevices('stage0', PIEZO_PORT0, STEPPER_DICT0,
+                              sensor = photodiode0, require_connection = False))
+        stage1 = stack.enter_context(StageDevices('stage1', PIEZO_PORT1, STEPPER_DICT1,
+                              sensor = photodiode1, require_connection = False))
+       
+        MENU_DICT = {
+            '_manual_control' : "Manual Control Options",
+            '0' : {
+                'text'   : 'Stage 0 manual control',
+                'func'   : manual_control.run,
+                'args'   : (stage0, ExposureTime),
+                'kwargs' : {}
+                    },
+            '1' : {
+                'text'   : 'Stage 1 manual control',
+                'func'   : manual_control.run,
+                'args'   : (stage1, ExposureTime),
+                'kwargs' : {}
+                    },
+            'center p0' : {
+                'text'   : 'Center piezo axes of stage 0',
+                'func'   : center_axes.run,
+                'args'   : (stage0, MovementType.PIEZO),
+                'kwargs' : {}
+                    },
+            'center p1' : {
+                'text'   : 'Center piezo axes of stage 1',
+                'func'   : center_axes.run,
+                'args'   : (stage0, MovementType.PIEZO),
+                'kwargs' : {}
+                    },
+            'center s0' : {
+                'text'   : 'Center stepper axes of stage 0',
+                'func'   : center_axes.run,
+                'args'   : (stage0, MovementType.STEPPER),
+                'kwargs' : {}
+                    },
+            'center s1' : {
+                'text'   : 'Center stepper axes of stage 1',
+                'func'   : center_axes.run,
+                'args'   : (stage0, MovementType.STEPPER),
+                'kwargs' : {}
+                    },
+            'zero p0' : {
+                'text'   : 'Zero piezo axes of stage 0',
+                'func'   : zero_axes.run,
+                'args'   : (stage0, MovementType.PIEZO),
+                'kwargs' : {}
+                    },
+            'zero p1' : {
+                'text'   : 'Zero piezo axes of stage 1',
+                'func'   : zero_axes.run,
+                'args'   : (stage0, MovementType.PIEZO),
+                'kwargs' : {}
+                    },
+            'zero s0' : {
+                'text'   : 'Zero stepper axes of stage 0',
+                'func'   : zero_axes.run,
+                'args'   : (stage0, MovementType.STEPPER),
+                'kwargs' : {}
+                    },
+            'zero s1' : {
+                'text'   : 'Zero stepper axes of stage 1',
+                'func'   : zero_axes.run,
+                'args'   : (stage0, MovementType.STEPPER),
+                'kwargs' : {}
+                    },
+            'reload'  : {
+                'text'   : 'Reload all ActiveFiberCoupling modules (might be broken)',
+                'func'   : reload_modules,
+                'args'   : (),
+                'kwargs' : {}
+                    },
+            '_optimization' : 'Optimization Algorithms',
+            'grid p0'    : {
+                'text'   : 'Grid search with piezos of stage 0',
+                'func'   : grid_search.run,
+                'args'   : (stage0, MovementType.PIEZO, ExposureTime),
+                'kwargs' : dict(spacing = Distance(15, "volts"), plot=False, planes=3)
+                    },
+            'grid p1'    : {
+                'text'   : 'Grid search with piezos of stage 1',
+                'func'   : grid_search.run,
+                'args'   : (stage1, MovementType.PIEZO, ExposureTime),
+                'kwargs' : {}
+                    },
+            'grid s0'    : {
+                'text'   : 'Grid search with steppers of stage 0',
+                'func'   : grid_search.run,
+                'args'   : (stage0, MovementType.STEPPER, ExposureTime),
+                'kwargs' : {}
+                    },
+            'grid s1'    : {
+                'text'   : 'Grid search with steppers of stage 1',
+                'func'   : grid_search.run,
+                'args'   : (stage1, MovementType.STEPPER, ExposureTime),
+                'kwargs' : {}
+                    }
                 }
-            }
 
-    def display_menu():
-        max_choice_length = max(map(lambda s: len(s) if not s.startswith('_') else 0,
-                                    list(MENU_DICT.keys())))    # excepting section titles, sorry
-        whitespace = max_choice_length + 2    # for aligning descriptions
-        for key, value in MENU_DICT.items():
-            if key.startswith('_'):
-                print('\n' + value)
+        def display_menu():
+            max_choice_length = max(map(lambda s: len(s) if not s.startswith('_') else 0,
+                                        list(MENU_DICT.keys())))    # excepting section titles, sorry
+            whitespace = max_choice_length + 2    # for aligning descriptions
+            for key, value in MENU_DICT.items():
+                if key.startswith('_'):
+                    print('\n' + value)
+                else:
+                    print(f"{key}:{' ' * (whitespace - len(key))}{value['text']}")
+            return
+
+
+        while True:
+            display_menu() 
+            user_input = input(">> ").strip()
+            if user_input.lower() == 'q':
+                break
+            if user_input not in MENU_DICT.keys() or user_input.startswith('_'):
+                print('\nInvalid input')
             else:
-                print(f"{key}:{' ' * (whitespace - len(key))}{value['text']}")
-        return
-
-
-    while True:
-        display_menu() 
-        user_input = input(">> ").strip()
-        if user_input.lower() == 'q':
-            break
-        if user_input not in MENU_DICT.keys() or user_input.startswith('_'):
-            print('\nInvalid input')
-        else:
-            MENU_DICT[user_input]['func'](*MENU_DICT[user_input]['args'],
-                                          **MENU_DICT[user_input]['kwargs'])
+                MENU_DICT[user_input]['func'](*MENU_DICT[user_input]['args'],
+                                              **MENU_DICT[user_input]['kwargs'])
 
 if __name__ == '__main__':
     main()

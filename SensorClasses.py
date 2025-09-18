@@ -5,6 +5,7 @@ import time
 import logging
 import warnings
 import socket
+import contextlib
 import piplates.DAQC2plate as DAQ
 from typing import Dict, Optional
 
@@ -24,7 +25,15 @@ class Sipm:
         DAQ.VerifyADDR(self.addr)
         DAQ.VerifyAINchannel(self.channel)
         log.info(f"Initialized to SiPM at addr {self.addr}, channel {self.channel}")
-        return
+
+    def __enter__(self):
+        pass    # not sure what to do here yet
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass    # not sure what to do here yet
+        return False
+
 
     def read(self):
         # getADC has several waits in it, we could prbably slim it down
@@ -51,7 +60,14 @@ class Photodiode:
         DAQ.VerifyADDR(self.addr)
         DAQ.VerifyAINchannel(self.channel)
         log.info(f"Initialized to photodiode at addr {self.addr}, channel {self.channel}")
-        return
+
+    def __enter__(self):
+        pass # no context management needed
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass    # no context management needed
+        return False
 
     def read(self):
         # getADC has several waits in it, we could prbably slim it down
@@ -75,6 +91,7 @@ class Sensor:
 
     def __init__(self, connection_dict: Dict[str, str],
                     sensorType: Optional[enum.Enum] = SensorType.PHOTODIODE):
+        self._exit_stack = contextlib.ExitStack()
         self.connection_dict = connection_dict
         self.sensorType = sensorType
         if sensorType == SensorType.SIPM:
@@ -85,7 +102,17 @@ class Sensor:
 #           self.sensor = Socket(connection_dict)
         else:
             raise ValueError("sensorType must be a SensorType enum.")
-        return
+
+
+    def __enter__(self):
+        self._exit_stack.enter_context(self.sensor)
+        log.debug("Entered sensor context")
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self._exit_stack.close()
+        log.debug("Exited context stack gracefully")
+        return False
 
     def read(self):
         return self.sensor.read()
