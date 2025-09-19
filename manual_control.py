@@ -20,7 +20,8 @@ Switch between goto (default) and move modes with 'goto' and 'move'.""")
             break
         if user_input == '':
             power = stage.sensor.integrate(Texp)
-            print(f"Power: {power:.6f}\nIntegrated for {Texp}")
+            power_str = str(f"{power:.6f}") if isinstance(power, float) else str(power)
+            print(f"Power: {power_str}\nIntegrated for {Texp}")
             continue
         if user_input == 'move':
             if goto: print('Switched to move mode.')

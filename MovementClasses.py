@@ -1,4 +1,4 @@
-########### TODO:
+#SOCKET TODO:
 #   stepper integration
 ####################
 import logging
@@ -9,7 +9,7 @@ import enum
 import yaml
 import contextlib
 from ticlib import TicUSB
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from SensorClasses import Sensor, SensorType
 
@@ -113,7 +113,7 @@ class Distance:
     
 
 class MoveResult:
-    def __init__(self, position: float, units: str, mechanism: str, centered_piezos: bool = False):
+    def __init__(self, position: Union[float, int], units: str, mechanism: str, centered_piezos: bool = False):
         self.position = position
         self.units = units
         self.mechanism = mechanism
@@ -153,7 +153,9 @@ class StageAxis:
                                         Distance(2800 * self.step_mode_mult, 'steps'))
                 warnings.warn(f"Stepper serial number {stepper} is not in stepper_info.yaml." +\
                             "Stage range set to safe defaults.")
-            self.STEPPER_CENTER = (self.STEPPER_LIMITS[1] - self.STEPPER_LIMITS[0]) / 2
+            log.debug(f"Stepper {self.stepper_SN} stage limits set to ({self.STEPPER_LIMITS[0].steps}, {self.STEPPER_LIMITS[1].steps}")
+            self.STEPPER_CENTER = (self.STEPPER_LIMITS[1] - self.STEPPER_LIMITS[0]) / 2 + self.STEPPER_LIMITS[0]
+            log.debug(f"Stepper {self.stepper_SN} stage center set to {self.STEPPER_CENTER.steps}")
 
             #   checking that the stepper controller settings are what we want
             #       because we can't change most of them in python
@@ -230,13 +232,18 @@ class StageAxis:
 
         return MoveResult(clamped, 'volts', 'piezo')
 
-    def _goto_stepper(self, steps: float) -> float:
+    def _goto_stepper(self, steps: int) -> float:
         # send move command to stepper
         # include clamping to safe values (per stepper)
         # this is a goto function
-        self.stepper.set_target_position(steps)
-        while self.stepper.get_target_position() != self.stepper.get_current_position():
-            time.sleep(0.01)
+        steps = int(steps)
+        if steps > self.STEPPER_LIMITS[1].steps:
+            warnings.warn(f"Cannot move to {steps} because it is above the steppers "+\
+                    f"stage limit of {self.STEPPER_LIMITS[1].steps}")
+        else:
+            self.stepper.set_target_position(steps)
+            while self.stepper.get_target_position() != self.stepper.get_current_position():
+                time.sleep(0.01)
         return MoveResult(steps, 'steps', 'stepper')
 
     def goto(self, position: Distance, which: Optional[MovementType] = None) -> float:
@@ -269,19 +276,19 @@ class StageAxis:
         raise ValueError("which must be a MovementType enum or None.")
 
     def move(self, movement: Distance, which: Optional[MovementType] = None) -> float:
+        # get stepper and piezo positions as Distance objects
+        stepper_position = Distance(self.stepper.get_current_position(), 'steps')
+
+        self.piezo.read(8)          #seems to clear better than flushing?
+        self.piezo.flush()
+        self.piezo.flushInput()
+        self.piezo.flushOutput()
+        self.piezo.write(f"{self.axis}voltage?\n".encode())
+        self.piezo.readline().decode('utf-8').strip()
+        piezo_position = self.piezo.read(8).decode('utf-8').strip()[2:-1] 
+        piezo_position = Distance(float(piezo_position), 'volts')
+
         if which == MovementType.GENERAL or which is None:
-            # get stepper and piezo positions as Distance objects
-            stepper_position = Distance(0, 'steps')
-
-            self.piezo.read(8)          #seems to clear better than flushing?
-            self.piezo.flush()
-            self.piezo.flushInput()
-            self.piezo.flushOutput()
-            self.piezo.write(f"{self.axis}voltage?\n".encode())
-            self.piezo.readline().decode('utf-8').strip()
-            piezo_position = self.piezo.read(8).decode('utf-8').strip()[2:-1] 
-            piezo_position = Distance(float(piezo_position), 'volts')
-
             axis_position = stepper_position + piezo_position
 
             if 0 < (axis_position + movement).volts < 75:
@@ -331,7 +338,7 @@ class StageDevices:
                     log.info(f"Connected to {stepper_SNs[axis]} as axis {axis}.")
                 else:
                     stepper = None
-                    log.info(f"No connection for {axis} provided")
+                    log.info(f"{self.name}:: no connection for {axis} provided")
             except ConnectionException as e:
                 if require_connection:
                     raise e

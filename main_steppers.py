@@ -1,6 +1,6 @@
 ################ TODO
 # convert main menu to YAML
-# reduce main menu entried by taking stage and device as inputs (e.g. p0)
+# reduce main menu entries by taking stage and device as inputs (e.g. p 0)
 #   allow arbitrary kwarg entries with choices
 #   kwargs in YAML will be defaults
 #####################
@@ -38,7 +38,7 @@ def setup_logging(log_to_console: bool = LOG_TO_CONSOLE, log_to_file: bool = LOG
 	
 	#Map string to logging level
 	level = getattr(logging, log_level.upper(), logging.INFO)
-	formatter - logging.formatter("%(asctime)s - %(module)s - %(funcName)s :: %(message)s")
+	formatter - logging.formatter("%(asctime)s - %(levelname)s - %(module)s - %(funcName)s :: %(message)s")
 	root_logger = logging.getLogger()
 	root_logger.setLevel(level)
 
@@ -63,17 +63,23 @@ def setup_logging(log_to_console: bool = LOG_TO_CONSOLE, log_to_file: bool = LOG
 
 
 # Device info
-PHOTODIODE0 = dict(addr = 0, channel = 1)
-PHOTODIODE1 = None
+SOCKET0 = dict(host = '192.168.1.10', port = 8000, sensortype = SensorType.SOCKET)
+SIPM0 = dict(addr = 0, channel = 1, sensortype = SensorType.SIPM)
+SIPM1 = dict(addr = 0, channel = 2, sensortype = SensorType.SIPM)
+PHOTODIODE0 = dict(addr = 0, channel = 1, sensortype = SensorType.PHOTODIODE)
+PHOTODIODE1 = dict(addr = 0, channel = 2, sensortype = SensorType.PHOTODIODE)
+
+SENSOR0 = SOCKET0
+SENSOR1 = PHOTODIODE0
 
 PIEZO_PORT0 = '/dev/ttyACM0'
 PIEZO_PORT1 = '/dev/ttyACM1'
 BAUD_RATE = 115200
 
-STEPPER_DICT0 = dict(x = '00485185', y = '00485159', z = '00485175')
+STEPPER_DICT0 = dict(x = '00485175', y = '00485185', z = '00485159')
 STEPPER_DICT1 = dict(x = None, y = None, z = None)
 
-ExposureTime = 500      # default number of times to integrate photodiode input ADC
+ExposureTime = 200      # default number of times to integrate photodiode input ADC
                 # in DAQ.getADC() function calls (approx 1ms?)
 
 
@@ -101,14 +107,13 @@ def reload_modules():       #   not working?
 
 def main():
     with contextlib.ExitStack() as stack:
-        photodiode0 = stack.enter_context(Sensor(PHOTODIODE0, SensorType.PHOTODIODE))
-        photodiode1 = None
-    #   sipm1 = Sensor(SIPM1, SensorType.SIPM)
+        sensor0 = stack.enter_context(Sensor(SENSOR0, SENSOR0['sensortype']))
+        sensor1 = stack.enter_context(Sensor(SENSOR1, SENSOR1['sensortype']))
 
         stage0 = stack.enter_context(StageDevices('stage0', PIEZO_PORT0, STEPPER_DICT0,
-                              sensor = photodiode0, require_connection = False))
+                              sensor = sensor0, require_connection = False))
         stage1 = stack.enter_context(StageDevices('stage1', PIEZO_PORT1, STEPPER_DICT1,
-                              sensor = photodiode1, require_connection = False))
+                              sensor = sensor1, require_connection = False))
        
         MENU_DICT = {
             '_manual_control' : "Manual Control Options",

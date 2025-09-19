@@ -115,6 +115,7 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
         axes: str = 'yz', planes: Union[None, int, Tuple[Distance, ...]] = None,
                                                          **grid_search_kwargs):  # default 3 planes
 
+    #   Why does center exist?????
     assert movementType in (MovementType.PIEZO, MovementType.STEPPER),\
             "movementType must be MovementType.PIEZO or .STEPPER"
             #   may add .GENERAL later
@@ -129,7 +130,10 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
 
     #   Default values
     if spacing is None and num_points is None:
-        spacing = Distance(10, "volts")
+        if movementType == MovementType.PIEZO:
+            spacing = Distance(10, "volts")
+        if movementType == MovementType.STEPPER:
+            spacing = Distance(200 * 32, "steps")
     if planes is None:
         planes = 3
 

@@ -8,7 +8,7 @@ def run(stage: StageDevices, which: MovementType):
         stage.goto('y', PIEZO_CENTER, MovementType.PIEZO)
         stage.goto('z', PIEZO_CENTER, MovementType.PIEZO)
     if which == MovementType.STEPPER or which == MovementType.GENERAL:
-        stage.goto('x', stage.axes['x'].STEPPER_CENTER, MovementType.STEPPER)
-        stage.goto('y', stage.axes['y'].STEPPER_CENTER, MovementType.STEPPER)
-        stage.goto('z', stage.axes['z'].STEPPER_CENTER, MovementType.STEPPER)
+        _ = stage.goto('x', stage.axes['x'].STEPPER_CENTER, MovementType.STEPPER)
+        _ = stage.goto('y', stage.axes['y'].STEPPER_CENTER, MovementType.STEPPER)
+        _ = stage.goto('z', stage.axes['z'].STEPPER_CENTER, MovementType.STEPPER)
 

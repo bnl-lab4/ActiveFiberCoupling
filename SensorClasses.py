@@ -1,5 +1,3 @@
-#### it would be nice to also have a socket class, but that would require a
-####    fundamentally different structure, effecting changes all the up to main.py
 import enum
 import time
 import logging
@@ -7,7 +5,7 @@ import warnings
 import socket
 import contextlib
 import piplates.DAQC2plate as DAQ
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 # unique logger name for this module
 log = logging.getLogger(__name__)
@@ -15,7 +13,7 @@ log = logging.getLogger(__name__)
 class SensorType(enum.Enum):
     SIPM = "SiPM"
     PHOTODIODE = "photodiode"
-    # SOCKET = "socket"
+    SOCKET = "socket"
 
 
 class Sipm:
@@ -41,16 +39,60 @@ class Sipm:
         log.debug(f"SiPM addr:{self.addr} channel:{self.channel} read power {power:.6f}")
         return power
 
-    def integrate(self, Texp: int, avg: bool = True):
+    def integrate(self, Texp: Union[int, float], avg: bool = True):
         # this would be much better if it integrated over time
         power = 0
+        Texp = int(Texp)
         for i in range(Texp):
             power += self.read()
         if avg:
             power /= Texp
-        log.info(f"SiPM addr:{self.addr} channel:{self.channel}  " +\
+        log.debug(f"SiPM addr:{self.addr} channel:{self.channel}  " +\
                 f"integrated power {power:.6f}{' averaged' if avg else ''} over {Texp} interations")
         return power
+
+class Socket:
+    def __init__(self, connection_dict: Dict[str, str]):
+        self.host = connection_dict['host']
+        self.port = connection_dict['port']
+        self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            self.connection.settimeout(5)
+            self.connection.connect((self.host, self.port))
+            log.info(f"Connected to socket host {self.host} at port {self.port}")
+        except TimeoutError as e:
+            warnings.warn(f"Timed out attempting to connect to host {self.host} at port {self.port}")
+        self.exit_stack = contextlib.ExitStack()
+
+    def __enter__(self):
+        self.exit_stack.enter_context(self.connection)
+        log.debug(f"Entered context of socket host {self.host} at port {self.port}")
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.exit_stack.close()
+        log.info(f"Socket connection to host {self.host} at port {self.port} closed")
+        log.debug(f"Exited context of socket host {self.host} at port {self.port}")
+
+    def read(self):
+        # getting a single reading does not make sense with the qutag
+        # defaults to a 100ms integration time
+        self.connection.sendall(str(100).encode('utf-8'))
+        power = int(self.connection.recv(1024).decode('utf-8'))
+        log.debug(f"Socket at host {self.host}, port {self.port} returned" +\
+                f"{int(power)} over {Texp}ms")
+        return power
+
+    def integrate(self, Texp: Union[int, float], avg: bool = True):
+        self.connection.sendall(str(Texp).encode('utf-8'))
+        power = float(self.connection.recv(1024).decode('utf-8'))
+        if not avg:
+            power *= Texp
+        power = int(power)
+        log.debug(f"Socket at host {self.host}, port {self.port} returned" +\
+                f"{power} {'averaged ' if avg else ''}over {Texp}ms")
+        return power
+
 
 
 class Photodiode:
@@ -72,11 +114,12 @@ class Photodiode:
     def read(self):
         # getADC has several waits in it, we could prbably slim it down
         power = DAQ.getADC(self.addr, self.channel)
-#       log.debug(f"Photodiode addr:{self.addr} channel:{self.channel} read power {power:.6f}")
+        log.debug(f"Photodiode addr:{self.addr} channel:{self.channel} read power {power:.6f}")
         return -power       # NOTE THE MINUS SIGN
 
-    def integrate(self, Texp: int, avg: bool = True):
+    def integrate(self, Texp: Union[int, float], avg: bool = True):
         power = 0
+        Texp = int(Texp)
         for i in range(Texp):
             power += self.read()
         if avg:
@@ -98,8 +141,8 @@ class Sensor:
             self.sensor = Sipm(connection_dict)
         elif sensorType == SensorType.PHOTODIODE:
             self.sensor = Photodiode(connection_dict)
-#       if sensorType == SensorType.SOCKET:
-#           self.sensor = Socket(connection_dict)
+        elif sensorType == SensorType.SOCKET:
+            self.sensor = Socket(connection_dict)
         else:
             raise ValueError("sensorType must be a SensorType enum.")
 
@@ -117,5 +160,5 @@ class Sensor:
     def read(self):
         return self.sensor.read()
 
-    def integrate(self, Texp: int, avg: Optional[bool] = True):
+    def integrate(self, Texp: Union[int, float], avg: Optional[bool] = True):
         return self.sensor.integrate(Texp, avg)
