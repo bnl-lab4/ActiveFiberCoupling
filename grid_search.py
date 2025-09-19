@@ -95,7 +95,7 @@ def grid_search(stage: StageDevices, movementType: MovementType,
 
     #   normalize weights, assuming that more light is in the positive direction
     weights = response_grid
-    weights -= weights.min()
+    weights -= weights.min() + 1e-3 * np.ones_like(weights)
     weights / weights.max()
     weights = 1 / np.sqrt(response_grid)
 
