@@ -74,7 +74,7 @@ def grid_search(stage: StageDevices, movementType: MovementType,
         stage.goto(axes[0], Distance(pos0, "microns"), movementType)
         for j, pos1 in enumerate(axis1):
             stage.goto(axes[1], Distance(pos1, "microns"), movementType)
-            response_grid[i, j] += stage.integrate(exposureTime, avg)
+            response_grid[j, i] += stage.integrate(exposureTime, avg)
 
 
     log.info(f"Grid values: {response_grid}")
@@ -92,7 +92,13 @@ def grid_search(stage: StageDevices, movementType: MovementType,
     params = gmodel.guess(response_grid.flatten(), axis0_grid.flatten(), axis1_grid.flatten())
     params['sigmay'].set(expr = 'sigmax')
     params.add('c', value = response_grid.min())
+
+    #   normalize weights, assuming that more light is in the positive direction
+    weights = response_grid
+    weights -= weights.min()
+    weights / weights.max()
     weights = 1 / np.sqrt(response_grid)
+
     result = model.fit(response_grid, x = axis0_grid, y = axis1_grid,
                        params = params, weights = weights, nan_policy = 'omit')
     maximum = result.params['height'].value
@@ -111,11 +117,9 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
         spacing: Union[None, Distance, Tuple[Distance, Distance]] = None,  # default 10 volts
         num_points: Tuple[None, int, Tuple[int, int]] = None,
         limits: Optional[Tuple] = None,                 # tuple of (tuples of) Distance objects
-        center: Optional[Tuple[Distance, Distance]] = None,
         axes: str = 'yz', planes: Union[None, int, Tuple[Distance, ...]] = None,
                                                          **grid_search_kwargs):  # default 3 planes
 
-    #   Why does center exist?????
     assert movementType in (MovementType.PIEZO, MovementType.STEPPER),\
             "movementType must be MovementType.PIEZO or .STEPPER"
             #   may add .GENERAL later
@@ -137,17 +141,11 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
     if planes is None:
         planes = 3
 
-    if center is None:
-        if movementType == MovementType.PIEZO:
-            center = (StageAxis.PIEZO_CENTER, ) * 2
-        elif movementType == MovementType.STEPPER:
-            center = (StageAxis.STEPPER_CENTER, ) * 2
-    
     if limits is None:
         if movementType == MovementType.PIEZO:
-            limits = (StageAxis.PIEZO_LIMITS, ) * 2
+            limits = (stage.PIEZO_LIMITS, ) * 2
         elif movementType == MovementType.STEPPER:
-            limits = (StageAxis.STEPPER_LIMITS, ) * 2
+            limits = [ stage.axes[grid_axis].STEPPER_LIMITS for grid_axis in axes ]
 
     #   Duck typing
     if isinstance(spacing, Distance):
@@ -159,7 +157,7 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
         if movementType == MovementType.PIEZO:
             planes = tuple(np.linspace(*StageAxis.PIEZO_LIMITS, planes))
         elif movementType == MovementType.STEPPER:
-            planes = tuple(np.linspace(*StageAxis.STEPPER_LIMITS, planes))
+            planes = tuple(np.linspace(*stage.axes[focus_axis].STEPPER_LIMITS, planes))
         
     if spacing is not None:
         axis0 = np.arange(limits[0][0].microns, 1.1*limits[0][1].microns, spacing[0].microns)
@@ -182,6 +180,12 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
         plane_maxima.append(maximum)
         plane_maxima_pos.append(maximum_pos)
         widths.append(width)
+
+        log.info(f"{focus_axis} = {plane.microns} intensity maximum: {maximum}")
+        log.info(f"{focus_axis} = {plane.microns} maximum at ({axes[0]}, {axes[1]}) = " +\
+                "({maximum_pos[0].microns}, {maximum_pos[1].microns})")
+        if width is not None:
+            log.info(f"{focus_axis} = {plane.microns} gaussian width sigma = {width}")
 
     plane_maxima = np.array(plane_maxima)
     plane_maxima_pos = np.array(plane_maxima_pos)

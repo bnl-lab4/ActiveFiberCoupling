@@ -34,7 +34,7 @@ class Distance:
     #   microns per full step might be different for each stepper
     #   this would require some structural changes to handle
     _MICRONS_PER_STEP = _MICRONS_PER_FULL_STEP / 32 # enforcing this step mode in StageAxis __init__
-    def __init__(self, value, unit):
+    def __init__(self, value: Union[int, float], unit: str = "microns"):
         if unit == "microns":
             self._microns = float(value)
         elif unit == "volts":
@@ -127,9 +127,6 @@ class MoveResult:
 
 class StageAxis:
     
-    PIEZO_LIMITS = (Distance(0, "volts"), Distance(75, "volts"))
-    PIEZO_CENTER = (PIEZO_LIMITS[1] - PIEZO_LIMITS[0]) / 2
-
     def __init__(self, axis: str, piezo, stepper, stepper_SN):
         self.axis = axis
         self.piezo = piezo
@@ -144,6 +141,9 @@ class StageAxis:
             self.step_mode_mult = 32    # currently going to enforce this
 
             #   getting stage limits from yaml file, if possible
+            self.PIEZO_LIMITS = (Distance(0, "volts"), Distance(75, "volts"))
+            self.PIEZO_CENTER = (self.PIEZO_LIMITS[1] - self.PIEZO_LIMITS[0]) / 2
+
             if stepper_SN in stepper_info.keys():
                 self.STEPPER_LIMITS = (Distance(stepper_info[stepper_SN][0] * self.step_mode_mult, 'steps'),
                                         Distance(stepper_info[stepper_SN][1] * self.step_mode_mult, 'steps'))
@@ -153,7 +153,7 @@ class StageAxis:
                                         Distance(2800 * self.step_mode_mult, 'steps'))
                 warnings.warn(f"Stepper serial number {stepper} is not in stepper_info.yaml." +\
                             "Stage range set to safe defaults.")
-            log.debug(f"Stepper {self.stepper_SN} stage limits set to ({self.STEPPER_LIMITS[0].steps}, {self.STEPPER_LIMITS[1].steps}")
+            log.debug(f"Stepper {self.stepper_SN} stage limits set to ({self.STEPPER_LIMITS[0].steps}, {self.STEPPER_LIMITS[1].steps})")
             self.STEPPER_CENTER = (self.STEPPER_LIMITS[1] - self.STEPPER_LIMITS[0]) / 2 + self.STEPPER_LIMITS[0]
             log.debug(f"Stepper {self.stepper_SN} stage center set to {self.STEPPER_CENTER.steps}")
 
@@ -238,7 +238,7 @@ class StageAxis:
         # this is a goto function
         steps = int(steps)
         if steps > self.STEPPER_LIMITS[1].steps:
-            warnings.warn(f"Cannot move to {steps} because it is above the steppers "+\
+            warnings.warn(f"Cannot move {self.stepper_SN} to {steps} because it is above the steppers "+\
                     f"stage limit of {self.STEPPER_LIMITS[1].steps}")
         else:
             self.stepper.set_target_position(steps)
@@ -263,8 +263,8 @@ class StageAxis:
             # decide whether the position can be reached with only the piezos
             if 0 < (stepper_position - movement).volts < 75:
                return self._goto_piezo(position.volts)
-            self._goto_piezo(PIEZO_CENTER.volts)
-            result = self._goto_stepper((position - (piezo_position + self.PIEZO_CENTER)).steps)
+            self._goto_piezo(self.PIEZO_CENTER.volts)
+            result = self._goto_stepper((position - (piezo_position + self.self.PIEZO_CENTER)).steps)
             result.centered_piezos = True
             return result
 
@@ -293,9 +293,9 @@ class StageAxis:
 
             if 0 < (axis_position + movement).volts < 75:
                 return self._goto_piezo((piezo_position + movement).volts)
-            self._goto_piezo(PIEZO_CENTER.volts)
+            self._goto_piezo(self.PIEZO_CENTER.volts)
             result = self._goto_stepper((stepper_position + movement -\
-                    (piezo_position - self.PIEZO_CENTER)).steps)
+                    (piezo_position - self.self.PIEZO_CENTER)).steps)
             result.centered_piezos = True
             return result
 
