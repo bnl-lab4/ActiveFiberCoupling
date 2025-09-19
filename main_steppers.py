@@ -34,6 +34,28 @@ LOG_TO_FILE = True # toggle to log to file
 LOG_FILENAME = "./log_output.txt" #need filepath
 LOG_LEVEL = "INFO" # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
 
+
+# Device info
+SOCKET0 = dict(host = '192.168.1.10', port = 8000, sensortype = SensorType.SOCKET)
+SIPM0 = dict(addr = 0, channel = 1, sensortype = SensorType.SIPM)
+SIPM1 = dict(addr = 0, channel = 2, sensortype = SensorType.SIPM)
+PHOTODIODE0 = dict(addr = 0, channel = 1, sensortype = SensorType.PHOTODIODE)
+PHOTODIODE1 = dict(addr = 0, channel = 2, sensortype = SensorType.PHOTODIODE)
+
+SENSOR0 = SOCKET0
+SENSOR1 = PHOTODIODE0
+
+PIEZO_PORT0 = '/dev/ttyACM0'
+PIEZO_PORT1 = '/dev/ttyACM1'
+BAUD_RATE = 115200
+
+STEPPER_DICT0 = dict(x = '00485175', y = '00485185', z = '00485159')
+STEPPER_DICT1 = dict(x = None, y = None, z = None)
+
+ExposureTime = 200      # default number of times to integrate photodiode input ADC
+                # in DAQ.getADC() function calls (approx 1ms?)
+
+
 def setup_logging(log_to_console: bool = LOG_TO_CONSOLE, log_to_file: bool = LOG_TO_FILE, filename = LOG_FILENAME, log_level: str = LOG_LEVEL):
 	
 	#Map string to logging level
@@ -60,28 +82,6 @@ def setup_logging(log_to_console: bool = LOG_TO_CONSOLE, log_to_file: bool = LOG
 	
 	if not (log_to_console or log_to_file):
 		logging.disable(logging.CRITICAL)
-
-
-# Device info
-SOCKET0 = dict(host = '192.168.1.10', port = 8000, sensortype = SensorType.SOCKET)
-SIPM0 = dict(addr = 0, channel = 1, sensortype = SensorType.SIPM)
-SIPM1 = dict(addr = 0, channel = 2, sensortype = SensorType.SIPM)
-PHOTODIODE0 = dict(addr = 0, channel = 1, sensortype = SensorType.PHOTODIODE)
-PHOTODIODE1 = dict(addr = 0, channel = 2, sensortype = SensorType.PHOTODIODE)
-
-SENSOR0 = SOCKET0
-SENSOR1 = PHOTODIODE0
-
-PIEZO_PORT0 = '/dev/ttyACM0'
-PIEZO_PORT1 = '/dev/ttyACM1'
-BAUD_RATE = 115200
-
-STEPPER_DICT0 = dict(x = '00485175', y = '00485185', z = '00485159')
-STEPPER_DICT1 = dict(x = None, y = None, z = None)
-
-ExposureTime = 200      # default number of times to integrate photodiode input ADC
-                # in DAQ.getADC() function calls (approx 1ms?)
-
 
 def reload_modules():       #   not working?
     print('\n')
