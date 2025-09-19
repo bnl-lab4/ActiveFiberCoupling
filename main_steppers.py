@@ -32,7 +32,7 @@ import grid_search
 LOG_TO_CONSOLE = True # toggle to log to console
 LOG_TO_FILE = True # toggle to log to file
 LOG_FILENAME = "./log_output.txt" #need filepath
-LOG_LEVEL = "INFO" # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+LOG_LEVEL = "DEBUG" # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 
 # Device info
@@ -42,8 +42,8 @@ SIPM1 = dict(addr = 0, channel = 2, sensortype = SensorType.SIPM)
 PHOTODIODE0 = dict(addr = 0, channel = 1, sensortype = SensorType.PHOTODIODE)
 PHOTODIODE1 = dict(addr = 0, channel = 2, sensortype = SensorType.PHOTODIODE)
 
-SENSOR0 = SOCKET0
-SENSOR1 = PHOTODIODE0
+SENSOR0 = PHOTODIODE0
+SENSOR1 = PHOTODIODE1
 
 PIEZO_PORT0 = '/dev/ttyACM0'
 PIEZO_PORT1 = '/dev/ttyACM1'
@@ -60,7 +60,7 @@ def setup_logging(log_to_console: bool = LOG_TO_CONSOLE, log_to_file: bool = LOG
 	
 	#Map string to logging level
 	level = getattr(logging, log_level.upper(), logging.INFO)
-	formatter - logging.formatter("%(asctime)s - %(levelname)s - %(module)s - %(funcName)s :: %(message)s")
+	formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s - %(funcName)s :: %(message)s")
 	root_logger = logging.getLogger()
 	root_logger.setLevel(level)
 
@@ -106,6 +106,7 @@ def reload_modules():       #   not working?
                 warnings.warn(f"RELOAD NOT SUCCESFUL: {module_dirpath}\n{e}")
 
 def main():
+    setup_logging()
     with contextlib.ExitStack() as stack:
         sensor0 = stack.enter_context(Sensor(SENSOR0, SENSOR0['sensortype']))
         sensor1 = stack.enter_context(Sensor(SENSOR1, SENSOR1['sensortype']))
@@ -200,7 +201,7 @@ def main():
                 'text'   : 'Grid search with steppers of stage 0',
                 'func'   : grid_search.run,
                 'args'   : (stage0, MovementType.STEPPER, ExposureTime),
-                'kwargs' : {}
+                'kwargs' : dict(axes = 'xz')
                     },
             'grid s1'    : {
                 'text'   : 'Grid search with steppers of stage 1',
