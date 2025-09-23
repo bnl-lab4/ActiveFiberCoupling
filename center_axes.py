@@ -1,4 +1,5 @@
-from MovementClasses import StageDevices, StageAxis, Distance, MovementType
+from MovementClasses import StageDevices, MovementType
+
 
 def run(stage: StageDevices, which: MovementType):
     if which == MovementType.PIEZO or which == MovementType.GENERAL:
@@ -9,4 +10,3 @@ def run(stage: StageDevices, which: MovementType):
         _ = stage.goto('x', stage.axes['x'].STEPPER_CENTER, MovementType.STEPPER)
         _ = stage.goto('y', stage.axes['y'].STEPPER_CENTER, MovementType.STEPPER)
         _ = stage.goto('z', stage.axes['z'].STEPPER_CENTER, MovementType.STEPPER)
-

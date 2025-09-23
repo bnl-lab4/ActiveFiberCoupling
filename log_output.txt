@@ -4709,3 +4709,339 @@ z = [2650. 3150. 3650. 4150. 4650. 5150. 5650. 6150. 6650. 7150. 7650.] microns
 2025-09-19 17:19:43,691 - DEBUG - font_manager - _findfont_cached :: findfont: score(FontEntry(fname='/usr/share/fonts/truetype/lyx/cmsy10.ttf', name='cmsy10', style='normal', variant='normal', weight=400, stretch='normal', size='scalable')) = 10.05
 2025-09-19 17:19:43,691 - DEBUG - font_manager - _findfont_cached :: findfont: score(FontEntry(fname='/usr/share/fonts/truetype/freefont/FreeSans.ttf', name='FreeSans', style='normal', variant='normal', weight=400, stretch='normal', size='scalable')) = 10.05
 2025-09-19 17:19:43,691 - DEBUG - font_manager - _findfont_cached :: findfont: Matching sans\-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=12.0 to DejaVu Sans ('/home/bnl/ActiveFiberCoupling/venv/lib/python3.11/site-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
+2025-09-19 18:10:40,685 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 1
+2025-09-19 18:10:40,687 - DEBUG - SensorClasses - __enter__ :: Entered sensor context
+2025-09-19 18:10:40,687 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 2
+2025-09-19 18:10:40,688 - DEBUG - SensorClasses - __enter__ :: Entered sensor context
+2025-09-19 18:10:40,751 - INFO - MovementClasses - __init__ :: Connected to 00485175 as axis x.
+2025-09-19 18:10:40,753 - DEBUG - MovementClasses - __init__ :: Stepper 00485175 stage limits set to (35200.0, 100800.0)
+2025-09-19 18:10:40,754 - DEBUG - MovementClasses - __init__ :: Stepper 00485175 stage center set to 68000.0
+2025-09-19 18:10:40,766 - INFO - MovementClasses - __init__ :: Stepper 00485175 settings are as expected
+2025-09-19 18:10:40,778 - INFO - MovementClasses - __init__ :: Connected to 00485185 as axis y.
+2025-09-19 18:10:40,781 - DEBUG - MovementClasses - __init__ :: Stepper 00485185 stage limits set to (36160.0, 91840.0)
+2025-09-19 18:10:40,781 - DEBUG - MovementClasses - __init__ :: Stepper 00485185 stage center set to 64000.0
+2025-09-19 18:10:40,791 - INFO - MovementClasses - __init__ :: Stepper 00485185 settings are as expected
+2025-09-19 18:10:40,800 - INFO - MovementClasses - __init__ :: Connected to 00485159 as axis z.
+2025-09-19 18:10:40,802 - DEBUG - MovementClasses - __init__ :: Stepper 00485159 stage limits set to (33920.0, 92800.0)
+2025-09-19 18:10:40,803 - DEBUG - MovementClasses - __init__ :: Stepper 00485159 stage center set to 63360.0
+2025-09-19 18:10:40,813 - INFO - MovementClasses - __init__ :: Stepper 00485159 settings are as expected
+2025-09-19 18:10:40,815 - INFO - MovementClasses - __enter__ :: Stepper 00485175 energized and now homing
+2025-09-19 18:10:42,537 - INFO - MovementClasses - __enter__ :: Stepper 00485175 homing complete
+2025-09-19 18:10:42,538 - DEBUG - MovementClasses - __enter__ :: Axis x context entered for stepper 00485175
+2025-09-19 18:10:42,542 - INFO - MovementClasses - __enter__ :: Stepper 00485185 energized and now homing
+2025-09-19 18:10:55,055 - INFO - MovementClasses - __enter__ :: Stepper 00485185 homing complete
+2025-09-19 18:10:55,056 - DEBUG - MovementClasses - __enter__ :: Axis y context entered for stepper 00485185
+2025-09-19 18:10:55,061 - INFO - MovementClasses - __enter__ :: Stepper 00485159 energized and now homing
+2025-09-19 18:11:11,019 - INFO - MovementClasses - __enter__ :: Stepper 00485159 homing complete
+2025-09-19 18:11:11,019 - DEBUG - MovementClasses - __enter__ :: Axis z context entered for stepper 00485159
+2025-09-19 18:11:11,020 - INFO - MovementClasses - __init__ :: stage1:: no connection for x provided
+2025-09-19 18:11:11,021 - INFO - MovementClasses - __init__ :: stage1:: no connection for y provided
+2025-09-19 18:11:11,021 - INFO - MovementClasses - __init__ :: stage1:: no connection for z provided
+2025-09-19 18:11:11,022 - DEBUG - MovementClasses - __enter__ :: Axis x context entered for stepper None
+2025-09-19 18:11:11,022 - DEBUG - MovementClasses - __enter__ :: Axis y context entered for stepper None
+2025-09-19 18:11:11,022 - DEBUG - MovementClasses - __enter__ :: Axis z context entered for stepper None
+2025-09-19 18:12:08,217 - DEBUG - MovementClasses - goto :: stage0, Axis x :set stepper to 68000 steps
+2025-09-19 18:12:18,692 - DEBUG - MovementClasses - goto :: stage0, Axis y :set stepper to 64000 steps
+2025-09-19 18:12:29,071 - DEBUG - MovementClasses - goto :: stage0, Axis z :set stepper to 63360 steps
+2025-09-19 18:12:31,549 - DEBUG - MovementClasses - __exit__ :: Exited context stack gracefully
+2025-09-19 18:12:31,557 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485159 upon exit
+2025-09-19 18:12:31,565 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485185 upon exit
+2025-09-19 18:12:31,572 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485175 upon exit
+2025-09-19 18:12:31,573 - DEBUG - MovementClasses - __exit__ :: Exited context stack gracefully
+2025-09-19 18:12:31,574 - DEBUG - SensorClasses - __exit__ :: Exited context stack gracefully
+2025-09-19 18:12:31,575 - DEBUG - SensorClasses - __exit__ :: Exited context stack gracefully
+2025-09-23 15:00:42,545 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 1
+2025-09-23 15:00:42,553 - DEBUG - SensorClasses - __enter__ :: Entered sensor context
+2025-09-23 15:00:42,553 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 2
+2025-09-23 15:00:42,554 - DEBUG - SensorClasses - __enter__ :: Entered sensor context
+2025-09-23 15:00:42,636 - INFO - MovementClasses - __init__ :: Connected to 00485175 as axis x.
+2025-09-23 15:00:42,638 - DEBUG - MovementClasses - __init__ :: Stepper 00485175 stage limits set to (35200.0, 100800.0)
+2025-09-23 15:00:42,639 - DEBUG - MovementClasses - __init__ :: Stepper 00485175 stage center set to 68000.0
+2025-09-23 15:00:42,649 - INFO - MovementClasses - __init__ :: Stepper 00485175 settings are as expected
+2025-09-23 15:00:42,657 - INFO - MovementClasses - __init__ :: Connected to 00485185 as axis y.
+2025-09-23 15:00:42,659 - DEBUG - MovementClasses - __init__ :: Stepper 00485185 stage limits set to (36160.0, 91840.0)
+2025-09-23 15:00:42,659 - DEBUG - MovementClasses - __init__ :: Stepper 00485185 stage center set to 64000.0
+2025-09-23 15:00:42,672 - INFO - MovementClasses - __init__ :: Stepper 00485185 settings are as expected
+2025-09-23 15:00:42,684 - INFO - MovementClasses - __init__ :: Connected to 00485159 as axis z.
+2025-09-23 15:00:42,686 - DEBUG - MovementClasses - __init__ :: Stepper 00485159 stage limits set to (33920.0, 92800.0)
+2025-09-23 15:00:42,687 - DEBUG - MovementClasses - __init__ :: Stepper 00485159 stage center set to 63360.0
+2025-09-23 15:00:42,697 - INFO - MovementClasses - __init__ :: Stepper 00485159 settings are as expected
+2025-09-23 15:00:42,701 - INFO - MovementClasses - __enter__ :: Stepper 00485175 energized and now homing
+2025-09-23 15:00:53,098 - INFO - MovementClasses - __enter__ :: Stepper 00485175 homing complete
+2025-09-23 15:00:53,098 - DEBUG - MovementClasses - __enter__ :: Axis x context entered for stepper 00485175
+2025-09-23 15:00:53,101 - INFO - MovementClasses - __enter__ :: Stepper 00485185 energized and now homing
+2025-09-23 15:00:55,160 - INFO - MovementClasses - __enter__ :: Stepper 00485185 homing complete
+2025-09-23 15:00:55,160 - DEBUG - MovementClasses - __enter__ :: Axis y context entered for stepper 00485185
+2025-09-23 15:00:55,164 - INFO - MovementClasses - __enter__ :: Stepper 00485159 energized and now homing
+2025-09-23 15:00:56,710 - INFO - MovementClasses - __enter__ :: Stepper 00485159 homing complete
+2025-09-23 15:00:56,711 - DEBUG - MovementClasses - __enter__ :: Axis z context entered for stepper 00485159
+2025-09-23 15:00:56,712 - INFO - MovementClasses - __init__ :: stage1:: no connection for x provided
+2025-09-23 15:00:56,712 - INFO - MovementClasses - __init__ :: stage1:: no connection for y provided
+2025-09-23 15:00:56,713 - INFO - MovementClasses - __init__ :: stage1:: no connection for z provided
+2025-09-23 15:00:56,713 - DEBUG - MovementClasses - __enter__ :: Axis x context entered for stepper None
+2025-09-23 15:00:56,714 - DEBUG - MovementClasses - __enter__ :: Axis y context entered for stepper None
+2025-09-23 15:00:56,714 - DEBUG - MovementClasses - __enter__ :: Axis z context entered for stepper None
+2025-09-23 15:01:18,956 - DEBUG - MovementClasses - __exit__ :: Exited context stack gracefully
+2025-09-23 15:01:18,960 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485159 upon exit
+2025-09-23 15:01:18,962 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485185 upon exit
+2025-09-23 15:01:18,964 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485175 upon exit
+2025-09-23 15:01:18,965 - DEBUG - MovementClasses - __exit__ :: Exited context stack gracefully
+2025-09-23 15:01:18,965 - DEBUG - SensorClasses - __exit__ :: Exited context stack gracefully
+2025-09-23 15:01:18,965 - DEBUG - SensorClasses - __exit__ :: Exited context stack gracefully
+2025-09-23 15:03:34,201 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 1
+2025-09-23 15:03:34,201 - DEBUG - SensorClasses - __enter__ :: Entered sensor context
+2025-09-23 15:03:34,201 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 2
+2025-09-23 15:03:34,202 - DEBUG - SensorClasses - __enter__ :: Entered sensor context
+2025-09-23 15:03:34,205 - INFO - MovementClasses - __init__ :: Connected to /dev/ttyACM0 at 115200 baud.
+2025-09-23 15:03:34,252 - INFO - MovementClasses - __init__ :: Connected to 00485175 as axis x.
+2025-09-23 15:03:34,256 - DEBUG - MovementClasses - __init__ :: Stepper 00485175 stage limits set to (35200.0, 100800.0)
+2025-09-23 15:03:34,256 - DEBUG - MovementClasses - __init__ :: Stepper 00485175 stage center set to 68000.0
+2025-09-23 15:03:34,266 - INFO - MovementClasses - __init__ :: Stepper 00485175 settings are as expected
+2025-09-23 15:03:34,273 - INFO - MovementClasses - __init__ :: Connected to 00485185 as axis y.
+2025-09-23 15:03:34,275 - DEBUG - MovementClasses - __init__ :: Stepper 00485185 stage limits set to (36160.0, 91840.0)
+2025-09-23 15:03:34,276 - DEBUG - MovementClasses - __init__ :: Stepper 00485185 stage center set to 64000.0
+2025-09-23 15:03:34,291 - INFO - MovementClasses - __init__ :: Stepper 00485185 settings are as expected
+2025-09-23 15:03:34,303 - INFO - MovementClasses - __init__ :: Connected to 00485159 as axis z.
+2025-09-23 15:03:34,306 - DEBUG - MovementClasses - __init__ :: Stepper 00485159 stage limits set to (33920.0, 92800.0)
+2025-09-23 15:03:34,307 - DEBUG - MovementClasses - __init__ :: Stepper 00485159 stage center set to 63360.0
+2025-09-23 15:03:34,325 - INFO - MovementClasses - __init__ :: Stepper 00485159 settings are as expected
+2025-09-23 15:03:34,330 - INFO - MovementClasses - __enter__ :: Stepper 00485175 energized and now homing
+2025-09-23 15:03:36,181 - INFO - MovementClasses - __enter__ :: Stepper 00485175 homing complete
+2025-09-23 15:03:36,181 - DEBUG - MovementClasses - __enter__ :: Axis x context entered for stepper 00485175
+2025-09-23 15:03:36,185 - INFO - MovementClasses - __enter__ :: Stepper 00485185 energized and now homing
+2025-09-23 15:03:38,234 - INFO - MovementClasses - __enter__ :: Stepper 00485185 homing complete
+2025-09-23 15:03:38,234 - DEBUG - MovementClasses - __enter__ :: Axis y context entered for stepper 00485185
+2025-09-23 15:03:38,237 - INFO - MovementClasses - __enter__ :: Stepper 00485159 energized and now homing
+2025-09-23 15:03:39,674 - INFO - MovementClasses - __enter__ :: Stepper 00485159 homing complete
+2025-09-23 15:03:39,674 - DEBUG - MovementClasses - __enter__ :: Axis z context entered for stepper 00485159
+2025-09-23 15:03:39,675 - INFO - MovementClasses - __init__ :: stage1:: no connection for x provided
+2025-09-23 15:03:39,676 - INFO - MovementClasses - __init__ :: stage1:: no connection for y provided
+2025-09-23 15:03:39,676 - INFO - MovementClasses - __init__ :: stage1:: no connection for z provided
+2025-09-23 15:03:39,676 - DEBUG - MovementClasses - __enter__ :: Axis x context entered for stepper None
+2025-09-23 15:03:39,676 - DEBUG - MovementClasses - __enter__ :: Axis y context entered for stepper None
+2025-09-23 15:03:39,676 - DEBUG - MovementClasses - __enter__ :: Axis z context entered for stepper None
+2025-09-23 15:03:45,464 - DEBUG - MovementClasses - goto :: stage0, Axis x :set piezo to 37.5 volts
+2025-09-23 15:03:45,465 - DEBUG - MovementClasses - goto :: stage0, Axis y :set piezo to 37.5 volts
+2025-09-23 15:03:45,465 - DEBUG - MovementClasses - goto :: stage0, Axis z :set piezo to 37.5 volts
+2025-09-23 15:04:02,343 - DEBUG - MovementClasses - goto :: stage0, Axis x :set stepper to 68000 steps
+2025-09-23 15:04:12,824 - DEBUG - MovementClasses - goto :: stage0, Axis y :set stepper to 64000 steps
+2025-09-23 15:04:23,197 - DEBUG - MovementClasses - goto :: stage0, Axis z :set stepper to 63360 steps
+2025-09-23 15:04:47,856 - DEBUG - SensorClasses - integrate :: Photodiode addr:0 channel 1  integrated power -1.336315 averaged over 200 interations
+2025-09-23 15:06:13,524 - DEBUG - MovementClasses - goto :: stage0, Axis x :set piezo to 0.0 volts
+2025-09-23 15:06:42,688 - DEBUG - MovementClasses - goto :: stage0, Axis y :set piezo to 10.0 volts
+2025-09-23 15:06:51,449 - DEBUG - MovementClasses - move :: stage0, Axis x :set piezo to 10.0 volts
+2025-09-23 15:06:56,896 - DEBUG - MovementClasses - move :: stage0, Axis x :set piezo to 60.04 volts
+2025-09-23 15:06:59,986 - DEBUG - MovementClasses - move :: stage0, Axis x :set piezo to 75.0 volts
+2025-09-23 15:08:09,859 - DEBUG - MovementClasses - move :: stage0, Axis z :set stepper to 73360 steps
+2025-09-23 15:08:46,448 - DEBUG - MovementClasses - __exit__ :: Exited context stack gracefully
+2025-09-23 15:08:46,450 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485159 upon exit
+2025-09-23 15:08:46,454 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485185 upon exit
+2025-09-23 15:08:46,457 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485175 upon exit
+2025-09-23 15:08:46,457 - DEBUG - MovementClasses - __exit__ :: Exited context stack gracefully
+2025-09-23 15:08:46,458 - DEBUG - SensorClasses - __exit__ :: Exited context stack gracefully
+2025-09-23 15:08:46,458 - DEBUG - SensorClasses - __exit__ :: Exited context stack gracefully
+2025-09-23 18:40:25,892 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 1
+2025-09-23 18:40:25,893 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 2
+2025-09-23 18:40:25,898 - INFO - MovementClasses - __init__ :: Connected to /dev/ttyACM0 at 115200 baud.
+2025-09-23 18:40:25,951 - INFO - MovementClasses - __init__ :: Connected to 00485175 as axis x.
+2025-09-23 18:40:25,965 - INFO - MovementClasses - __init__ :: Stepper 00485175 settings are as expected
+2025-09-23 18:40:25,976 - INFO - MovementClasses - __init__ :: Connected to 00485185 as axis y.
+2025-09-23 18:40:25,995 - INFO - MovementClasses - __init__ :: Stepper 00485185 settings are as expected
+2025-09-23 18:40:26,008 - INFO - MovementClasses - __init__ :: Connected to 00485159 as axis z.
+2025-09-23 18:40:26,028 - INFO - MovementClasses - __init__ :: Stepper 00485159 settings are as expected
+2025-09-23 18:40:26,031 - INFO - MovementClasses - __enter__ :: Stepper 00485175 energized
+2025-09-23 18:40:26,034 - INFO - MovementClasses - __enter__ :: Stepper 00485185 energized
+2025-09-23 18:40:26,042 - INFO - MovementClasses - __enter__ :: Stepper 00485159 energized
+2025-09-23 18:40:26,045 - INFO - MovementClasses - __init__ :: stage1:: no connection for x provided
+2025-09-23 18:40:26,047 - INFO - MovementClasses - __init__ :: stage1:: no connection for y provided
+2025-09-23 18:40:26,048 - INFO - MovementClasses - __init__ :: stage1:: no connection for z provided
+2025-09-23 18:41:19,612 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485159 upon exit
+2025-09-23 18:41:19,615 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485185 upon exit
+2025-09-23 18:41:19,618 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485175 upon exit
+2025-09-23 18:41:27,697 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 1
+2025-09-23 18:41:27,697 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 2
+2025-09-23 18:41:27,699 - INFO - MovementClasses - __init__ :: Connected to /dev/ttyACM0 at 115200 baud.
+2025-09-23 18:41:27,752 - INFO - MovementClasses - __init__ :: Connected to 00485175 as axis x.
+2025-09-23 18:41:27,769 - INFO - MovementClasses - __init__ :: Stepper 00485175 settings are as expected
+2025-09-23 18:41:27,780 - INFO - MovementClasses - __init__ :: Connected to 00485185 as axis y.
+2025-09-23 18:41:27,794 - INFO - MovementClasses - __init__ :: Stepper 00485185 settings are as expected
+2025-09-23 18:41:27,804 - INFO - MovementClasses - __init__ :: Connected to 00485159 as axis z.
+2025-09-23 18:41:27,824 - INFO - MovementClasses - __init__ :: Stepper 00485159 settings are as expected
+2025-09-23 18:41:27,830 - INFO - MovementClasses - __enter__ :: Stepper 00485175 energized
+2025-09-23 18:41:27,833 - INFO - MovementClasses - __enter__ :: Stepper 00485185 energized
+2025-09-23 18:41:27,835 - INFO - MovementClasses - __enter__ :: Stepper 00485159 energized
+2025-09-23 18:41:27,837 - INFO - MovementClasses - __init__ :: stage1:: no connection for x provided
+2025-09-23 18:41:27,837 - INFO - MovementClasses - __init__ :: stage1:: no connection for y provided
+2025-09-23 18:41:27,837 - INFO - MovementClasses - __init__ :: stage1:: no connection for z provided
+2025-09-23 18:41:48,892 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485159 upon exit
+2025-09-23 18:41:48,895 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485185 upon exit
+2025-09-23 18:41:48,898 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485175 upon exit
+2025-09-23 18:45:25,529 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 1
+2025-09-23 18:45:25,530 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 2
+2025-09-23 18:45:25,532 - INFO - MovementClasses - __init__ :: Connected to /dev/ttyACM0 at 115200 baud.
+2025-09-23 18:45:25,578 - INFO - MovementClasses - __init__ :: Connected to 00485175 as axis x.
+2025-09-23 18:45:25,595 - INFO - MovementClasses - __init__ :: Stepper 00485175 settings are as expected
+2025-09-23 18:45:25,602 - INFO - MovementClasses - __init__ :: Connected to 00485185 as axis y.
+2025-09-23 18:45:25,622 - INFO - MovementClasses - __init__ :: Stepper 00485185 settings are as expected
+2025-09-23 18:45:25,633 - INFO - MovementClasses - __init__ :: Connected to 00485159 as axis z.
+2025-09-23 18:45:25,661 - INFO - MovementClasses - __init__ :: Stepper 00485159 settings are as expected
+2025-09-23 18:45:25,664 - INFO - MovementClasses - __enter__ :: Stepper 00485175 energized
+2025-09-23 18:45:25,667 - INFO - MovementClasses - __enter__ :: Stepper 00485185 energized
+2025-09-23 18:45:25,669 - INFO - MovementClasses - __enter__ :: Stepper 00485159 energized
+2025-09-23 18:45:25,677 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485159 upon exit
+2025-09-23 18:45:25,681 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485185 upon exit
+2025-09-23 18:45:25,684 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485175 upon exit
+2025-09-23 18:45:44,041 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 1
+2025-09-23 18:45:44,042 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 2
+2025-09-23 18:45:44,043 - INFO - MovementClasses - __init__ :: Connected to /dev/ttyACM0 at 115200 baud.
+2025-09-23 18:45:44,092 - INFO - MovementClasses - __init__ :: Connected to 00485175 as axis x.
+2025-09-23 18:45:44,112 - INFO - MovementClasses - __init__ :: Stepper 00485175 settings are as expected
+2025-09-23 18:45:44,118 - INFO - MovementClasses - __init__ :: Connected to 00485185 as axis y.
+2025-09-23 18:45:44,138 - INFO - MovementClasses - __init__ :: Stepper 00485185 settings are as expected
+2025-09-23 18:45:44,147 - INFO - MovementClasses - __init__ :: Connected to 00485159 as axis z.
+2025-09-23 18:45:44,168 - INFO - MovementClasses - __init__ :: Stepper 00485159 settings are as expected
+2025-09-23 18:45:44,173 - INFO - MovementClasses - __enter__ :: Stepper 00485175 energized
+2025-09-23 18:45:44,175 - INFO - MovementClasses - __enter__ :: Stepper 00485185 energized
+2025-09-23 18:45:44,177 - INFO - MovementClasses - __enter__ :: Stepper 00485159 energized
+2025-09-23 18:45:44,178 - INFO - MovementClasses - __init__ :: stage1:: no connection for x provided
+2025-09-23 18:45:44,179 - INFO - MovementClasses - __init__ :: stage1:: no connection for y provided
+2025-09-23 18:45:44,179 - INFO - MovementClasses - __init__ :: stage1:: no connection for z provided
+2025-09-23 18:46:13,360 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485159 upon exit
+2025-09-23 18:46:13,362 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485185 upon exit
+2025-09-23 18:46:13,364 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485175 upon exit
+2025-09-23 18:58:31,758 - INFO - main_steppers - setup_logging :: Logging to console and file ./log_output.txt with level 20
+2025-09-23 18:58:31,759 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 1
+2025-09-23 18:58:31,759 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 2
+2025-09-23 18:58:31,761 - INFO - MovementClasses - __init__ :: Connected to /dev/ttyACM0 at 115200 baud.
+2025-09-23 18:58:31,812 - INFO - MovementClasses - __init__ :: Connected to 00485175 as axis x.
+2025-09-23 18:58:31,826 - INFO - MovementClasses - __init__ :: Stepper 00485175 settings are as expected
+2025-09-23 18:58:31,836 - INFO - MovementClasses - __init__ :: Connected to 00485185 as axis y.
+2025-09-23 18:58:31,848 - INFO - MovementClasses - __init__ :: Stepper 00485185 settings are as expected
+2025-09-23 18:58:31,861 - INFO - MovementClasses - __init__ :: Connected to 00485159 as axis z.
+2025-09-23 18:58:31,880 - INFO - MovementClasses - __init__ :: Stepper 00485159 settings are as expected
+2025-09-23 18:58:31,882 - INFO - MovementClasses - __enter__ :: Stepper 00485175 energized
+2025-09-23 18:58:31,885 - INFO - MovementClasses - __enter__ :: Stepper 00485185 energized
+2025-09-23 18:58:31,887 - INFO - MovementClasses - __enter__ :: Stepper 00485159 energized
+2025-09-23 18:58:31,888 - INFO - MovementClasses - __init__ :: stage1:: no connection for x provided
+2025-09-23 18:58:31,889 - INFO - MovementClasses - __init__ :: stage1:: no connection for y provided
+2025-09-23 18:58:31,889 - INFO - MovementClasses - __init__ :: stage1:: no connection for z provided
+2025-09-23 18:59:40,786 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485159 upon exit
+2025-09-23 18:59:40,789 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485185 upon exit
+2025-09-23 18:59:40,792 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485175 upon exit
+2025-09-23 19:00:06,797 - INFO - main_steppers - setup_logging :: Logging to console and file ./log_output.txt with level 20
+2025-09-23 19:00:06,798 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 1
+2025-09-23 19:00:06,804 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 2
+2025-09-23 19:00:06,807 - INFO - MovementClasses - __init__ :: Connected to /dev/ttyACM0 at 115200 baud.
+2025-09-23 19:00:06,858 - INFO - MovementClasses - __init__ :: Connected to 00485175 as axis x.
+2025-09-23 19:00:06,879 - INFO - MovementClasses - __init__ :: Connected to 00485185 as axis y.
+2025-09-23 19:00:06,899 - INFO - MovementClasses - __init__ :: Connected to 00485159 as axis z.
+2025-09-23 19:00:06,921 - INFO - MovementClasses - __enter__ :: Stepper 00485175 energized
+2025-09-23 19:00:06,923 - INFO - MovementClasses - __enter__ :: Stepper 00485175 now homing
+2025-09-23 19:00:08,673 - INFO - MovementClasses - __enter__ :: Stepper 00485175 homing complete
+2025-09-23 19:00:08,675 - INFO - MovementClasses - __enter__ :: Stepper 00485185 energized
+2025-09-23 19:00:08,678 - INFO - MovementClasses - __enter__ :: Stepper 00485185 now homing
+2025-09-23 19:00:10,737 - INFO - MovementClasses - __enter__ :: Stepper 00485185 homing complete
+2025-09-23 19:00:10,740 - INFO - MovementClasses - __enter__ :: Stepper 00485159 energized
+2025-09-23 19:00:10,742 - INFO - MovementClasses - __enter__ :: Stepper 00485159 now homing
+2025-09-23 19:00:12,184 - INFO - MovementClasses - __enter__ :: Stepper 00485159 homing complete
+2025-09-23 19:00:12,186 - INFO - MovementClasses - __init__ :: stage1:: no connection for x provided
+2025-09-23 19:00:12,186 - INFO - MovementClasses - __init__ :: stage1:: no connection for y provided
+2025-09-23 19:00:12,186 - INFO - MovementClasses - __init__ :: stage1:: no connection for z provided
+2025-09-23 19:00:58,148 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485159 upon exit
+2025-09-23 19:00:58,151 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485185 upon exit
+2025-09-23 19:00:58,153 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485175 upon exit
+2025-09-23 19:02:11,418 - INFO - main_steppers - setup_logging :: Logging to console and file ./log_output.txt with level 20
+2025-09-23 19:02:11,418 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 1
+2025-09-23 19:02:11,419 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 2
+2025-09-23 19:02:11,420 - INFO - MovementClasses - __init__ :: Connected to /dev/ttyACM0 at 115200 baud.
+2025-09-23 19:02:11,467 - INFO - MovementClasses - __init__ :: Connected to 00485175 as axis x.
+2025-09-23 19:02:11,487 - INFO - MovementClasses - __init__ :: Connected to 00485185 as axis y.
+2025-09-23 19:02:11,520 - INFO - MovementClasses - __init__ :: Connected to 00485159 as axis z.
+2025-09-23 19:02:11,542 - INFO - MovementClasses - __enter__ :: Stepper 00485175 energized
+2025-09-23 19:02:11,544 - INFO - MovementClasses - __enter__ :: Stepper 00485175 now homing
+2025-09-23 19:02:13,295 - INFO - MovementClasses - __enter__ :: Stepper 00485175 homing complete
+2025-09-23 19:02:13,297 - INFO - MovementClasses - __enter__ :: Stepper 00485185 energized
+2025-09-23 19:02:13,299 - INFO - MovementClasses - __enter__ :: Stepper 00485185 now homing
+2025-09-23 19:02:15,358 - INFO - MovementClasses - __enter__ :: Stepper 00485185 homing complete
+2025-09-23 19:02:15,360 - INFO - MovementClasses - __enter__ :: Stepper 00485159 energized
+2025-09-23 19:02:15,363 - INFO - MovementClasses - __enter__ :: Stepper 00485159 now homing
+2025-09-23 19:02:16,805 - INFO - MovementClasses - __enter__ :: Stepper 00485159 homing complete
+2025-09-23 19:02:16,806 - INFO - MovementClasses - __init__ :: stage1:: no connection for x provided
+2025-09-23 19:02:16,806 - INFO - MovementClasses - __init__ :: stage1:: no connection for y provided
+2025-09-23 19:02:16,806 - INFO - MovementClasses - __init__ :: stage1:: no connection for z provided
+2025-09-23 19:02:32,596 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485159 upon exit
+2025-09-23 19:02:32,604 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485185 upon exit
+2025-09-23 19:02:32,607 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485175 upon exit
+2025-09-23 19:05:14,557 - INFO - main_steppers - setup_logging :: Logging to console and file ./log_output.txt with level 20
+2025-09-23 19:05:14,557 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 1
+2025-09-23 19:05:14,557 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 2
+2025-09-23 19:05:14,560 - INFO - MovementClasses - __init__ :: Connected to /dev/ttyACM0 at 115200 baud.
+2025-09-23 19:05:14,606 - INFO - MovementClasses - __init__ :: Connected to 00485175 as axis x.
+2025-09-23 19:05:14,626 - INFO - MovementClasses - __init__ :: Connected to 00485185 as axis y.
+2025-09-23 19:05:14,660 - INFO - MovementClasses - __init__ :: Connected to 00485159 as axis z.
+2025-09-23 19:05:14,683 - INFO - MovementClasses - __enter__ :: Stepper 00485175 energized
+2025-09-23 19:05:14,686 - INFO - MovementClasses - __enter__ :: Stepper 00485175 now homing
+2025-09-23 19:05:16,437 - INFO - MovementClasses - __enter__ :: Stepper 00485175 homing complete
+2025-09-23 19:05:16,439 - INFO - MovementClasses - __enter__ :: Stepper 00485185 energized
+2025-09-23 19:05:16,442 - INFO - MovementClasses - __enter__ :: Stepper 00485185 now homing
+2025-09-23 19:05:18,503 - INFO - MovementClasses - __enter__ :: Stepper 00485185 homing complete
+2025-09-23 19:05:18,506 - INFO - MovementClasses - __enter__ :: Stepper 00485159 energized
+2025-09-23 19:05:18,509 - INFO - MovementClasses - __enter__ :: Stepper 00485159 now homing
+2025-09-23 19:05:19,951 - INFO - MovementClasses - __enter__ :: Stepper 00485159 homing complete
+2025-09-23 19:05:19,952 - INFO - MovementClasses - __init__ :: stage1:: no connection for x provided
+2025-09-23 19:05:19,952 - INFO - MovementClasses - __init__ :: stage1:: no connection for y provided
+2025-09-23 19:05:19,953 - INFO - MovementClasses - __init__ :: stage1:: no connection for z provided
+2025-09-23 19:07:28,523 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485159 upon exit
+2025-09-23 19:07:28,526 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485185 upon exit
+2025-09-23 19:07:28,529 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485175 upon exit
+2025-09-23 19:18:04,753 - INFO - main_steppers - setup_logging :: Logging to console and file ./log_output.txt with level 20
+2025-09-23 19:18:04,753 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 1
+2025-09-23 19:18:04,754 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 2
+2025-09-23 19:18:04,758 - INFO - MovementClasses - __init__ :: Connected to /dev/ttyACM0 at 115200 baud.
+2025-09-23 19:18:04,808 - INFO - MovementClasses - __init__ :: Connected to 00485175 as axis x.
+2025-09-23 19:18:04,837 - INFO - MovementClasses - __init__ :: Connected to 00485185 as axis y.
+2025-09-23 19:18:04,863 - INFO - MovementClasses - __init__ :: Connected to 00485159 as axis z.
+2025-09-23 19:18:04,883 - INFO - MovementClasses - __enter__ :: Stepper 00485175 energized
+2025-09-23 19:18:04,885 - INFO - MovementClasses - __enter__ :: Stepper 00485185 energized
+2025-09-23 19:18:04,887 - INFO - MovementClasses - __enter__ :: Stepper 00485159 energized
+2025-09-23 19:18:04,888 - INFO - MovementClasses - __init__ :: stage1:: no connection for x provided
+2025-09-23 19:18:04,888 - INFO - MovementClasses - __init__ :: stage1:: no connection for y provided
+2025-09-23 19:18:04,888 - INFO - MovementClasses - __init__ :: stage1:: no connection for z provided
+2025-09-23 19:18:22,783 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485159 upon exit
+2025-09-23 19:18:22,785 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485185 upon exit
+2025-09-23 19:18:22,786 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485175 upon exit
+2025-09-23 19:20:38,224 - INFO - main_steppers - setup_logging :: Logging to console and file ./log_output.txt with level 20
+2025-09-23 19:20:38,224 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 1
+2025-09-23 19:20:38,225 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 2
+2025-09-23 19:20:38,231 - INFO - MovementClasses - __init__ :: Connected to /dev/ttyACM0 at 115200 baud.
+2025-09-23 19:20:38,278 - INFO - MovementClasses - __init__ :: Connected to 00485175 as axis x.
+2025-09-23 19:20:38,303 - INFO - MovementClasses - __init__ :: Connected to 00485185 as axis y.
+2025-09-23 19:20:38,332 - INFO - MovementClasses - __init__ :: Connected to 00485159 as axis z.
+2025-09-23 19:20:38,349 - INFO - MovementClasses - __enter__ :: Stepper 00485175 energized
+2025-09-23 19:20:38,355 - INFO - MovementClasses - __enter__ :: Stepper 00485185 energized
+2025-09-23 19:20:38,357 - INFO - MovementClasses - __enter__ :: Stepper 00485159 energized
+2025-09-23 19:20:38,359 - INFO - MovementClasses - __init__ :: stage1:: no connection for x provided
+2025-09-23 19:20:38,359 - INFO - MovementClasses - __init__ :: stage1:: no connection for y provided
+2025-09-23 19:20:38,359 - INFO - MovementClasses - __init__ :: stage1:: no connection for z provided
+2025-09-23 19:27:20,219 - INFO - main_steppers - setup_logging :: Logging to console and file ./log_output.txt with level INFO
+2025-09-23 19:27:20,219 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 1
+2025-09-23 19:27:20,219 - INFO - SensorClasses - __init__ :: Initialized to photodiode at addr 0, channel 2
+2025-09-23 19:27:20,222 - INFO - MovementClasses - __init__ :: Connected to /dev/ttyACM0 at 115200 baud.
+2025-09-23 19:27:20,265 - INFO - MovementClasses - __init__ :: Connected to 00485175 as axis x.
+2025-09-23 19:27:20,286 - INFO - MovementClasses - __init__ :: Connected to 00485185 as axis y.
+2025-09-23 19:27:20,320 - INFO - MovementClasses - __init__ :: Connected to 00485159 as axis z.
+2025-09-23 19:27:20,341 - INFO - MovementClasses - __enter__ :: Stepper 00485175 energized
+2025-09-23 19:27:20,345 - INFO - MovementClasses - __enter__ :: Stepper 00485185 energized
+2025-09-23 19:27:20,348 - INFO - MovementClasses - __enter__ :: Stepper 00485159 energized
+2025-09-23 19:27:20,350 - INFO - MovementClasses - __init__ :: stage1:: no connection for x provided
+2025-09-23 19:27:20,350 - INFO - MovementClasses - __init__ :: stage1:: no connection for y provided
+2025-09-23 19:27:20,350 - INFO - MovementClasses - __init__ :: stage1:: no connection for z provided
+2025-09-23 19:27:44,177 - INFO - main_steppers - setup_logging :: Logging to console and file ./log_output.txt with level INFO
+2025-09-23 19:28:49,878 - INFO - main_steppers - setup_logging :: Logging to console and file ./log_output.txt with level DEBUG
+2025-09-23 19:28:53,226 - DEBUG - MovementClasses - __exit__ :: Exited context stack gracefully
+2025-09-23 19:28:53,234 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485159 upon exit
+2025-09-23 19:28:53,242 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485185 upon exit
+2025-09-23 19:28:53,247 - INFO - MovementClasses - __exit__ :: Deenergized stepper 00485175 upon exit
+2025-09-23 19:28:53,248 - DEBUG - MovementClasses - __exit__ :: Exited context stack gracefully
+2025-09-23 19:28:53,248 - DEBUG - SensorClasses - __exit__ :: Exited context stack gracefully
+2025-09-23 19:28:53,249 - DEBUG - SensorClasses - __exit__ :: Exited context stack gracefully

@@ -1,4 +1,4 @@
-#SOCKET TODO:
+# SOCKET TODO:
 #   stepper integration
 ####################
 import logging
@@ -9,9 +9,9 @@ import enum
 import yaml
 import contextlib
 from ticlib import TicUSB
-from typing import Dict, List, Optional, Union
+from typing import Dict, Optional, Union
 
-from SensorClasses import Sensor, SensorType
+from SensorClasses import Sensor
 
 # unique logger name for this module
 log = logging.getLogger(__name__)
@@ -28,12 +28,14 @@ class MovementType(enum.Enum):
     PIEZO = "piezo"
     GENERAL = "general"
 
+
 class Distance:
     _MICRONS_PER_VOLT = 20 / 75
     _MICRONS_PER_FULL_STEP = 2.5     # I think
     #   microns per full step might be different for each stepper
     #   this would require some structural changes to handle
     _MICRONS_PER_STEP = _MICRONS_PER_FULL_STEP / 32 # enforcing this step mode in StageAxis __init__
+
     def __init__(self, value: Union[int, float], unit: str = "microns"):
         if unit == "microns":
             self._microns = float(value)
@@ -43,7 +45,6 @@ class Distance:
             self._microns = float(value) * self._MICRONS_PER_STEP
         else:
             raise ValueError("Unsupported unit: unit must be 'microns', 'volts', or 'steps'")
-        
 
     def __add__(self, other):
         if isinstance(other, Distance):
@@ -110,7 +111,7 @@ class Distance:
     @steps.setter
     def steps(self, value):
         self._microns = float(value) * self._MICRONS_PER_STEP
-    
+
 
 class MoveResult:
     def __init__(self, position: Union[float, int], units: str, mechanism: str, centered_piezos: bool = False):
@@ -119,24 +120,25 @@ class MoveResult:
         self.mechanism = mechanism
         self.centered_piezos = centered_piezos
 
-
     @property
     def text(self):
         return f"set {self.mechanism} to {self.position} {self.units}" +\
                     f"{'after centering piezos' if self.centered_piezos else ''}"
 
+
 class StageAxis:
-    
-    def __init__(self, axis: str, piezo, stepper, stepper_SN):
+
+    def __init__(self, axis: str, piezo, stepper, stepper_SN, autohome: bool = True):
         self.axis = axis
         self.piezo = piezo
         self.stepper = stepper
         self.stepper_SN = stepper_SN
+        self.autohome = autohome
 
         if self.stepper is not None:
             if self.stepper.get_step_mode() != 5:
-                raise Exception(f"Stepper {self.stepper_SN} step mode is set to " +\
-                        str(self.stepper.get_step_mode()) +\
+                raise Exception(f"Stepper {self.stepper_SN} step mode is set to " +
+                        str(self.stepper.get_step_mode()) +
                         " instead of the expected value of 5 (32 microsteps per step).")
             self.step_mode_mult = 32    # currently going to enforce this
 
@@ -151,7 +153,7 @@ class StageAxis:
                 #   should be safe values
                 self.STEPPER_LIMITS = (Distance(1000 * self.step_mode_mult, 'steps'),
                                         Distance(2800 * self.step_mode_mult, 'steps'))
-                warnings.warn(f"Stepper serial number {stepper} is not in stepper_info.yaml." +\
+                warnings.warn(f"Stepper serial number {stepper} is not in stepper_info.yaml." +
                             "Stage range set to safe defaults.")
             log.debug(f"Stepper {self.stepper_SN} stage limits set to ({self.STEPPER_LIMITS[0].steps}, {self.STEPPER_LIMITS[1].steps})")
             self.STEPPER_CENTER = (self.STEPPER_LIMITS[1] - self.STEPPER_LIMITS[0]) / 2 + self.STEPPER_LIMITS[0]
@@ -188,13 +190,12 @@ class StageAxis:
                 if value != stepper_settings_check[key]:
                     stepper_settings_fail.update({key : (value, stepper_settings_check[key])})
             if stepper_settings_fail != {}:
-                warnings.warn(f"Stepper {stepper_SN} settings not expected values:\n" +\
-                        "\n".join(["setting  |  current  |  expected",] +\
-                        [f"{key}  |  {value[0]}  |  {value[1]}"\
+                warnings.warn(f"Stepper {stepper_SN} settings not expected values:\n" +
+                        "\n".join(["setting  |  current  |  expected",] +
+                        [f"{key}  |  {value[0]}  |  {value[1]}"
                         for key, value in stepper_settings_fail.items()]))  # sorry
             else:
-                log.info(f"Stepper {stepper_SN} settings are as expected")
-
+                log.debug(f"Stepper {stepper_SN} settings are as expected")
 
     def __enter__(self):
         if self.stepper is None:
@@ -202,13 +203,15 @@ class StageAxis:
         self.stepper.halt_and_set_position(0)
         self.stepper.energize()
         self.stepper.exit_safe_start()
-        self.stepper.go_home(0)
-        log.info(f"Stepper {self.stepper_SN} energized and now homing")
-        while (self.stepper.get_misc_flags()[0] >> 1) & 1:
-            # check whether "position uncertain" flag is true
-            # homing sequence sets "position uncertain" to false upon success
-            time.sleep(0.1)
-        log.info(f"Stepper {self.stepper_SN} homing complete")
+        log.info(f"Stepper {self.stepper_SN} energized")
+        if self.autohome:
+            self.stepper.go_home(0)
+            log.info(f"Stepper {self.stepper_SN} now homing")
+            while (self.stepper.get_misc_flags()[0] >> 1) & 1:
+                # check whether "position uncertain" flag is true
+                # homing sequence sets "position uncertain" to false upon success
+                time.sleep(0.1)
+            log.info(f"Stepper {self.stepper_SN} homing complete")
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -238,7 +241,7 @@ class StageAxis:
         # this is a goto function
         steps = int(steps)
         if steps > self.STEPPER_LIMITS[1].steps:
-            warnings.warn(f"Cannot move {self.stepper_SN} to {steps} because it is above the steppers "+\
+            warnings.warn(f"Cannot move {self.stepper_SN} to {steps} because it is above the steppers " +
                     f"stage limit of {self.STEPPER_LIMITS[1].steps}")
         else:
             self.stepper.set_target_position(steps)
@@ -257,12 +260,12 @@ class StageAxis:
             self.piezo.flushOutput()
             self.piezo.write(f"{self.axis}voltage?\n".encode())
             self.piezo.readline().decode('utf-8').strip()
-            piezo_position = self.piezo.read(8).decode('utf-8').strip()[2:-1] 
+            piezo_position = self.piezo.read(8).decode('utf-8').strip()[2:-1]
             piezo_position = Distance(float(piezo_position), 'volts')
 
             # decide whether the position can be reached with only the piezos
-            if 0 < (stepper_position - movement).volts < 75:
-               return self._goto_piezo(position.volts)
+            if 0 < (stepper_position - position).volts < 75:
+                return self._goto_piezo(position.volts)
             self._goto_piezo(self.PIEZO_CENTER.volts)
             result = self._goto_stepper((position - (piezo_position + self.self.PIEZO_CENTER)).steps)
             result.centered_piezos = True
@@ -285,7 +288,7 @@ class StageAxis:
         self.piezo.flushOutput()
         self.piezo.write(f"{self.axis}voltage?\n".encode())
         self.piezo.readline().decode('utf-8').strip()
-        piezo_position = self.piezo.read(8).decode('utf-8').strip()[2:-1] 
+        piezo_position = self.piezo.read(8).decode('utf-8').strip()[2:-1]
         piezo_position = Distance(float(piezo_position), 'volts')
 
         if which == MovementType.GENERAL or which is None:
@@ -294,7 +297,7 @@ class StageAxis:
             if 0 < (axis_position + movement).volts < 75:
                 return self._goto_piezo((piezo_position + movement).volts)
             self._goto_piezo(self.PIEZO_CENTER.volts)
-            result = self._goto_stepper((stepper_position + movement -\
+            result = self._goto_stepper((stepper_position + movement -
                     (piezo_position - self.self.PIEZO_CENTER)).steps)
             result.centered_piezos = True
             return result
@@ -305,19 +308,18 @@ class StageAxis:
             return self._goto_stepper((stepper_position + movement).steps)
 
         raise ValueError("which must be a MovementType enum or None.")
-            
-            
+
 
 class StageDevices:
-    
-    def __init__(self, name: str, piezo_port: str, stepper_SNs: Dict[str, str], sensor: Sensor = None,
-                 piezo_baud_rate: int = 115200, require_connection: bool = False):
+
+    def __init__(self, name: str, piezo_port: str, stepper_SNs: Dict[str, str],
+                 sensor: Sensor = None, piezo_baud_rate: int = 115200,
+                 require_connection: bool = False, autohome: bool = True):
         self.name = name
         self.sensor = sensor
         self.axes = {axis : None for axis in stepper_SNs.keys()}
         self.piezo_port = piezo_port
         self._exit_stack = contextlib.ExitStack()   # for context management
-
 
         piezo = None
         try:
@@ -343,10 +345,8 @@ class StageDevices:
                 if require_connection:
                     raise e
                 warnings.warn(f"Error opening stepper port {stepper_SNs[axis]} as axis {axis}: {e}")
-            
-            self.axes[axis] = StageAxis(axis, piezo, stepper, stepper_SN) 
 
-
+            self.axes[axis] = StageAxis(axis, piezo, stepper, stepper_SN, autohome)
 
     def __enter__(self):
         for axis, stageAxis in self.axes.items():
@@ -354,18 +354,15 @@ class StageDevices:
             log.debug(f"Axis {axis} context entered for stepper {stageAxis.stepper_SN}")
         return self
 
-
     def __exit__(self, exc_type, exc_value, traceback):
         self._exit_stack.close()
         log.debug("Exited context stack gracefully")
         return False
 
-
     def move(self, axis: str, movement: Distance, which: Optional[MovementType] = None):
         result = self.axes[axis].move(movement, which)
         log.debug(f"{self.name}, Axis {axis} :" + result.text)
         return result
-
 
     def goto(self, axis: str, position: Distance, which: Optional[MovementType] = None):
         result = self.axes[axis].goto(position, which)
@@ -383,4 +380,3 @@ class StageDevices:
             warnings.warn("No sensor assigned to this stage")
             return None
         return self.sensor.integrate(Texp, avg)
-
