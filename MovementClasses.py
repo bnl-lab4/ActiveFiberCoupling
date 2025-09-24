@@ -9,7 +9,7 @@ import enum
 import yaml
 import contextlib
 from ticlib import TicUSB
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Union, Sequence
 
 from SensorClasses import Sensor
 
@@ -121,6 +121,26 @@ class Distance:
     @fullsteps.setter
     def fullsteps(self, value):
         self._microns = float(value) * self._MICRONS_PER_FULL_STEP
+
+    def prettyprint(self, which: Union[Sequence[str], str, None] = None):
+        if which is None or which.lower() == 'all':
+            which = ('microns', 'volts', 'steps', 'fullsteps')
+        if isinstance(which, str):
+            which = (which,)
+
+        output = []
+        if 'microns' in which:
+            output.append(f'{self.microns:.2f} microns')
+        if 'volts' in which:
+            output.append(f'{self.volts:.2f} volts')
+        if 'steps' in which:
+            output.append(f'{self.steps:.2f} steps')
+        if 'fullsteps' in which:
+            output.append(f'{self.fullsteps:.2f} full steps')
+
+        output = 'Distance(' + ',\n         '.join(output) + ')'
+
+        return output
 
 
 class MoveResult:

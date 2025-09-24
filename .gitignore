@@ -1,3 +1,5 @@
 venv/
 log_output.txt
+.main_history
 *.swp
+**/*.pyc

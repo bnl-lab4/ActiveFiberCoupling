@@ -1,7 +1,13 @@
 ################ TODO
 # convert main menu to YAML
-# allow arbitrary kwarg entries with choices
-# kwargs is a dictionary of presets, with descriptive names (e.g. fine or coarse for grid)
+# create simulator StageDevice with fake data
+# add center argument back into grid_search
+# add home function to StageDevices/Axis then main menu
+# add initial_home flag to StageAxis
+# add get piezo/stepper position function to StageAxis
+# 3d fitting in grid_search
+# populate default kwargs dictionaries
+# bind warnings to logger while still showing warnings in console
 #####################
 
 
@@ -12,8 +18,11 @@ import logging
 import warnings
 import shlex        # better parsing of input kwargs
 import contextlib   # better than nested 'with' statements
-import readline    # enables input() to save history just by being loaded
-from typing import Optional, Union, List
+import readline     # enables input() to save history just by being loaded
+import atexit       # for saving readline history file
+import inspect      # checking kwargs match to function
+import traceback    # show traceback in main menu
+from typing import Optional, Union, List, Sequence
 
 # Import alignment algorithms and control modes
 from MovementClasses import StageDevices, MovementType, Distance
@@ -274,6 +283,10 @@ def parse_str_values(value):
         # Check if value is list
         value = value[1:-1]
         list_values = [item.strip() for item in value.split(',')]
+        for i, val in enumerate(list_values):
+            if val.startswith('D('):
+                list_values[i] = list_values[i] + ',' + list_values[i+1]
+                del list_values[i+1]
         value = [parse_str_values(value) for value in list_values]
         return value
 
@@ -321,7 +334,33 @@ def str_to_dict(tokens: List[str]):     # expects tokens as shlex would return
     return kwargs_dict
 
 
+def dict_to_str(mydict):
+    dict_print = []
+    for key, value in mydict.items():
+        if isinstance(value, Sequence) and not isinstance(value, str):
+            value_print = []
+            for elem in value:
+                if isinstance(elem, Distance):
+                    value_print.append(elem.prettyprint())
+                else:
+                    value_print.append(str(elem))
+            list_print = f"{str(key)} : [\n" + ',\n'.join(value_print) + "]"
+            list_print = list_print.replace('\n', '\n' + ' ' * (len(str(key)) + 4))
+            dict_print.append(list_print)
+        else:
+            dict_print.append(f"{str(key)} : {str(value)}")
+
+    return '\n'.join(dict_print)
+
+
 def main():
+    # load input history file
+    history_file = './.main_history'
+    if os.path.exists(history_file):
+        readline.read_history_file(history_file)
+    readline.set_history_length(100)        # only save the last 100 entries
+    # before stopping the script, save the input history to the file
+    atexit.register(readline.write_history_file, history_file)
     # Default runtime variable
     AutoHome = True # home motors upon establishing connection
     RequireConnection = False # raise exception if device connections fail to establish
@@ -347,7 +386,7 @@ def main():
                                         sensor = sensor1, require_connection = RequireConnection,
                                                  autohome = AutoHome))
 
-        MenuDict = {
+        MENU_DICT = {
             '_manual_control' : "Manual Control Options",
             'manual' : {
                 'text'   : 'Stage manual control',
@@ -410,42 +449,71 @@ def main():
                 }
 
         while True:
-            display_menu(MenuDict)
+            display_menu(MENU_DICT)
             user_input = input(">> ").strip()
-            if user_input.lower() == 'q':
-                break
-            user_input = shlex.split(user_input)    # splits by tokens smartly
-            if len(user_input) == 0:
-                print('\nNo input given')
-                continue
-            if len(user_input) == 1:
-                misc_start = int(list(MenuDict.keys()).index('_misc')) + 1 # relies on ordering :/
-                if user_input[0].lower() in list(MenuDict.keys())[misc_start:]:  # if it is in miscellaneous
-                    MenuDict[user_input[0].lower()]['func']()
+            try:
+                if user_input.lower() == 'q':
+                    break
+                user_input = shlex.split(user_input)    # splits by tokens smartly
+                if len(user_input) == 0:
+                    print('\nNo input given')
+                    continue
+                if len(user_input) == 1:
+                    misc_start = int(list(MENU_DICT.keys()).index('_misc')) + 1 # relies on ordering :/
+                    if user_input[0].lower() in list(MENU_DICT.keys())[misc_start:]:  # if it is in miscellaneous
+                        MENU_DICT[user_input[0].lower()]['func']()
+                    else:
+                        print('\nInvalid input: not enough space-separated arguments')
+                    continue
+                if user_input[0] not in MENU_DICT.keys() or user_input[0].startswith('_'):
+                    print('\nInvalid input')
+                    continue
+
+                func_key = user_input[0].lower()
+                func = MENU_DICT[func_key]['func']
+                args_key = ''.join(sorted(user_input[1].lower()))   # sort to allow e.g. s1 or 1s
+                args = MENU_DICT[func_key]['args'][args_key]
+                if len(user_input) == 2:
+                    func(*args)
+                    continue
+
+                user_input = user_input[2:]
+                kwargs = {}
+                if '=' not in user_input[0]:    # checking for default kwargs key
+                    kwargs_default_key = user_input[0].lower()
+                    kwargs.update(MENU_DICT[func_key]['kwargs'][kwargs_default_key])
+                    user_input = user_input[1:]
+                if any(['=' not in kwarg for kwarg in user_input]):
+                    warnings.warn("All kwargs must be in key=value form")
+                    print("Function call aborted.")
+                    continue
+
+                kwargs.update(str_to_dict(user_input))
+
+                # check whether kwargs are correct
+                try:
+                    inspect.signature(func).bind(*args, **kwargs)
+                except TypeError as e:
+                    warnings.warn(f"Invalid keyword arguments: {e}")
+                    print("Function call aborted.")
+                    continue
+
+                kwargs_print = dict_to_str(kwargs)
+                print("Interpreted kwargs:\n" + kwargs_print)
+                yn_input = input("Is this correct? (y/n): ").strip()
+                if yn_input.lower() == 'y':
+                    print(f"Calling {func_key} with args {args_key} and kwargs as above.")
+                    func(*args, **kwargs)
+                elif yn_input.lower() == 'n':
+                    pass
                 else:
-                    print('\nInvalid input: not enough space-separated arguments')
-                continue
-            if user_input[0] not in MenuDict.keys() or user_input[0].startswith('_'):
-                print('\nInvalid input')
-                continue
+                    print(f"Input {yn_input} could not be interpreted")
 
-            func_key = user_input[0].lower()
-            func = MenuDict[func_key]['func']
-            args_key = ''.join(sorted(user_input[1].lower()))   # sort to allow e.g. s1 or 1s
-            args = MenuDict[func_key]['args'][args_key]
-            if len(user_input) == 2:
-                func(*args)
-                continue
+                print("Function call aborted.")
 
-            user_input = user_input[2:]
-            kwargs = {}
-            if '=' not in user_input[0]:
-                kwargs_default_key = user_input[0].lower()
-                kwargs.update(MenuDict[func_key]['kwargs'][kwargs_default_key])
-                user_input = user_input[1:]
-            kwargs.update(str_to_dict(user_input))
-
-            func(*args, **kwargs)
+            except Exception as e:
+                func_traceback = traceback.format_exc()
+                warnings.warn(f"An error was encountered: {e}\nFull traceback below:\n" + func_traceback)
 
 
 if __name__ == '__main__':
