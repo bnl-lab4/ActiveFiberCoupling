@@ -1,18 +1,19 @@
 ################ TODO
 # convert main menu to YAML
-# reduce main menu entries by taking stage and device as inputs (e.g. p 0)
-#   allow arbitrary kwarg entries with choices
-#   kwargs in YAML will be defaults
+# allow arbitrary kwarg entries with choices
+# kwargs is a dictionary of presets, with descriptive names (e.g. fine or coarse for grid)
 #####################
 
 
 import os
 import sys
-import importlib
+import importlib    # for reloading modules
 import logging
 import warnings
-import contextlib
-from typing import Optional, Union, Dict
+import shlex        # better parsing of input kwargs
+import contextlib   # better than nested 'with' statements
+import readline    # enables input() to save history just by being loaded
+from typing import Optional, Union, List
 
 # Import alignment algorithms and control modes
 from MovementClasses import StageDevices, MovementType, Distance
@@ -50,13 +51,10 @@ def AcceptInputArgs(inputTuple, inputArgs):
     CommandArg_ValueDict = dict(t=True, y=True, true=True, f=False, n=False, false=False)
 
     for arg in inputArgs:
-        print(arg)
-        try:
-            arg, val = arg.strip().lower().split('-')
-        except Exception as e:
-            print(e)
-            warnings.warn(f"Command-line argument {arg} not formatted properly")
+        if '-' not in arg:
+            warnings.warn(f"Command-line argument {arg} not formatted properly (arg-bool)")
             continue
+        arg, val = arg.strip().lower().split('-')
         if arg == 'autohome':
             inputTuple[0] = CommandArg_ValueDict[val]
             continue
@@ -267,6 +265,62 @@ def display_menu(menu_dict):
     return
 
 
+def parse_str_values(value):
+    # Attempt to convert to appropriate data type
+    if value.lower() in ['true', 'false']:
+        return value.lower() == 'true'
+
+    if value.startswith('[') and value.endswith(']'):
+        # Check if value is list
+        value = value[1:-1]
+        list_values = [item.strip() for item in value.split(',')]
+        value = [parse_str_values(value) for value in list_values]
+        return value
+
+    if (value.startswith('D(') or value.startswith('Distance(')) and \
+                        value.endswith(')'):
+        # Check if value is meant to be a Distance object
+        value = value[2:-1]
+        value = [item.strip() for item in value.split(',')]
+        distance_args = [parse_str_values(arg) for arg in value]
+        return Distance(*distance_args)
+
+    if value.replace('.', '', 1).isdigit():
+        # Check for float or integer
+        if '.' in value:
+            return float(value)
+        return int(value)
+
+    if (value.startswith('"') and value.endswith('"')) or \
+         (value.startswith("'") and value.endswith("'")):
+        # Check for quotes indicating a string
+        return value[1:-1]
+
+    # Default to string if no other type matches
+    return value
+
+
+def str_to_dict(tokens: List[str]):     # expects tokens as shlex would return
+    if isinstance(tokens, str):
+        tokens = [tokens,]
+    assert isinstance(tokens, list), "tokens must be a string or list thereof"
+
+    kwargs_dict = {}
+    rejects = []
+    for pair in tokens:
+        if '=' in pair:     # require '=' to separate key and value
+            key, value = [part.strip() for part in pair.split('=', 1)]
+            value = parse_str_values(value)
+            kwargs_dict[key] = value
+        else:
+            rejects.append(pair)
+    if len(rejects) != 0:
+        warnings.warn("The following input kwargs could not be parsed:" +
+                      '\n'.join(rejects))
+
+    return kwargs_dict
+
+
 def main():
     # Default runtime variable
     AutoHome = True # home motors upon establishing connection
@@ -278,7 +332,7 @@ def main():
         InputArgs = sys.argv[1:]
         AutoHome, RequireConnection, *LoggingSettings = AcceptInputArgs(
                 [AutoHome, RequireConnection] + LoggingSettings, InputArgs)
-        print(f"Received input args: {AutoHome}, {RequireConnection}, {LoggingSettings}")
+        # print(f"Received input args: {AutoHome}, {RequireConnection}, {LoggingSettings}")
 
     setup_logging(*LoggingSettings)
 
@@ -293,7 +347,7 @@ def main():
                                         sensor = sensor1, require_connection = RequireConnection,
                                                  autohome = AutoHome))
 
-        MENU_DICT = {
+        MenuDict = {
             '_manual_control' : "Manual Control Options",
             'manual' : {
                 'text'   : 'Stage manual control',
@@ -302,7 +356,6 @@ def main():
                             '0' : (stage0, ExposureTime),
                             '1' : (stage1, ExposureTime),
                             },
-                'kwargs' : {}
                     },
             'center' : {
                 'text'   : 'Center piezo or stepper axes',
@@ -313,7 +366,6 @@ def main():
                             '0s' : (stage0, MovementType.STEPPER),
                             '1s' : (stage1, MovementType.STEPPER),
                             },
-                'kwargs' : {}
                     },
             'zero' : {
                 'text'   : 'Zero piezo or stepper axes',
@@ -324,7 +376,6 @@ def main():
                             '0s' : (stage0, MovementType.STEPPER),
                             '1s' : (stage1, MovementType.STEPPER),
                             },
-                'kwargs' : {}
                     },
             '_optimization' : 'Optimization Algorithms',
             'grid'    : {
@@ -336,50 +387,65 @@ def main():
                             '0s' : (stage0, MovementType.STEPPER, ExposureTime),
                             '1s' : (stage1, MovementType.STEPPER, ExposureTime),
                             },
-                'kwargs' : dict(spacing = Distance(15, "volts"), plot=True, planes=3)
+                'kwargs' : {
+                            'coarse' : dict(spacing = Distance(15, "volts"), plot=True, planes=3)
+                            },
                     },
             '_misc'      : "Miscillaneous",
             'reload'  : {
                 'text'   : 'Reload all ActiveFiberCoupling modules (might be broken)',
                 'func'   : reload_modules,
                 'args'   : (),
-                'kwargs' : {}
                     },
             'texp'    : {
                 'text'   : 'Change the default exposure time',
                 'func'   : Update_ExposureTime,
                 'args'   : (),
-                'kwargs' : {}
                     },
             'log'    : {
                 'text'   : 'Change the logging settings',
                 'func'   : Update_Logging,
                 'args'   : (),
-                'kwargs' : {}
                     },
                 }
 
         while True:
-            display_menu(MENU_DICT)
-            user_input = input(">> ").strip().lower()
-            if user_input == 'q':
+            display_menu(MenuDict)
+            user_input = input(">> ").strip()
+            if user_input.lower() == 'q':
                 break
-            user_input = user_input.split()
+            user_input = shlex.split(user_input)    # splits by tokens smartly
             if len(user_input) == 0:
                 print('\nNo input given')
                 continue
             if len(user_input) == 1:
-                if user_input[0] in list(MENU_DICT.keys())[-3:]:  # if it is in miscellaneous
-                    MENU_DICT[user_input[0]]['func']()
+                misc_start = int(list(MenuDict.keys()).index('_misc')) + 1 # relies on ordering :/
+                if user_input[0].lower() in list(MenuDict.keys())[misc_start:]:  # if it is in miscellaneous
+                    MenuDict[user_input[0].lower()]['func']()
                 else:
                     print('\nInvalid input: not enough space-separated arguments')
                 continue
-            if user_input[0] not in MENU_DICT.keys() or user_input[0].startswith('_'):
+            if user_input[0] not in MenuDict.keys() or user_input[0].startswith('_'):
                 print('\nInvalid input')
                 continue
 
-            MENU_DICT[user_input[0]]['func'](*MENU_DICT[user_input[0]]['args'][user_input[1]],
-                                          **MENU_DICT[user_input[0]]['kwargs'])
+            func_key = user_input[0].lower()
+            func = MenuDict[func_key]['func']
+            args_key = ''.join(sorted(user_input[1].lower()))   # sort to allow e.g. s1 or 1s
+            args = MenuDict[func_key]['args'][args_key]
+            if len(user_input) == 2:
+                func(*args)
+                continue
+
+            user_input = user_input[2:]
+            kwargs = {}
+            if '=' not in user_input[0]:
+                kwargs_default_key = user_input[0].lower()
+                kwargs.update(MenuDict[func_key]['kwargs'][kwargs_default_key])
+                user_input = user_input[1:]
+            kwargs.update(str_to_dict(user_input))
+
+            func(*args, **kwargs)
 
 
 if __name__ == '__main__':

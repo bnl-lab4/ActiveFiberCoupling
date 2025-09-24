@@ -17,7 +17,7 @@ VALID_AXES = {'x', 'y', 'z'}
 
 
 def plot_plane(response_grid: np.array, axis0_grid: np.array, axis1_grid: np.array,
-               axes: list, fit_result = None):  # idk how to type hint ModelResult
+               axes: list, fit_result = None, block: bool = True):  # idk how to type hint ModelResult
     if fit_result is None:
         fig, data_ax = plt.subplots()
         # pcolormesh correctly handles the cell centering for the given x and y arrays
@@ -28,7 +28,7 @@ def plot_plane(response_grid: np.array, axis0_grid: np.array, axis1_grid: np.arr
         data_ax.set_ylabel(axes[1] + ' (microns)')
         data_ax.set_title('Data')
 
-        fig.show()
+        fig.show(block)
         return
 
     fig, axs = plt.subplots(figsize=(18, 5), nrows = 1, ncols = 5, layout = 'constrained',
@@ -58,14 +58,14 @@ def plot_plane(response_grid: np.array, axis0_grid: np.array, axis1_grid: np.arr
         ax.set_ylabel(axes[1] + ' (microns)')
         ax.set_title(title)
 
-    fig.show()
+    fig.show(block)
     return
 
 
 def grid_search(stage: StageDevices, movementType: MovementType,
                 axis0: np.array, axis1: np.array, axes: list,
                 exposureTime: Union[int, float],
-                avg: bool = True, fit: bool = True, plot: bool = True):
+                avg: bool = True, fit: bool = True, plot: bool = True, block: bool = True):
     axis0_grid, axis1_grid = np.meshgrid(axis0, axis1)
     response_grid = np.zeros_like(axis0_grid)
     for i, pos0 in enumerate(axis0):
@@ -105,7 +105,7 @@ def grid_search(stage: StageDevices, movementType: MovementType,
 
     if plot:
         log.info("Plot Generated")
-        plot_plane(response_grid, axis0_grid, axis1_grid, axes, result)
+        plot_plane(response_grid, axis0_grid, axis1_grid, axes, result, block)
 
     return maximum, maximum_pos, width
 
@@ -115,7 +115,7 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
         num_points: Tuple[None, int, Tuple[int, int]] = None,
         limits: Optional[Tuple] = None,                 # tuple of (tuples of) Distance objects
         axes: str = 'yz', planes: Union[None, int, Tuple[Distance, ...]] = None,
-                                                         **grid_search_kwargs):  # default 3 planes
+        grid_search_kwargs: Optional[dict] = None, fake_data: bool = False):  # default 3 planes
 
     assert movementType in (MovementType.PIEZO, MovementType.STEPPER), \
             "movementType must be MovementType.PIEZO or .STEPPER"

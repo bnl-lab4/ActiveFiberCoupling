@@ -43,8 +43,10 @@ class Distance:
             self._microns = float(value) * self._MICRONS_PER_VOLT
         elif unit == "steps":
             self._microns = float(value) * self._MICRONS_PER_STEP
+        elif unit == 'fullsteps':
+            self._microns = float(value) * self._MICRONS_PER_FULL_STEP
         else:
-            raise ValueError("Unsupported unit: unit must be 'microns', 'volts', or 'steps'")
+            raise ValueError("Unsupported unit: unit must be 'microns', 'volts', 'steps', or 'fullsteps'")
 
     def __add__(self, other):
         if isinstance(other, Distance):
@@ -112,17 +114,33 @@ class Distance:
     def steps(self, value):
         self._microns = float(value) * self._MICRONS_PER_STEP
 
+    @property
+    def fullsteps(self):
+        return self._microns / self._MICRONS_PER_FULL_STEP
+
+    @fullsteps.setter
+    def fullsteps(self, value):
+        self._microns = float(value) * self._MICRONS_PER_FULL_STEP
+
 
 class MoveResult:
-    def __init__(self, position: Union[float, int], units: str, mechanism: str, centered_piezos: bool = False):
-        self.position = position
-        self.units = units
-        self.mechanism = mechanism
+    def __init__(self, distance: Distance, movementType: MovementType, centered_piezos: bool = False):
+        self.distance = distance
+        self.movementType = movementType
         self.centered_piezos = centered_piezos
+        assert self.movementType != MovementType.GENERAL, "movementType cannot be general"
 
     @property
     def text(self):
-        return f"set {self.mechanism} to {self.position} {self.units}" +\
+        values = []
+        values.append(f'{self.distance.microns} microns')
+        if self.movementType == MovementType.PIEZO:
+            values.append(f'{self.distance.volts} volts')
+        if self.movementType == MovementType.STEPPER:
+            values.append(f'{self.distance.steps} steps')
+            values.append(f'{self.distance.fullsteps} full steps')
+        values = '(' + ', '.join(values) + ')'
+        return f"set {self.movementType} to {values}" + \
                     f"{'after centering piezos' if self.centered_piezos else ''}"
 
 
@@ -225,7 +243,8 @@ class StageAxis:
         return False
 
     def _goto_piezo(self, voltage: float) -> float:
-        clamped = max(0.0, min(75.0, voltage)) #piezo voltage limits
+        clamped = max(self.PIEZO_LIMITS[0].volts,
+                      min(self.PIEZO_LIMITS[1].volts, voltage)) #piezo voltage limits
         if clamped != voltage:
             warnings.warn(f"Requested {self.axis.upper()}={voltage:.2f}V, clamped to {clamped:.2f}V")
         command = f"{self.axis.lower()}voltage={clamped}\n"
@@ -233,13 +252,10 @@ class StageAxis:
         self.piezo.write(command.encode())
         self.piezo.flush()
 
-        return MoveResult(clamped, 'volts', 'piezo')
+        return MoveResult(Distance(clamped, 'volts'), MovementType.PIEZO)
 
     def _goto_stepper(self, steps: int) -> float:
-        # send move command to stepper
-        # include clamping to safe values (per stepper)
-        # this is a goto function
-        steps = int(steps)
+        steps = int(steps)  # steps expected in microsteps
         if steps > self.STEPPER_LIMITS[1].steps:
             warnings.warn(f"Cannot move {self.stepper_SN} to {steps} because it is above the steppers " +
                     f"stage limit of {self.STEPPER_LIMITS[1].steps}")
@@ -247,7 +263,7 @@ class StageAxis:
             self.stepper.set_target_position(steps)
             while self.stepper.get_target_position() != self.stepper.get_current_position():
                 time.sleep(0.01)
-        return MoveResult(steps, 'steps', 'stepper')
+        return MoveResult(Distance(steps, 'steps'), MovementType.STEPPER)
 
     def goto(self, position: Distance, which: Optional[MovementType] = None) -> float:
         if which == MovementType.GENERAL or which is None:
