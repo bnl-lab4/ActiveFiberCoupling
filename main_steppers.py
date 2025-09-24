@@ -337,6 +337,11 @@ def str_to_dict(tokens: List[str]):     # expects tokens as shlex would return
 def dict_to_str(mydict):
     dict_print = []
     for key, value in mydict.items():
+        if isinstance(value, dict):
+            sub_dict_print = f"{str(key)} : " + "{\n" + dict_to_str(value) + "\n}"
+            sub_dict_print = sub_dict_print.replace('\n', '\n' + ' ' * (len(str(key)) + 4))
+            dict_print.append(sub_dict_print)
+            continue
         if isinstance(value, Sequence) and not isinstance(value, str):
             value_print = []
             for elem in value:
@@ -344,13 +349,50 @@ def dict_to_str(mydict):
                     value_print.append(elem.prettyprint())
                 else:
                     value_print.append(str(elem))
-            list_print = f"{str(key)} : [\n" + ',\n'.join(value_print) + "]"
+            list_print = f"{str(key)} : [\n" + ',\n'.join(value_print) + "\n]"
             list_print = list_print.replace('\n', '\n' + ' ' * (len(str(key)) + 4))
             dict_print.append(list_print)
-        else:
-            dict_print.append(f"{str(key)} : {str(value)}")
+            continue
+
+        dict_print.append(f"{str(key)} : {str(value)}")
 
     return '\n'.join(dict_print)
+
+
+def menu_help(func_key: Optional[str] = None, menu: Optional[dict] = None):
+    MAIN_MENU_HELP = """
+MAIN MENU HELP
+Function call syntax is '<func name> <stagenum device> <default kwarg name> <key=value> <key=value>'.
+Call 'help func=<func name>' to see the required args and optional kwargs.
+Space is the delimiter between arguments, so do not use spaces anywhere else.
+Keyword argument values can be ints, floats, strings, Distance objects, and lists thereof.
+Strings are handled lazily and do not need to be wrapped with ' or " (but can be).
+Lists are denoted by starting and ending with brackets '[' ']', with the elements comma separated.
+Distance objects are denoted by starting with 'D(' or 'Distance(' and ending with parentheses ')'.
+The first argument of Distance is the value, the second is the units, separated by only a comma.
+
+Some examples:
+help func=reload
+        -- Show the input parameters of reload.
+        -- Certain functions like help don't need an arg.
+center 0s
+        -- Centers the steppers of stage 0.
+grid 0s fine axes='yz' planes=[D(100,"fullsteps"),D(500,fullsteps)]
+        -- Run grid search on stage 0 with steppers in y-z planes,
+            using the 'fine' preset kwargs but overriding the planes argument.
+    """
+
+    if func_key is not None:
+        func_dict_str = dict_to_str(menu[func_key])
+        func_sig = inspect.signature(menu[func_key]['func'])
+        siglist = []
+        for _, sig in list(func_sig.parameters.items()):
+            siglist.append(str(sig))
+        sig_str = ',\n'.join(siglist)
+        return print(f"FUNCTION MENU ENTRY:\n{func_dict_str}" + '\n'*2 +
+                     f"FUNCTION SIGNATURE:\n{sig_str}")
+
+    return print(MAIN_MENU_HELP)
 
 
 def main():
@@ -358,7 +400,7 @@ def main():
     history_file = './.main_history'
     if os.path.exists(history_file):
         readline.read_history_file(history_file)
-    readline.set_history_length(100)        # only save the last 100 entries
+    readline.set_history_length(500)        # only save the last 100 entries
     # before stopping the script, save the input history to the file
     atexit.register(readline.write_history_file, history_file)
     # Default runtime variable
@@ -427,33 +469,48 @@ def main():
                             '1s' : (stage1, MovementType.STEPPER, ExposureTime),
                             },
                 'kwargs' : {
-                            'coarse' : dict(spacing = Distance(15, "volts"), plot=True, planes=3)
+                            'coarse' : dict(spacing = Distance(15, "volts"), plot=True, planes=3),
+                            'fine'   : dict()
                             },
                     },
             '_misc'      : "Miscillaneous",
             'reload'  : {
                 'text'   : 'Reload all ActiveFiberCoupling modules (might be broken)',
                 'func'   : reload_modules,
-                'args'   : (),
+                'args'   : {},
                     },
             'texp'    : {
                 'text'   : 'Change the default exposure time',
                 'func'   : Update_ExposureTime,
-                'args'   : (),
+                'args'   : {},
                     },
             'log'    : {
                 'text'   : 'Change the logging settings',
                 'func'   : Update_Logging,
-                'args'   : (),
+                'args'   : {},
                     },
+            'help'   : {
+                'text'   : 'Help with menu or with a function (func=func_name)',
+                'func'   : menu_help,
+                'args'   : {}
+                    }
                 }
 
         while True:
+            print('\n'*5)   # for readability
             display_menu(MENU_DICT)
             user_input = input(">> ").strip()
+            print('\n'*2)
+
             try:
+                # special cases
                 if user_input.lower() == 'q':
                     break
+                if user_input.lower() == 'exec':    # hidden mode :), pls don't abuse
+                    print("WARNING: IN EXEC MODE\nAnything typed here will be executed as python code.")
+                    exec(input('exec >> '))
+                    continue
+
                 user_input = shlex.split(user_input)    # splits by tokens smartly
                 if len(user_input) == 0:
                     print('\nNo input given')
@@ -472,6 +529,14 @@ def main():
                 func_key = user_input[0].lower()
                 func = MENU_DICT[func_key]['func']
                 args_key = ''.join(sorted(user_input[1].lower()))   # sort to allow e.g. s1 or 1s
+
+                if func_key == 'manual':    # manual is device agnostic
+                    args_key = args_key[0]
+
+                if func_key == 'help':      # help is a special case, handled separately
+                    menu_help(user_input[1], MENU_DICT)
+                    continue
+
                 args = MENU_DICT[func_key]['args'][args_key]
                 if len(user_input) == 2:
                     func(*args)
