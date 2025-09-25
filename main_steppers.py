@@ -1,13 +1,11 @@
 ################ TODO
 # convert main menu to YAML
 # create simulator StageDevice with fake data
+# add unit input to manual control
 # add center argument back into grid_search
-# add home function to StageDevices/Axis then main menu
-# add initial_home flag to StageAxis
 # add get piezo/stepper position function to StageAxis
 # 3d fitting in grid_search
 # populate default kwargs dictionaries
-# bind warnings to logger while still showing warnings in console
 #####################
 
 
@@ -30,6 +28,7 @@ from SensorClasses import Sensor, SensorType
 import manual_control
 import center_axes
 import zero_axes
+import MovementUtils
 import grid_search
 
 
@@ -394,29 +393,70 @@ def str_to_dict(tokens: List[str]):     # expects tokens as shlex would return
     return kwargs_dict
 
 
-def dict_to_str(mydict):
+def sequence_to_str(sequence, joined = True):
+    sequence_print = []
+    for elem in sequence:
+        if isinstance(elem, dict):
+            sub_dict_list = dict_to_str(elem, joined=False)
+            if len(sub_dict_list) <= 1:
+                sub_dict_print = '{ ' + sub_dict_list[0] + ' }'
+            else:
+                sub_dict_print = "{\n" + '\n'.join(sub_dict_list) + "\n}"
+            sub_dict_print = sub_dict_print.replace('\n', '\n' + ' ' * 8)
+            sequence_print.append(sub_dict_print)
+            continue
+
+        elif isinstance(elem, Sequence) and not isinstance(elem, str):
+            sub_seq_list = sequence_to_str(elem, joined=False)
+            if len(sub_seq_list) <= 1:
+                sub_seq_print = '( ' + sub_seq_list + " )"
+            else:
+                sub_seq_print = '(\n' + '\n'.join(sub_seq_list) + '\n)'
+            sub_seq_print = sub_seq_print.replace('\n', '\n' + ' ' * 8)
+            sequence_print.append(sub_seq_print)
+            continue
+
+        elif isinstance(elem, Distance):
+            sequence_print.append(elem.prettyprint())
+        else:
+            sequence_print.append(str(elem))
+
+    if joined:
+        sequence_print = '\n'.join(sequence_print)
+    return sequence_print
+
+
+def dict_to_str(mydict, joined = True):
     dict_print = []
     for key, value in mydict.items():
         if isinstance(value, dict):
-            sub_dict_print = f"{str(key)} : " + "{\n" + dict_to_str(value) + "\n}"
-            sub_dict_print = sub_dict_print.replace('\n', '\n' + ' ' * (len(str(key)) + 4))
+            sub_dict_list = dict_to_str(value, joined=False)
+            if len(sub_dict_list) <= 1:
+                sub_dict_print = f"{str(key)} : " + '{ ' + sub_dict_list[0] + ' }'
+            else:
+                sub_dict_print = f"{str(key)} : " + '{\n' + '\n'.join(sub_dict_list) + "\n}"
+            sub_dict_print = sub_dict_print.replace('\n', '\n' + ' ' * 8)
             dict_print.append(sub_dict_print)
             continue
-        if isinstance(value, Sequence) and not isinstance(value, str):
-            value_print = []
-            for elem in value:
-                if isinstance(elem, Distance):
-                    value_print.append(elem.prettyprint())
-                else:
-                    value_print.append(str(elem))
-            list_print = f"{str(key)} : [\n" + ',\n'.join(value_print) + "\n]"
-            list_print = list_print.replace('\n', '\n' + ' ' * (len(str(key)) + 4))
-            dict_print.append(list_print)
+
+        elif isinstance(value, Sequence) and not isinstance(value, str):
+            sub_seq_list = sequence_to_str(value, joined=False)
+            if len(sub_seq_list) <= 1:
+                sub_seq_print = f"{str(key)} : ( {sub_seq_list[0]} )"
+            else:
+                sub_seq_print = f"{str(key)} : (\n" + '\n'.join(sub_seq_list) + '\n)'
+            sub_seq_print = sub_seq_print.replace('\n', '\n' + ' ' * 8)
+            dict_print.append(sub_seq_print)
             continue
 
-        dict_print.append(f"{str(key)} : {str(value)}")
+        elif isinstance(value, Distance):
+            dict_print.append(value.prettyprint())
+        else:
+            dict_print.append(f"{str(key)} : {str(value)}")
 
-    return '\n'.join(dict_print)
+    if joined:
+        dict_print = '\n'.join(dict_print)
+    return dict_print
 
 
 def menu_help(func_key: Optional[str] = None, menu: Optional[dict] = None):
@@ -516,6 +556,39 @@ def main():
                             '1p' : (stage1, MovementType.PIEZO),
                             '0s' : (stage0, MovementType.STEPPER),
                             '1s' : (stage1, MovementType.STEPPER),
+                            },
+                    },
+            'energize' : {
+                'text'   : 'Energize steppers',
+                'func'   : MovementUtils.energize,
+                'args'   : {
+                            '0' : (stage0,),
+                            '1' : (stage1,),
+                            },
+                'kwargs' : {
+                            'all' : dict(axes='all')
+                            },
+                    },
+            'deenergize' : {
+                'text'   : 'Deenergize steppers',
+                'func'   : MovementUtils.deenergize,
+                'args'   : {
+                            '0' : (stage0,),
+                            '1' : (stage1,),
+                            },
+                'kwargs' : {
+                            'all' : dict(axes='all')
+                            },
+                    },
+            'home' : {
+                'text'   : 'Home steppers',
+                'func'   : MovementUtils.home,
+                'args'   : {
+                            '0' : (stage0,),
+                            '1' : (stage1,),
+                            },
+                'kwargs' : {
+                            'all' : dict(axes='all')
                             },
                     },
             '_optimization' : 'Optimization Algorithms',
@@ -628,8 +701,9 @@ def main():
                 print("Interpreted kwargs:\n" + kwargs_print)
                 yn_input = input("Is this correct? (y/n): ").strip()
                 if yn_input.lower() == 'y':
-                    print(f"Calling {func_key} with args {args_key} and kwargs as above.")
+                    print(f"Calling {func_key} with args {args_key} and kwargs as above.\n")
                     func(*args, **kwargs)
+                    continue
                 elif yn_input.lower() == 'n':
                     pass
                 else:

@@ -1,5 +1,9 @@
 # SOCKET TODO:
-#   stepper integration
+#   de/re energize functions (stage level)
+#   stage status function
+#   smart homing function
+#   simulation StageDevices
+#   parallelize stepper movement
 ####################
 import logging
 import time
@@ -194,7 +198,8 @@ class StageAxis:
                 warnings.warn(f"Stepper serial number {stepper} is not in stepper_info.yaml." +
                             "Stage range set to safe defaults.")
             log.debug(f"Stepper {self.stepper_SN} stage limits set to ({self.STEPPER_LIMITS[0].steps}, {self.STEPPER_LIMITS[1].steps})")
-            self.STEPPER_CENTER = (self.STEPPER_LIMITS[1] - self.STEPPER_LIMITS[0]) / 2 + self.STEPPER_LIMITS[0]
+            # stepper center is defined with lower limit = 0 steps
+            self.STEPPER_CENTER = (self.STEPPER_LIMITS[1] - self.STEPPER_LIMITS[0]) / 2
             log.debug(f"Stepper {self.stepper_SN} stage center set to {self.STEPPER_CENTER.steps}")
 
             #   checking that the stepper controller settings are what we want
@@ -238,31 +243,28 @@ class StageAxis:
     def __enter__(self):
         if self.stepper is None:
             return self
-        self.stepper.halt_and_set_position(0)
-        self.stepper.energize()
-        self.stepper.exit_safe_start()
-        log.info(f"Stepper {self.stepper_SN} energized")
+        self.energize()
         if self.autohome:
-            self.stepper.go_home(0)
-            log.info(f"Stepper {self.stepper_SN} now homing")
-            while (self.stepper.get_misc_flags()[0] >> 1) & 1:
-                # check whether "position uncertain" flag is true
-                # homing sequence sets "position uncertain" to false upon success
-                time.sleep(0.1)
-            log.info(f"Stepper {self.stepper_SN} homing complete")
+            self.home()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         #   gracefully stop and deenergize the stepper when done
         if self.stepper is None:
             return False
-        self.stepper.halt_and_hold()
-        self.stepper.deenergize()
-        self.stepper.enter_safe_start()
-        log.info(f"Deenergized stepper {self.stepper_SN} upon exit")
+        self.deenergize()
         return False
 
-    def _goto_piezo(self, voltage: float) -> float:
+    def _position_uncertain(self):
+        return (self.stepper.get_misc_flags()[0] >> 1) & 1
+
+    def _energized(self):
+        return (self.stepper.get_misc_flags()[0]) & 1
+
+    def _homing_active(self):
+        return (self.stepper.get_misc_flags()[0] >> 4) & 1
+
+    def _goto_piezo(self, voltage: float) -> MoveResult:
         clamped = max(self.PIEZO_LIMITS[0].volts,
                       min(self.PIEZO_LIMITS[1].volts, voltage)) #piezo voltage limits
         if clamped != voltage:
@@ -274,9 +276,15 @@ class StageAxis:
 
         return MoveResult(Distance(clamped, 'volts'), MovementType.PIEZO)
 
-    def _goto_stepper(self, steps: int) -> float:
+    def _goto_stepper(self, steps: int) -> MoveResult:
+        if not self._energized():
+            raise RuntimeError(f"Stepper {self.stepper_SN} not energized")
+
+        if self._position_uncertain():
+            raise RuntimeError(f"Stepper {self.stepper_SN} position is uncertain and needs homing")
+
         steps = int(steps)  # steps expected in microsteps
-        if steps > self.STEPPER_LIMITS[1].steps:
+        if steps > (self.STEPPER_LIMITS[1] - self.STEPPER_LIMITS[0]).steps: # lower limit is set to 0
             warnings.warn(f"Cannot move {self.stepper_SN} to {steps} because it is above the steppers " +
                     f"stage limit of {self.STEPPER_LIMITS[1].steps}")
         else:
@@ -284,6 +292,32 @@ class StageAxis:
             while self.stepper.get_target_position() != self.stepper.get_current_position():
                 time.sleep(0.01)
         return MoveResult(Distance(steps, 'steps'), MovementType.STEPPER)
+
+    def energize(self):
+        self.stepper.halt_and_set_position(0)
+        self.stepper.energize()
+        self.stepper.exit_safe_start()
+        log.info(f"Stepper {self.stepper_SN} energized")
+
+    def deenergize(self):
+        self.stepper.halt_and_hold()
+        self.stepper.deenergize()
+        self.stepper.enter_safe_start()
+        log.info(f"Deenergized stepper {self.stepper_SN} upon exit")
+
+    def home(self):
+        if not self._energized():
+            raise RuntimeError(f"Stepper {self.stepper_SN} not energized")
+        self.stepper.go_home(0)
+        log.info(f"Stepper {self.stepper_SN} homing")
+        while self._position_uncertain():
+            # homing sequence sets "position uncertain" to false upon success
+            time.sleep(0.1)
+
+        #   set lower stage limit to 0
+        self._goto_stepper(self.STEPPER_LIMITS[0].steps)
+        self.stepper.halt_and_set_position(0)
+        log.info(f"Stepper {self.stepper_SN} homing complete, zeroed at lower stage limit")
 
     def goto(self, position: Distance, which: Optional[MovementType] = None) -> float:
         if which == MovementType.GENERAL or which is None:
@@ -315,19 +349,23 @@ class StageAxis:
         raise ValueError("which must be a MovementType enum or None.")
 
     def move(self, movement: Distance, which: Optional[MovementType] = None) -> float:
-        # get stepper and piezo positions as Distance objects
-        stepper_position = Distance(self.stepper.get_current_position(), 'steps')
+        if which is None:
+            which = MovementType.GENERAL
+        # get stepper and piezo positions as Distance objects if applicable
+        if which == MovementType.STEPPER or which == MovementType.GENERAL:
+            stepper_position = Distance(self.stepper.get_current_position(), 'steps')
 
-        self.piezo.read(8)          #seems to clear better than flushing?
-        self.piezo.flush()
-        self.piezo.flushInput()
-        self.piezo.flushOutput()
-        self.piezo.write(f"{self.axis}voltage?\n".encode())
-        self.piezo.readline().decode('utf-8').strip()
-        piezo_position = self.piezo.read(8).decode('utf-8').strip()[2:-1]
-        piezo_position = Distance(float(piezo_position), 'volts')
+        if which == MovementType.PIEZO or which == MovementType.GENERAL:
+            self.piezo.read(8)          #seems to clear better than flushing?
+            self.piezo.flush()
+            self.piezo.flushInput()
+            self.piezo.flushOutput()
+            self.piezo.write(f"{self.axis}voltage?\n".encode())
+            self.piezo.readline().decode('utf-8').strip()
+            piezo_position = self.piezo.read(8).decode('utf-8').strip()[2:-1]
+            piezo_position = Distance(float(piezo_position), 'volts')
 
-        if which == MovementType.GENERAL or which is None:
+        if which == MovementType.GENERAL:
             axis_position = stepper_position + piezo_position
 
             if 0 < (axis_position + movement).volts < 75:
@@ -394,6 +432,27 @@ class StageDevices:
         self._exit_stack.close()
         log.debug("Exited context stack gracefully")
         return False
+
+    def deenergize(self, axes: Optional[str] = None):
+        if axes is None or axes.lower() == 'all':
+            axes = 'xyz'
+        axes = list(axes)
+        for axis in axes:
+            self.axes[axis].deenergize()
+
+    def home(self, axes: Optional[str] = None):
+        if axes is None or axes.lower() == 'all':
+            axes = 'xyz'
+        axes = list(axes)
+        for axis in axes:
+            self.axes[axis].home()
+
+    def energize(self, axes: Optional[str] = None):
+        if axes is None or axes.lower() == 'all':
+            axes = 'xyz'
+        axes = list(axes)
+        for axis in axes:
+            self.axes[axis].energize()
 
     def move(self, axis: str, movement: Distance, which: Optional[MovementType] = None):
         result = self.axes[axis].move(movement, which)
