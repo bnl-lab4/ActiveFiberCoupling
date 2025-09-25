@@ -1,6 +1,5 @@
 import enum
 import logging
-import warnings
 import socket
 import contextlib
 import piplates.DAQC2plate as DAQ
@@ -61,7 +60,7 @@ class Socket:
             self.connection.connect((self.host, self.port))
             log.info(f"Connected to socket host {self.host} at port {self.port}")
         except TimeoutError:
-            warnings.warn(f"Timed out attempting to connect to host {self.host} at port {self.port}")
+            log.warn(f"Timed out attempting to connect to host {self.host} at port {self.port}")
         self.exit_stack = contextlib.ExitStack()
 
     def __enter__(self):

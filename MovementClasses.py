@@ -364,7 +364,7 @@ class StageDevices:
         except serial.SerialException as e:
             if require_connection:
                 raise e
-            warnings.warn(f"Error opening serial port {piezo_port}: {e}")
+            log.warn(f"Could not open serial port {piezo_port}: {e}")
 
         # loop a similar try-except over the stepper controllers
         # while also creating the axis objects
@@ -380,7 +380,7 @@ class StageDevices:
             except ConnectionException as e:
                 if require_connection:
                     raise e
-                warnings.warn(f"Error opening stepper port {stepper_SNs[axis]} as axis {axis}: {e}")
+                log.warn(f"Error opening stepper port {stepper_SNs[axis]} as axis {axis}: {e}")
 
             self.axes[axis] = StageAxis(axis, piezo, stepper, stepper_SN, autohome)
 

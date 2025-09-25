@@ -33,9 +33,6 @@ import zero_axes
 import grid_search
 
 
-# unique logger name for this module
-log = logging.getLogger(__name__)
-
 # Device info constants
 SOCKET0 = dict(host = '192.168.1.10', port = 8000, sensortype = SensorType.SOCKET)
 SIPM0 = dict(addr = 0, channel = 1, sensortype = SensorType.SIPM)
@@ -52,6 +49,18 @@ BAUD_RATE = 115200
 
 STEPPER_DICT0 = dict(x = '00485175', y = '00485185', z = '00485159')
 STEPPER_DICT1 = dict(x = None, y = None, z = None)
+
+
+# custom warning format to remove the source line
+def custom_formatwarning(message, category, filename, lineno, line=None):
+    # Custom warning formatter that removes the source line.
+    return f"{filename}-line{lineno}-{category.__name__} :: {message}\n"
+
+
+# Initial logging/warning configuration
+log = logging.getLogger(__name__)
+logging.captureWarnings(True)
+warnings.formatwarning = custom_formatwarning
 
 
 def AcceptInputArgs(inputTuple, inputArgs):
@@ -79,13 +88,21 @@ def AcceptInputArgs(inputTuple, inputArgs):
         if arg == 'logfile':
             if verify_logfile(val):
                 inputTuple[4] = val
-        if arg == 'loglevel':
+        if arg == 'consoleloglevel':
             try:
                 inputTuple[5] = getattr(logging, val)
             except AttributeError:
                 warnings.warn(f"Could not find log level {val}, default will be kept")
                 continue
             inputTuple[5] = val
+            continue
+        if arg == 'loglevel':
+            try:
+                inputTuple[6] = getattr(logging, val)
+            except AttributeError:
+                warnings.warn(f"Could not find log level {val}, default will be kept")
+                continue
+            inputTuple[6] = val
             continue
 
         warnings.warn(f"{'-'.join(arg)} is not a valid argument")
@@ -119,7 +136,7 @@ def verify_logfile(filepath):
 
 
 def setup_logging(log_to_console: Optional[bool] = None, log_to_file: Optional[bool] = None,
-                              filename: Optional[str] = None,
+                  filename: Optional[str] = None, console_log_level: Union[str, int, None] = None,
                               log_level: Union[str, int, None] = None):
     # Logging Defaults
     if log_to_console is None:
@@ -128,52 +145,84 @@ def setup_logging(log_to_console: Optional[bool] = None, log_to_file: Optional[b
         log_to_file = True
     if filename is None:
         filename = './log_output.txt'
+
     if log_level is None:
-        level = logging.INFO
+        level = logging.DEBUG
     elif isinstance(log_level, str):
         # Map string to logging level
         level = getattr(logging, log_level.upper(), logging.INFO)
+    elif log_level in [int(10 * i) for i in range(1, 6)]:
+        level = log_level
     else:
-        level = log_level # it should be an int
+        raise ValueError(f"log_level {log_level} is not in an acceptable form")
 
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s - %(funcName)s :: %(message)s")
+    if console_log_level is None or not log_to_console:
+        console_level = logging.INFO    # INFO for now, WARNING during science use
+    elif isinstance(console_log_level, str):
+        # Map string to logging level
+        console_level = getattr(logging, console_log_level.upper(), logging.INFO)
+    elif console_log_level in [int(10 * i) for i in range(1, 6)]:
+        console_level = console_log_level
+    else:
+        raise ValueError(f"console_log_level {console_log_level} is not in an acceptable form")
+
+    standard_format = logging.Formatter("%(asctime)s-%(levelname)s-" +
+                "%(module)s-line%(lineno)d-%(funcName)s :: %(message)s")
+    caught_warning_format = logging.Formatter("%(asctime)s-WARNING(CAUGHT)-%(message)s")
+
     root_logger = logging.getLogger()
     root_logger.setLevel(level)
+    warnings_logger = logging.getLogger('py.warnings')
+    warnings_logger.setLevel(logging.WARNING)
+    warnings_logger.propagate = False    # so root_logger does not also get caught warning logs
 
     # clears existing handlers to avoid duplicates
     if root_logger.hasHandlers():
         root_logger.handlers.clear()
+    if warnings_logger.hasHandlers():
+        warnings_logger.handlers.clear()
 
-    # Check and add console logging
-    if log_to_console:
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        root_logger.addHandler(console_handler)
+    # logic for which level done above, never truly off
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(console_level)
+    console_handler.setFormatter(standard_format)
+    root_logger.addHandler(console_handler)
+
+    console_handler_warnings = logging.StreamHandler()
+    console_handler_warnings.setLevel(console_level)
+    console_handler_warnings.setFormatter(caught_warning_format)
+    warnings_logger.addHandler(console_handler_warnings)
 
     # Check and add file handling
     if log_to_file and filename:
         file_handler = logging.FileHandler(filename)
-        file_handler.setFormatter(formatter)
+        file_handler.setFormatter(standard_format)
         root_logger.addHandler(file_handler)
+
+        file_handler_warnings = logging.FileHandler(filename)
+        file_handler_warnings.setFormatter(caught_warning_format)
+        warnings_logger.addHandler(file_handler_warnings)
 
     if not (log_to_console or log_to_file):
         logging.disable(logging.CRITICAL)
 
     log_locations = []
-    if log_to_console:
-        log_locations.append('console')
+    log_levels = []
+
+    log_locations.append('console')
+    log_levels.append(logging.getLevelName(console_level))
     if log_to_file:
         log_locations.append(filename)
+        log_levels.append(logging.getLevelName(level))
     if len(log_locations) == 0:
-        log_locations = 'nowhere'
+        log.info("Logging to nowhere")
     else:
-        log_locations = ' and '.join(log_locations)
-
-    log.info(f"Logging to {log_locations} with level {logging.getLevelName(level)}")
+        for loc, level in zip(log_locations, log_levels):
+            log.info(f"Logging to {loc} with level {level}")
 
 
 def Update_Logging():
-    SettingNames = ["Log to console", 'Log to file', 'Log filename', 'Log level']
+    SettingNames = ["Log to console", 'Log to file', 'Log filename', 'Console log level', 'Log level']
     LoggingSettings = {name : None for name in SettingNames}
 
     while True: # Log to console?
@@ -211,6 +260,17 @@ def Update_Logging():
         except Exception as e:
             print(f"Error while verifying input filename: {e}")
         print(f"Could not update log file to {user_input}")
+
+    while LoggingSettings['Log to console']: # console log level?
+        user_input = input("Console log level? [debug/info/warning/error/critical/skip]: ").strip().lower()
+        if user_input == 's' or user_input == 'skip':
+            break
+        try:
+            LoggingSettings['Console log level'] = getattr(logging, user_input.upper())
+            break
+        except AttributeError:
+            print(f"Could not find log level matching {user_input}")
+        print(f"Could not update log level to {user_input}")
 
     while True: # log level?
         user_input = input("Log level? [debug/info/warning/error/critical/skip]: ").strip().lower()
@@ -497,10 +557,11 @@ def main():
                 }
 
         while True:
-            print('\n'*5)   # for readability
+            print('\n'*4)   # for readability
             display_menu(MENU_DICT)
+            print('')
             user_input = input(">> ").strip()
-            print('\n'*2)
+            print('\n')
 
             try:
                 # special cases
