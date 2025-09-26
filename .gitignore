@@ -3,3 +3,4 @@ log_output.txt
 .main_history
 *.swp
 **/*.pyc
+log_plots/*

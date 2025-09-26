@@ -1,15 +1,16 @@
 ################ TODO
 # convert main menu to YAML
 # create simulator StageDevice with fake data
-# put zero and center functions in MovementUtile.py
 # 3d fitting in grid_search
 # populate default kwargs dictionaries
 # rewrite command line arg handling to be more flexible (dict?)
+# add simulate bool to command line args
 #####################
 
 
 import os
 import sys
+import math
 import importlib    # for reloading modules
 import logging
 import warnings
@@ -21,8 +22,10 @@ import traceback    # show traceback in main menu
 from typing import Optional, Union
 
 # Import alignment algorithms and control modes
-from MovementClasses import StageDevices, MovementType, Distance
+from MovementClasses import StageDevices, MovementType
 from SensorClasses import Sensor, SensorType
+from Distance import Distance
+from SimulationClasses import SimulationSensor, SimulationStageDevices
 import manual_control
 import MovementUtils
 import grid_search
@@ -35,6 +38,7 @@ SIPM0 = dict(addr = 0, channel = 1, sensortype = SensorType.SIPM)
 SIPM1 = dict(addr = 0, channel = 2, sensortype = SensorType.SIPM)
 PHOTODIODE0 = dict(addr = 0, channel = 1, sensortype = SensorType.PHOTODIODE)
 PHOTODIODE1 = dict(addr = 0, channel = 2, sensortype = SensorType.PHOTODIODE)
+SIMSENSOR = dict(propagation_axis = 'y', focal_ratio = 4.0, angle_of_deviation = math.pi/180)
 
 SENSOR0 = PHOTODIODE0
 SENSOR1 = PHOTODIODE1
@@ -349,6 +353,7 @@ def main():
     AutoHome = True # home motors upon establishing connection
     RequireConnection = False # raise exception if device connections fail to establish
     ExposureTime = 200  # default exposure time (units are sensor dependent)
+    Simulate = True
     LoggingSettings = [None] * 4
 
     if len(sys.argv) > 1:
@@ -360,15 +365,22 @@ def main():
     setup_logging(*LoggingSettings)
 
     with contextlib.ExitStack() as stack:
-        sensor0 = stack.enter_context(Sensor(SENSOR0, SENSOR0['sensortype']))
-        stage0 = stack.enter_context(StageDevices('stage0', PIEZO_PORT0, STEPPER_DICT0,
-                                    sensor = sensor0, require_connection = RequireConnection,
-                                             autohome = AutoHome))
+        if not Simulate:
+            sensor0 = stack.enter_context(Sensor(SENSOR0, SENSOR0['sensortype']))
+            stage0 = stack.enter_context(StageDevices('stage0', PIEZO_PORT0, STEPPER_DICT0,
+                                        sensor = sensor0, require_connection = RequireConnection,
+                                                 autohome = AutoHome))
 
-        sensor1 = stack.enter_context(Sensor(SENSOR1, SENSOR1['sensortype']))
-        stage1 = stack.enter_context(StageDevices('stage1', PIEZO_PORT1, STEPPER_DICT1,
-                                    sensor = sensor1, require_connection = RequireConnection,
-                                             autohome = AutoHome))
+            sensor1 = stack.enter_context(Sensor(SENSOR1, SENSOR1['sensortype']))
+            stage1 = stack.enter_context(StageDevices('stage1', PIEZO_PORT1, STEPPER_DICT1,
+                                        sensor = sensor1, require_connection = RequireConnection,
+                                                 autohome = AutoHome))
+        else:
+            sensor0 = stack.enter_context(SimulationSensor(**SIMSENSOR))
+            stage0 = stack.enter_context(SimulationStageDevices('simstage0', sensor = sensor0))
+
+            sensor1 = stack.enter_context(SimulationSensor(**SIMSENSOR))
+            stage1 = stack.enter_context(SimulationStageDevices('simstage1', sensor = sensor1))
 
         MENU_DICT = {
             '_manual_control' : "Manual Control Options",
@@ -450,7 +462,7 @@ def main():
                     },
             '_misc'      : "Miscillaneous",
             'reload'  : {
-                'text'   : 'Reload all ActiveFiberCoupling modules (might be broken)',
+                'text'   : 'Reload all ActiveFiberCoupling modules',
                 'func'   : None,
                 'args'   : {},
                     },
@@ -488,6 +500,9 @@ def main():
                     continue
                 if user_input.lower() == 'reload':
                     reload_menu(MENU_DICT)
+                    continue
+                if user_input.lower() == 'uwu':
+                    print('UwU')
                     continue
 
                 user_input = user_input.strip().split(' ')

@@ -154,7 +154,7 @@ def dict_to_str(mydict, joined = True):
             continue
 
         elif isinstance(value, Distance):
-            dict_print.append(value.prettyprint(stacked=True))
+            dict_print.append(f"{str(key)} : {value.prettyprint(stacked=True)}")
         else:
             dict_print.append(f"{str(key)} : {str(value)}")
 

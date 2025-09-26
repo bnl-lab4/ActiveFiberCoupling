@@ -1,4 +1,5 @@
-from MovementClasses import MovementType, Distance
+from MovementClasses import MovementType
+from Distance import Distance
 
 
 def run(stage, ExposureTime):

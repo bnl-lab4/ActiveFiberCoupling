@@ -4,6 +4,7 @@
 #   simulation StageDevices
 #   parallelize stepper movement
 ####################
+
 import logging
 import time
 import serial
@@ -12,9 +13,10 @@ import enum
 import yaml
 import contextlib
 from ticlib import TicUSB
-from typing import Dict, Optional, Union, Sequence
+from typing import Dict, Optional
 
 from SensorClasses import Sensor
+from Distance import Distance
 
 # unique logger name for this module
 log = logging.getLogger(__name__)
@@ -30,123 +32,6 @@ class MovementType(enum.Enum):
     STEPPER = "stepper"
     PIEZO = "piezo"
     GENERAL = "general"
-
-
-class Distance:
-    _MICRONS_PER_VOLT = 20 / 75
-    _MICRONS_PER_FULL_STEP = 2.5     # I think
-    _MICRONS_PER_STEP = _MICRONS_PER_FULL_STEP / 32
-    # enforcing 32 microsteps per full step in StageAxis __init__
-
-    def __init__(self, value: Union[int, float], unit: str = "microns"):
-        if unit == "microns":
-            self._microns = float(value)
-        elif unit == "volts":
-            self._microns = float(value) * self._MICRONS_PER_VOLT
-        elif unit == "steps":
-            self._microns = float(value) * self._MICRONS_PER_STEP
-        elif unit == 'fullsteps':
-            self._microns = float(value) * self._MICRONS_PER_FULL_STEP
-        else:
-            raise ValueError("Unsupported unit: unit must be 'microns', 'volts', 'steps', or 'fullsteps'")
-
-    def __add__(self, other):
-        if isinstance(other, Distance):
-            new_microns = self.microns + other.microns
-            return Distance(new_microns, 'microns')
-
-        raise TypeError("Addition is only supported with other Distance objects")
-
-    def __radd__(self, other):
-        return self.__add__(other)
-
-    def __sub__(self, other):
-        if isinstance(other, Distance):
-            new_microns = self.microns - other.microns
-            return Distance(new_microns, 'microns')
-
-        raise TypeError("Addition is only supported with other Distance objects")
-
-    def __rsub__(self, other):
-        return self.__sub__(other)
-
-    def __mul__(self, other):
-        if isinstance(other, (int, float)):
-            new_microns = self.microns * other
-            return Distance(new_microns, 'microns')
-
-        raise TypeError("Multiplication is only supported with scalars")
-
-    def __rmul__(self, other):
-        return self.__mul__(other)
-
-    def __truediv__(self, other):
-        if isinstance(other, (int, float)):
-            new_microns = self.microns / other
-            return Distance(new_microns, 'microns')
-
-        raise TypeError("Multiplication is only supported with scalars")
-
-    def __rtruediv__(self, other):
-        return self.__truediv__(other)
-
-    @property
-    def microns(self):
-        return self._microns
-
-    @microns.setter
-    def microns(self, value):
-        self._microns = float(value)
-        return
-
-    @property
-    def volts(self):
-        return self._microns / self._MICRONS_PER_VOLT
-
-    @volts.setter
-    def volts(self, value):
-        self._microns = float(value) * self._MICRONS_PER_VOLT
-        return
-
-    @property
-    def steps(self):
-        return self._microns / self._MICRONS_PER_STEP
-
-    @steps.setter
-    def steps(self, value):
-        self._microns = float(value) * self._MICRONS_PER_STEP
-
-    @property
-    def fullsteps(self):
-        return self._microns / self._MICRONS_PER_FULL_STEP
-
-    @fullsteps.setter
-    def fullsteps(self, value):
-        self._microns = float(value) * self._MICRONS_PER_FULL_STEP
-
-    def prettyprint(self, which: Union[Sequence[str], str, None] = None,
-                    stacked: bool = False):
-        if which is None or which.lower() == 'all':
-            which = ('microns', 'volts', 'steps', 'fullsteps')
-        if isinstance(which, str):
-            which = (which,)
-
-        output = []
-        if 'microns' in which:
-            output.append(f'{self.microns:.1f} microns')
-        if 'volts' in which:
-            output.append(f'{self.volts:.1f} volts')
-        if 'steps' in which:
-            output.append(f'{self.steps:.1f} steps')
-        if 'fullsteps' in which:
-            output.append(f'{self.fullsteps:.1f} full steps')
-
-        output = 'Distance(' + ', '.join(output) + ')'
-
-        if stacked:
-            output = output.replace(',', ',\n' + ' ' * 9)
-
-        return output
 
 
 class MoveResult:
@@ -341,58 +226,49 @@ class StageAxis:
         position = self.piezo.read(8).decode('utf-8').strip()[2:-1]
         return Distance(float(position), 'volts')
 
-    def goto(self, position: Distance, which: Optional[MovementType] = None) -> float:
-        if which == MovementType.GENERAL or which is None:
-            stepper_position = self.get_stepper_position()
-            piezo_position = self.get_piezo_position()
-
-            # decide whether the position can be reached with only the piezos
-            if 0 < (stepper_position - position).volts < 75:
-                return self._goto_piezo(position.volts)
-            self._goto_piezo(self.PIEZO_CENTER.volts)
-            result = self._goto_stepper((position - (piezo_position + self.self.PIEZO_CENTER)).steps)
-            result.centered_piezos = True
-            return result
+    def goto(self, position: Distance, which: Optional[MovementType] = None) -> MoveResult:
+        if which is None:
+            which = MovementType.GENERAL
 
         if which == MovementType.PIEZO:
             return self._goto_piezo(position.volts)
         if which == MovementType.STEPPER:
             return self._goto_stepper(position.steps)
 
-        raise ValueError("which must be a MovementType enum or None.")
-
-    def move(self, movement: Distance, which: Optional[MovementType] = None) -> float:
-        if which is None:
-            which = MovementType.GENERAL
-        # get stepper and piezo positions as Distance objects if applicable
-        if which == MovementType.STEPPER or which == MovementType.GENERAL:
-            stepper_position = Distance(self.stepper.get_current_position(), 'steps')
-
-        if which == MovementType.PIEZO or which == MovementType.GENERAL:
-            self.piezo.read(8)          #seems to clear better than flushing?
-            self.piezo.flush()
-            self.piezo.flushInput()
-            self.piezo.flushOutput()
-            self.piezo.write(f"{self.axis}voltage?\n".encode())
-            self.piezo.readline().decode('utf-8').strip()
-            piezo_position = self.piezo.read(8).decode('utf-8').strip()[2:-1]
-            piezo_position = Distance(float(piezo_position), 'volts')
-
         if which == MovementType.GENERAL:
-            axis_position = stepper_position + piezo_position
+            stepper_position = self.get_stepper_position()
 
-            if 0 < (axis_position + movement).volts < 75:
-                return self._goto_piezo((piezo_position + movement).volts)
+            # decide whether the position can be reached with only the piezos
+            if self.PIEZO_LIMITS[0] < position - stepper_position < self.PIEZO_LIMITS[1]:
+                return self._goto_piezo((position - stepper_position).volts)
             self._goto_piezo(self.PIEZO_CENTER.volts)
-            result = self._goto_stepper((stepper_position + movement -
-                    (piezo_position - self.self.PIEZO_CENTER)).steps)
+            stepper_target = position - self.PIEZO_CENTER
+            result = self._goto_stepper(stepper_target.steps)
             result.centered_piezos = True
             return result
 
+        raise ValueError("which must be a MovementType enum or None.")
+
+    def move(self, movement: Distance, which: Optional[MovementType] = None) -> MoveResult:
+        if which is None:
+            which = MovementType.GENERAL
+
         if which == MovementType.PIEZO:
-            return self._goto_piezo((piezo_position + movement).volts)
+            return self._goto_piezo((self.get_piezo_position() + movement).volts)
         if which == MovementType.STEPPER:
-            return self._goto_stepper((stepper_position + movement).steps)
+            return self._goto_stepper((self.stepper_position() + movement).steps)
+
+        if which == MovementType.GENERAL:
+            stepper_position = self.get_stepper_position()
+            piezo_position = self.get_piezo_position()
+            if self.PIEZO_LIMITS[0] < piezo_position + movement < self.PIEZO_LIMITS[1]:
+                return self._goto_piezo((piezo_position + movement).volts)
+            self._goto_piezo(self.PIEZO_CENTER.volts)
+            stepper_target = stepper_position + movement +\
+                        (piezo_position - self.PIEZO_CENTER)
+            result = self._goto_stepper(stepper_target.steps)
+            result.centered_piezos = True
+            return result
 
         raise ValueError("which must be a MovementType enum or None.")
 
@@ -479,12 +355,12 @@ class StageDevices:
 
     def read(self):
         if self.sensor is None:
-            warnings.warn("No sensor assigned to this stage")
+            log.warning("No sensor assigned to {self.name}")
             return None
         return self.sensor.read()
 
     def integrate(self, Texp: int, avg: bool = True):
         if self.sensor is None:
-            warnings.warn("No sensor assigned to this stage")
+            log.warning("No sensor assigned to {self.name}")
             return None
         return self.sensor.integrate(Texp, avg)

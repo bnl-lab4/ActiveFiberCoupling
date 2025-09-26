@@ -34,7 +34,6 @@ class Sipm:
     def read(self):
         # getADC has several waits in it, we could prbably slim it down
         power = DAQ.getADC(self.addr, self.channel)
-        # log.debug(f"SiPM addr:{self.addr} channel:{self.channel} read power {power:.6f}")
         return power
 
     def integrate(self, Texp: Union[int, float], avg: bool = True):
@@ -78,8 +77,6 @@ class Socket:
         # defaults to a 100ms integration time
         self.connection.sendall(str(100).encode('utf-8'))
         power = int(self.connection.recv(1024).decode('utf-8'))
-        # log.debug(f"Socket at host {self.host}, port {self.port} returned" +\
-        #        f"{int(power)} over {Texp}ms")
         return power
 
     def integrate(self, Texp: Union[int, float], avg: bool = True):
@@ -112,7 +109,6 @@ class Photodiode:
     def read(self):
         # getADC has several waits in it, we could prbably slim it down
         power = DAQ.getADC(self.addr, self.channel)
-        # log.debug(f"Photodiode addr:{self.addr} channel:{self.channel} read power {power:.6f}")
         return -power       # NOTE THE MINUS SIGN
 
     def integrate(self, Texp: Union[int, float], avg: bool = True):

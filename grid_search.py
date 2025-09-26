@@ -11,7 +11,8 @@ from collections.abc import Sequence as sequence
 from typing import Optional, Union, Tuple, Sequence
 from datetime import datetime
 
-from MovementClasses import MovementType, StageDevices, Distance
+from MovementClasses import MovementType, StageDevices
+from Distance import Distance
 
 # unique logger name for this module
 log = logging.getLogger(__name__)
@@ -107,7 +108,7 @@ def grid_search(stage: StageDevices, movementType: MovementType,
     maximum_pos_distance = [Distance(pos, "microns").prettyprint() for pos in maximum_pos]
     width = result.params['sigmax'].value
     width_distance = Distance(width, 'microns').prettyprint()
-    log.info(f"Best fit peak of {maximum} at" +
+    log.info(f"Best fit peak of {maximum} at {axes} = " +
             f"{maximum_pos_distance} with width {width_distance}")
 
     log.info("Plot Generated")
@@ -119,7 +120,7 @@ def grid_search(stage: StageDevices, movementType: MovementType,
             plane = stage.axes[focus_axis].get_stepper_position()
         fig.savefig(f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_" +
             f"{movementType.value}_{focus_axis}-{plane.prettyprint()}.png")
-    if show_plot():
+    if show_plot:
         plt.show(block=True)
 
     return maximum, maximum_pos, width
@@ -186,9 +187,11 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
 
     if isinstance(planes, int):
         if movementType == MovementType.PIEZO:
-            planes = tuple(np.linspace(*stage.axes[focus_axis].PIEZO_LIMITS, planes))
+            planes_limits = [limit.microns for limit in stage.axes[focus_axis].PIEZO_LIMITS]
         elif movementType == MovementType.STEPPER:
-            planes = tuple(np.linspace(*stage.axes[focus_axis].STEPPER_LIMITS, planes))
+            planes_limits = [limit.microns for limit in stage.axes[focus_axis].STEPPER_LIMITS]
+        planes = np.linspace(*planes_limits, planes)
+        planes = [Distance(plane, "microns") for plane in planes]
 
     if center is not None:
         limits[0][0] += center[0]
@@ -208,7 +211,8 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
     plane_maxima_pos = []
     widths = []
     for plane in planes:
-        log.info(f"Running grid search in plane {focus_axis}={plane.prettyprint()} microns with grid:\n" +
+        log.info(f"Running grid search in plane {focus_axis} = " +
+                    f"{plane.prettyprint()} microns with grid:\n" +
                     f"{axes[0]} = {axis0} microns\n{axes[1]} = {axis1} microns")
         stage.goto(focus_axis, plane, movementType)
         maximum, maximum_pos, width = grid_search(stage, movementType,
