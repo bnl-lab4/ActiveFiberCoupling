@@ -16,4 +16,3 @@ def run(stage: StageDevices, which: MovementType):
         # empty assignments makes them finish before moving on
         _ = stage.goto('x', stage.axes['x'].STEPPER_CENTER, MovementType.STEPPER)
         _ = stage.goto('y', stage.axes['y'].STEPPER_CENTER, MovementType.STEPPER)
-        _ = stage.goto('z', stage.axes['z'].STEPPER_CENTER, MovementType.STEPPER)

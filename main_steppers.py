@@ -1,11 +1,10 @@
 ################ TODO
 # convert main menu to YAML
 # create simulator StageDevice with fake data
-# add unit input to manual control
-# add center argument back into grid_search
-# add get piezo/stepper position function to StageAxis
+# put zero and center functions in MovementUtile.py
 # 3d fitting in grid_search
 # populate default kwargs dictionaries
+# rewrite command line arg handling to be more flexible (dict?)
 #####################
 
 
@@ -14,22 +13,20 @@ import sys
 import importlib    # for reloading modules
 import logging
 import warnings
-import shlex        # better parsing of input kwargs
 import contextlib   # better than nested 'with' statements
 import readline     # enables input() to save history just by being loaded
 import atexit       # for saving readline history file
 import inspect      # checking kwargs match to function
 import traceback    # show traceback in main menu
-from typing import Optional, Union, List, Sequence
+from typing import Optional, Union
 
 # Import alignment algorithms and control modes
 from MovementClasses import StageDevices, MovementType, Distance
 from SensorClasses import Sensor, SensorType
 import manual_control
-import center_axes
-import zero_axes
 import MovementUtils
 import grid_search
+import StringUtils
 
 
 # Device info constants
@@ -287,38 +284,45 @@ def Update_Logging():
 
 def Update_ExposureTime():
     global ExposureTime
-    print("Update default exposure time (iterations for SiPMs or photodiodes, milliseconds for sockets)")
+    print(f"Update default exposure time (currently {ExposureTime}):" +
+        "(iterations for SiPMs or photodiodes, milliseconds for sockets)")
     user_input = input(">> ").strip()
     try:
         user_input = int(float(user_input))
     except ValueError:
-        print("Input {user_input} cannot be converted to an int. ExposureTime will remain at {ExposureTime}")
+        print(f"Input {user_input} cannot be converted to an int. ExposureTime will remain at {ExposureTime}")
         return False
     ExposureTime = user_input
     return True
 
 
-def reload_modules():       #   not working?
-    print('\n')
-    for module in list(sys.modules.values()):
-        try:
-            module_path = module.__file__
-        except AttributeError:
-            continue
-        if module_path is None:
-            continue
-        if module.__file__ == '/home/bnl/ActiveFiberCoupling/main_steppers.py':
-            # do not try to reload this file itself
-            continue
+def reload_menu(menu):
+    for key in menu.keys():
+        if key.startswith('_') or key == 'reload':
+            continue    # ignore menu section headers and this functions menu entry
 
-        module_dirpath = ('/').join(module_path.split('/')[:-1])
-        if module_dirpath == '/home/bnl/ActiveFiberCoupling':
-            # if module is in this directory
-            try:
-                importlib.reload(module)
-                print(f'Reloaded: {module.__name__}')
-            except Exception as e:
-                warnings.warn(f"RELOAD NOT SUCCESFUL: {module_dirpath}\n{e}")
+        # get name of module function comes from
+        func_module_name = menu[key]['func'].__module__
+        if func_module_name == '__main__':
+            continue    # can't reload this script itself
+
+        try:
+            # get function name in its module
+            func_name = menu[key]['func'].__name__
+
+            # reload the module
+            reloaded_module = importlib.reload(importlib.import_module(func_module_name))
+
+            # get func from reloaded module
+            new_func = getattr(reloaded_module, func_name)
+
+            # redefine func in menu
+            menu[key]['func'] = new_func
+
+            log.info(f"{key} function reloaded succesfully")
+
+        except (ImportError, AttributeError):
+            log.warning(f"{key} function was not reloaded succesfully")
 
 
 def display_menu(menu_dict):
@@ -331,168 +335,6 @@ def display_menu(menu_dict):
         else:
             print(f"{key}:{' ' * (whitespace - len(key))}{value['text']}")
     return
-
-
-def parse_str_values(value):
-    # Attempt to convert to appropriate data type
-    if value.lower() in ['true', 'false']:
-        return value.lower() == 'true'
-
-    if value.startswith('[') and value.endswith(']'):
-        # Check if value is list
-        value = value[1:-1]
-        list_values = [item.strip() for item in value.split(',')]
-        for i, val in enumerate(list_values):
-            if val.startswith('D('):
-                list_values[i] = list_values[i] + ',' + list_values[i+1]
-                del list_values[i+1]
-        value = [parse_str_values(value) for value in list_values]
-        return value
-
-    if (value.startswith('D(') or value.startswith('Distance(')) and \
-                        value.endswith(')'):
-        # Check if value is meant to be a Distance object
-        value = value[2:-1]
-        value = [item.strip() for item in value.split(',')]
-        distance_args = [parse_str_values(arg) for arg in value]
-        return Distance(*distance_args)
-
-    if value.replace('.', '', 1).isdigit():
-        # Check for float or integer
-        if '.' in value:
-            return float(value)
-        return int(value)
-
-    if (value.startswith('"') and value.endswith('"')) or \
-         (value.startswith("'") and value.endswith("'")):
-        # Check for quotes indicating a string
-        return value[1:-1]
-
-    # Default to string if no other type matches
-    return value
-
-
-def str_to_dict(tokens: List[str]):     # expects tokens as shlex would return
-    if isinstance(tokens, str):
-        tokens = [tokens,]
-    assert isinstance(tokens, list), "tokens must be a string or list thereof"
-
-    kwargs_dict = {}
-    rejects = []
-    for pair in tokens:
-        if '=' in pair:     # require '=' to separate key and value
-            key, value = [part.strip() for part in pair.split('=', 1)]
-            value = parse_str_values(value)
-            kwargs_dict[key] = value
-        else:
-            rejects.append(pair)
-    if len(rejects) != 0:
-        warnings.warn("The following input kwargs could not be parsed:" +
-                      '\n'.join(rejects))
-
-    return kwargs_dict
-
-
-def sequence_to_str(sequence, joined = True):
-    sequence_print = []
-    for elem in sequence:
-        if isinstance(elem, dict):
-            sub_dict_list = dict_to_str(elem, joined=False)
-            if len(sub_dict_list) <= 1:
-                sub_dict_print = '{ ' + sub_dict_list[0] + ' }'
-            else:
-                sub_dict_print = "{\n" + '\n'.join(sub_dict_list) + "\n}"
-            sub_dict_print = sub_dict_print.replace('\n', '\n' + ' ' * 8)
-            sequence_print.append(sub_dict_print)
-            continue
-
-        elif isinstance(elem, Sequence) and not isinstance(elem, str):
-            sub_seq_list = sequence_to_str(elem, joined=False)
-            if len(sub_seq_list) <= 1:
-                sub_seq_print = '( ' + sub_seq_list + " )"
-            else:
-                sub_seq_print = '(\n' + '\n'.join(sub_seq_list) + '\n)'
-            sub_seq_print = sub_seq_print.replace('\n', '\n' + ' ' * 8)
-            sequence_print.append(sub_seq_print)
-            continue
-
-        elif isinstance(elem, Distance):
-            sequence_print.append(elem.prettyprint())
-        else:
-            sequence_print.append(str(elem))
-
-    if joined:
-        sequence_print = '\n'.join(sequence_print)
-    return sequence_print
-
-
-def dict_to_str(mydict, joined = True):
-    dict_print = []
-    for key, value in mydict.items():
-        if isinstance(value, dict):
-            sub_dict_list = dict_to_str(value, joined=False)
-            if len(sub_dict_list) <= 1:
-                sub_dict_print = f"{str(key)} : " + '{ ' + sub_dict_list[0] + ' }'
-            else:
-                sub_dict_print = f"{str(key)} : " + '{\n' + '\n'.join(sub_dict_list) + "\n}"
-            sub_dict_print = sub_dict_print.replace('\n', '\n' + ' ' * 8)
-            dict_print.append(sub_dict_print)
-            continue
-
-        elif isinstance(value, Sequence) and not isinstance(value, str):
-            sub_seq_list = sequence_to_str(value, joined=False)
-            if len(sub_seq_list) <= 1:
-                sub_seq_print = f"{str(key)} : ( {sub_seq_list[0]} )"
-            else:
-                sub_seq_print = f"{str(key)} : (\n" + '\n'.join(sub_seq_list) + '\n)'
-            sub_seq_print = sub_seq_print.replace('\n', '\n' + ' ' * 8)
-            dict_print.append(sub_seq_print)
-            continue
-
-        elif isinstance(value, Distance):
-            dict_print.append(value.prettyprint())
-        else:
-            dict_print.append(f"{str(key)} : {str(value)}")
-
-    if joined:
-        dict_print = '\n'.join(dict_print)
-    return dict_print
-
-
-def menu_help(func_key: Optional[str] = None, menu: Optional[dict] = None):
-    MAIN_MENU_HELP = """
-MAIN MENU HELP
-Function call syntax is '<func name> <stagenum device> <default kwarg name> <key=value> <key=value>'.
-Call 'help func=<func name>' to see the required args and optional kwargs.
-Space is the delimiter between arguments, so do not use spaces anywhere else.
-Keyword argument values can be ints, floats, strings, Distance objects, and lists thereof.
-Strings are handled lazily and do not need to be wrapped with ' or " (but can be).
-Lists are denoted by starting and ending with brackets '[' ']', with the elements comma separated.
-Distance objects are denoted by starting with 'D(' or 'Distance(' and ending with parentheses ')'.
-The first argument of Distance is the value, the second is the units, separated by only a comma.
-
-Some examples:
-help func=reload
-        -- Show the input parameters of reload.
-        -- Certain functions like help don't need an arg.
-center 0s
-        -- Centers the steppers of stage 0.
-grid 0s fine axes='yz' planes=[D(100,"fullsteps"),D(500,fullsteps)]
-        -- Run grid search on stage 0 with steppers in y-z planes,
-            using the 'fine' preset kwargs but overriding the planes argument.
-    """
-
-    if func_key is not None:
-        func_dict_str = dict_to_str(menu[func_key])
-        func_sig = inspect.signature(menu[func_key]['func'])
-        siglist = []
-        for _, sig in list(func_sig.parameters.items()):
-            siglist.append(str(sig))
-        sig_str = ',\n'.join(siglist)
-        return print(f"FUNCTION MENU ENTRY:\n{func_dict_str}" + '\n'*2 +
-                     f"FUNCTION SIGNATURE:\n{sig_str}")
-
-    return print(MAIN_MENU_HELP)
 
 
 def main():
@@ -519,14 +361,14 @@ def main():
 
     with contextlib.ExitStack() as stack:
         sensor0 = stack.enter_context(Sensor(SENSOR0, SENSOR0['sensortype']))
-        sensor1 = stack.enter_context(Sensor(SENSOR1, SENSOR1['sensortype']))
-
         stage0 = stack.enter_context(StageDevices('stage0', PIEZO_PORT0, STEPPER_DICT0,
-                                        sensor = sensor0, require_connection = RequireConnection,
-                                                 autohome = AutoHome))
+                                    sensor = sensor0, require_connection = RequireConnection,
+                                             autohome = AutoHome))
+
+        sensor1 = stack.enter_context(Sensor(SENSOR1, SENSOR1['sensortype']))
         stage1 = stack.enter_context(StageDevices('stage1', PIEZO_PORT1, STEPPER_DICT1,
-                                        sensor = sensor1, require_connection = RequireConnection,
-                                                 autohome = AutoHome))
+                                    sensor = sensor1, require_connection = RequireConnection,
+                                             autohome = AutoHome))
 
         MENU_DICT = {
             '_manual_control' : "Manual Control Options",
@@ -540,7 +382,7 @@ def main():
                     },
             'center' : {
                 'text'   : 'Center piezo or stepper axes',
-                'func'   : center_axes.run,
+                'func'   : MovementUtils.center,
                 'args'   : {
                             '0p' : (stage0, MovementType.PIEZO),
                             '1p' : (stage1, MovementType.PIEZO),
@@ -550,7 +392,7 @@ def main():
                     },
             'zero' : {
                 'text'   : 'Zero piezo or stepper axes',
-                'func'   : zero_axes.run,
+                'func'   : MovementUtils.zero,
                 'args'   : {
                             '0p' : (stage0, MovementType.PIEZO),
                             '1p' : (stage1, MovementType.PIEZO),
@@ -609,7 +451,7 @@ def main():
             '_misc'      : "Miscillaneous",
             'reload'  : {
                 'text'   : 'Reload all ActiveFiberCoupling modules (might be broken)',
-                'func'   : reload_modules,
+                'func'   : None,
                 'args'   : {},
                     },
             'texp'    : {
@@ -624,7 +466,7 @@ def main():
                     },
             'help'   : {
                 'text'   : 'Help with menu or with a function (func=func_name)',
-                'func'   : menu_help,
+                'func'   : StringUtils.menu_help,
                 'args'   : {}
                     }
                 }
@@ -644,8 +486,11 @@ def main():
                     print("WARNING: IN EXEC MODE\nAnything typed here will be executed as python code.")
                     exec(input('exec >> '))
                     continue
+                if user_input.lower() == 'reload':
+                    reload_menu(MENU_DICT)
+                    continue
 
-                user_input = shlex.split(user_input)    # splits by tokens smartly
+                user_input = user_input.strip().split(' ')
                 if len(user_input) == 0:
                     print('\nNo input given')
                     continue
@@ -664,11 +509,12 @@ def main():
                 func = MENU_DICT[func_key]['func']
                 args_key = ''.join(sorted(user_input[1].lower()))   # sort to allow e.g. s1 or 1s
 
-                if func_key == 'manual':    # manual is device agnostic
+                if func_key in ('manual', 'home', 'energize', 'deenergize', 'status'):
+                    # device-agnostic functions
                     args_key = args_key[0]
 
                 if func_key == 'help':      # help is a special case, handled separately
-                    menu_help(user_input[1], MENU_DICT)
+                    StringUtils.menu_help(user_input[1], MENU_DICT)
                     continue
 
                 args = MENU_DICT[func_key]['args'][args_key]
@@ -687,7 +533,7 @@ def main():
                     print("Function call aborted.")
                     continue
 
-                kwargs.update(str_to_dict(user_input))
+                kwargs.update(StringUtils.str_to_dict(user_input))
 
                 # check whether kwargs are correct
                 try:
@@ -697,7 +543,7 @@ def main():
                     print("Function call aborted.")
                     continue
 
-                kwargs_print = dict_to_str(kwargs)
+                kwargs_print = StringUtils.dict_to_str(kwargs)
                 print("Interpreted kwargs:\n" + kwargs_print)
                 yn_input = input("Is this correct? (y/n): ").strip()
                 if yn_input.lower() == 'y':
@@ -705,7 +551,7 @@ def main():
                     func(*args, **kwargs)
                     continue
                 elif yn_input.lower() == 'n':
-                    pass
+                    print('')
                 else:
                     print(f"Input {yn_input} could not be interpreted")
 

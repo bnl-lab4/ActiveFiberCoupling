@@ -1,17 +1,23 @@
-import serial
-from motion import move
-import photodiode_in
 from MovementClasses import MovementType, Distance
-from SensorClasses import Sensor, SensorType
+
 
 def run(stage, ExposureTime):
-    print("""'q' returns to menu, 'ENTER' returns integrated signal.
-Enter command as [axis] [value] [device], e.g. >>y 15.2 piezo or >>x -10 p.
-Switch between goto (default) and move modes with 'goto' and 'move'.""")
+    print("""
+'q' returns to menu, 'ENTER' returns integrated signal. 'texp' [int] changes exposure time.
+Enter command as [axis] [device] [value], with an optional [unit] argument.
+Arguments must be space separated. [device] can be 'piezo', 'stage', 'p', or 's'.
+Units can be 'microns', 'volts', 'steps', 'fullsteps' (or 'u', 'v', 's', 'fs').
+Piezo unit defaults to volts. Stepper unit defaults to full steps.
+Examples: >>y piezo 15.2     >>x s -10     >>z p 5 v     >>x s 600 volts
+Switch between goto (default) and move modes with 'goto' and 'move'.
+""")
     goto = True
-    which_dict = dict(p=(MovementType.PIEZO, 'volts'), s=(MovementType.STEPPER, 'steps'),
+    WHICH_DICT = dict(p=(MovementType.PIEZO, 'volts'), s=(MovementType.STEPPER, 'steps'),
                       piezo=(MovementType.PIEZO, 'volts'), stepper=(MovementType.STEPPER, 'steps'))
-    axes = ('x', 'y', 'z')
+    AXES = ('x', 'y', 'z')
+    UNITS = ('microns', 'volts', 'steps', 'fullsteps')
+    UNITS_ABRV = dict(u=UNITS[0], m=UNITS[0], v=UNITS[1],
+                      s=UNITS[2], st=UNITS[2], f=UNITS[3], fs=UNITS[3])
     Texp = ExposureTime
 
     while True:
@@ -24,13 +30,17 @@ Switch between goto (default) and move modes with 'goto' and 'move'.""")
             print(f"Power: {power_str}\nIntegrated for {Texp}")
             continue
         if user_input == 'move':
-            if goto: print('Switched to move mode.')
-            else: print('Already in move mode.')
+            if goto:
+                print('Switched to move mode.')
+            else:
+                print('Already in move mode.')
             goto = False
             continue
         if user_input == 'goto':
-            if goto: print('Already in goto mode.')
-            else: print('Switched to goto mode.')
+            if goto:
+                print('Already in goto mode.')
+            else:
+                print('Switched to goto mode.')
             goto = True
             continue
 
@@ -39,19 +49,31 @@ Switch between goto (default) and move modes with 'goto' and 'move'.""")
             Texp = int(user_input[1])
             print(f'Exposure "time" set to {Texp}')
             continue
-        if len(user_input) != 3:
-            print('Invalid input: Enter command as [axis] [value] [device].')
+        if len(user_input) != 3 and len(user_input) != 4:
+            print('Invalid input: Enter command as [axis] [device] [value] ([unit]).')
             continue
 
-        axis, value, device = user_input
-        if axis.lower() not in axes:
-            print('Invalid input: [axis] must be x or y or z')
+        if len(user_input) == 3:
+            user_input.append(None)
+
+        axis, device, value, unit = user_input
+        if axis.lower() not in AXES:
+            print('Invalid input: Axis must be x or y or z')
             continue
-        if device.lower() not in which_dict.keys():
+        if device.lower() not in WHICH_DICT.keys():
             print('Invalid input: Device must be s, p, stepper, or piezo')
             continue
-        
-        if goto:
-            stage.goto(axis, Distance(value, which_dict[device][1]), which_dict[device][0])
+        if unit is not None:
+            if unit in UNITS:
+                pass
+            elif unit in UNITS_ABRV.keys():
+                unit = UNITS_ABRV[unit]
+            else:
+                print('Invalid input: Unit must be u, v, s, fs')
         else:
-            stage.move(axis, Distance(value, which_dict[device][1]), which_dict[device][0])
+            unit = WHICH_DICT[device][1]
+
+        if goto:
+            stage.goto(axis, Distance(value, unit), WHICH_DICT[device][0])
+        else:
+            stage.move(axis, Distance(value, unit), WHICH_DICT[device][0])

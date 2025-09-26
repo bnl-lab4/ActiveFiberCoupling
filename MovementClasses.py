@@ -1,5 +1,4 @@
 # SOCKET TODO:
-#   de/re energize functions (stage level)
 #   stage status function
 #   smart homing function
 #   simulation StageDevices
@@ -36,9 +35,8 @@ class MovementType(enum.Enum):
 class Distance:
     _MICRONS_PER_VOLT = 20 / 75
     _MICRONS_PER_FULL_STEP = 2.5     # I think
-    #   microns per full step might be different for each stepper
-    #   this would require some structural changes to handle
-    _MICRONS_PER_STEP = _MICRONS_PER_FULL_STEP / 32 # enforcing this step mode in StageAxis __init__
+    _MICRONS_PER_STEP = _MICRONS_PER_FULL_STEP / 32
+    # enforcing 32 microsteps per full step in StageAxis __init__
 
     def __init__(self, value: Union[int, float], unit: str = "microns"):
         if unit == "microns":
@@ -126,7 +124,8 @@ class Distance:
     def fullsteps(self, value):
         self._microns = float(value) * self._MICRONS_PER_FULL_STEP
 
-    def prettyprint(self, which: Union[Sequence[str], str, None] = None):
+    def prettyprint(self, which: Union[Sequence[str], str, None] = None,
+                    stacked: bool = False):
         if which is None or which.lower() == 'all':
             which = ('microns', 'volts', 'steps', 'fullsteps')
         if isinstance(which, str):
@@ -134,15 +133,18 @@ class Distance:
 
         output = []
         if 'microns' in which:
-            output.append(f'{self.microns:.2f} microns')
+            output.append(f'{self.microns:.1f} microns')
         if 'volts' in which:
-            output.append(f'{self.volts:.2f} volts')
+            output.append(f'{self.volts:.1f} volts')
         if 'steps' in which:
-            output.append(f'{self.steps:.2f} steps')
+            output.append(f'{self.steps:.1f} steps')
         if 'fullsteps' in which:
-            output.append(f'{self.fullsteps:.2f} full steps')
+            output.append(f'{self.fullsteps:.1f} full steps')
 
-        output = 'Distance(' + ',\n         '.join(output) + ')'
+        output = 'Distance(' + ', '.join(output) + ')'
+
+        if stacked:
+            output = output.replace(',', ',\n' + ' ' * 9)
 
         return output
 
@@ -189,18 +191,23 @@ class StageAxis:
             self.PIEZO_CENTER = (self.PIEZO_LIMITS[1] - self.PIEZO_LIMITS[0]) / 2
 
             if stepper_SN in stepper_info.keys():
-                self.STEPPER_LIMITS = (Distance(stepper_info[stepper_SN][0] * self.step_mode_mult, 'steps'),
-                                        Distance(stepper_info[stepper_SN][1] * self.step_mode_mult, 'steps'))
+                self.TRUE_STEPPER_LIMITS = (Distance(stepper_info[stepper_SN][0], 'fullsteps'),
+                                       Distance(stepper_info[stepper_SN][1], 'fullsteps'))
             else:
                 #   should be safe values
-                self.STEPPER_LIMITS = (Distance(1000 * self.step_mode_mult, 'steps'),
-                                        Distance(2800 * self.step_mode_mult, 'steps'))
+                self.TRUE_STEPPER_LIMITS = (Distance(1000, 'fullsteps'),
+                                       Distance(2800, 'fullsteps'))
                 warnings.warn(f"Stepper serial number {stepper} is not in stepper_info.yaml." +
                             "Stage range set to safe defaults.")
-            log.debug(f"Stepper {self.stepper_SN} stage limits set to ({self.STEPPER_LIMITS[0].steps}, {self.STEPPER_LIMITS[1].steps})")
+            log.debug(f"True stepper {self.stepper_SN} stage limits set to " +
+            f"({self.TRUE_STEPPER_LIMITS[0].prettyprint()}, {self.TRUE_STEPPER_LIMITS[1].prettyprint()})")
+
+            self.STEPPER_LIMITS = (Distance(0, 'fullsteps'),
+                self.TRUE_STEPPER_LIMITS[1] - self.TRUE_STEPPER_LIMITS[0])
+
             # stepper center is defined with lower limit = 0 steps
             self.STEPPER_CENTER = (self.STEPPER_LIMITS[1] - self.STEPPER_LIMITS[0]) / 2
-            log.debug(f"Stepper {self.stepper_SN} stage center set to {self.STEPPER_CENTER.steps}")
+            log.debug(f"Stepper {self.stepper_SN} stage center set to {self.STEPPER_CENTER.prettyprint()}")
 
             #   checking that the stepper controller settings are what we want
             #       because we can't change most of them in python
@@ -284,9 +291,9 @@ class StageAxis:
             raise RuntimeError(f"Stepper {self.stepper_SN} position is uncertain and needs homing")
 
         steps = int(steps)  # steps expected in microsteps
-        if steps > (self.STEPPER_LIMITS[1] - self.STEPPER_LIMITS[0]).steps: # lower limit is set to 0
+        if steps > self.STEPPER_LIMITS[1].steps: # lower limit is set to 0
             warnings.warn(f"Cannot move {self.stepper_SN} to {steps} because it is above the steppers " +
-                    f"stage limit of {self.STEPPER_LIMITS[1].steps}")
+                    f"stage limit of {self.STEPPER_LIMITS[1].prettyprint()}")
         else:
             self.stepper.set_target_position(steps)
             while self.stepper.get_target_position() != self.stepper.get_current_position():
@@ -315,23 +322,29 @@ class StageAxis:
             time.sleep(0.1)
 
         #   set lower stage limit to 0
-        self._goto_stepper(self.STEPPER_LIMITS[0].steps)
+        self._goto_stepper(self.TRUE_STEPPER_LIMITS[0].steps)
         self.stepper.halt_and_set_position(0)
-        log.info(f"Stepper {self.stepper_SN} homing complete, zeroed at lower stage limit")
+        log.info(f"Stepper {self.stepper_SN} homing complete, " +
+                    f"zeroed at lower stage limit {self.TRUE_STEPPER_LIMITS[0].prettyprint()}")
+
+    def get_stepper_position(self):
+        position = self.stepper.get_current_position()
+        return Distance(position, "steps")
+
+    def get_piezo_position(self):
+        self.piezo.read(8)          #seems to clear better than flushing?
+        self.piezo.flush()
+        self.piezo.flushInput()
+        self.piezo.flushOutput()
+        self.piezo.write(f"{self.axis}voltage?\n".encode())
+        self.piezo.readline().decode('utf-8').strip()
+        position = self.piezo.read(8).decode('utf-8').strip()[2:-1]
+        return Distance(float(position), 'volts')
 
     def goto(self, position: Distance, which: Optional[MovementType] = None) -> float:
         if which == MovementType.GENERAL or which is None:
-            # get stepper and piezo positions as Distance objects
-            stepper_position = Distance(0, 'steps')
-
-            self.piezo.read(8)          #seems to clear better than flushing?
-            self.piezo.flush()
-            self.piezo.flushInput()
-            self.piezo.flushOutput()
-            self.piezo.write(f"{self.axis}voltage?\n".encode())
-            self.piezo.readline().decode('utf-8').strip()
-            piezo_position = self.piezo.read(8).decode('utf-8').strip()[2:-1]
-            piezo_position = Distance(float(piezo_position), 'volts')
+            stepper_position = self.get_stepper_position()
+            piezo_position = self.get_piezo_position()
 
             # decide whether the position can be reached with only the piezos
             if 0 < (stepper_position - position).volts < 75:
