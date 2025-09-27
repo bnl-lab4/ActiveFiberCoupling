@@ -1,7 +1,6 @@
 # SOCKET TODO:
 #   stage status function
 #   smart homing function
-#   simulation StageDevices
 #   parallelize stepper movement
 ####################
 
@@ -160,7 +159,9 @@ class StageAxis:
         clamped = max(self.PIEZO_LIMITS[0].volts,
                       min(self.PIEZO_LIMITS[1].volts, voltage)) #piezo voltage limits
         if clamped != voltage:
-            warnings.warn(f"Requested {self.axis.upper()}={voltage:.2f}V, clamped to {clamped:.2f}V")
+            log.warning(f"Cannot move {self.axis.upper()} to {voltage} because it is" +
+            "outside the piezo's limits of" +
+            f"({self.PIEZO_LIMITS[0].volts}, {self.PIEZO_LIMITS[1].volts}) volts")
         command = f"{self.axis.lower()}voltage={clamped}\n"
         self.piezo.read(self.piezo.in_waiting).decode("utf-8")
         self.piezo.write(command.encode())
@@ -176,13 +177,15 @@ class StageAxis:
             raise RuntimeError(f"Stepper {self.stepper_SN} position is uncertain and needs homing")
 
         steps = int(steps)  # steps expected in microsteps
-        if steps > self.STEPPER_LIMITS[1].steps: # lower limit is set to 0
-            warnings.warn(f"Cannot move {self.stepper_SN} to {steps} because it is above the steppers " +
-                    f"stage limit of {self.STEPPER_LIMITS[1].prettyprint()}")
-        else:
-            self.stepper.set_target_position(steps)
-            while self.stepper.get_target_position() != self.stepper.get_current_position():
-                time.sleep(0.01)
+        clamped = max(self.STEPPER_LIMITS[0].steps,
+                      min(self.STEPPER_LIMITS[1].steps, steps)) #piezo steps limits
+        if clamped != steps:
+            log.warning(f"Cannot move {self.stepper_SN} to {steps} because it is" +
+            "outside the stepper's stage limits of" +
+            f"({self.STEPPER_LIMITS[0].steps}, {self.STEPPER_LIMITS[1].steps}) steps")
+        self.stepper.set_target_position(steps)
+        while self.stepper.get_target_position() != self.stepper.get_current_position():
+            time.sleep(0.01)
         return MoveResult(Distance(steps, 'steps'), MovementType.STEPPER)
 
     def energize(self):
@@ -256,7 +259,7 @@ class StageAxis:
         if which == MovementType.PIEZO:
             return self._goto_piezo((self.get_piezo_position() + movement).volts)
         if which == MovementType.STEPPER:
-            return self._goto_stepper((self.stepper_position() + movement).steps)
+            return self._goto_stepper((self.get_stepper_position() + movement).steps)
 
         if which == MovementType.GENERAL:
             stepper_position = self.get_stepper_position()

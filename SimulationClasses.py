@@ -46,7 +46,7 @@ class SimulationSensor:
     def __init__(self,
                  propagation_axis: str, # defaults to y
                  focal_ratio: float = 4.0,
-                 beam_waist_position: Tuple[float, float, float] = (1900.0,) * 3,
+                 beam_waist_position: Tuple[float, float, float] = (2000.0,) * 3, # microns
                  angle_of_deviation: float = 0,
                  peak_intensity: float = 1.0):
         """
@@ -67,7 +67,7 @@ class SimulationSensor:
         self.stage = None # This will be set by the SimulationStageDevices instance
 
         NA = math.sin(math.atan(1 / (2 * focal_ratio)))
-        self.w0 = NA * 2 / math.pi
+        self.w0 = math.pi * WAVELENGTH / NA
 
         # Calculate Rayleigh range
         self.z_R = (math.pi * self.w0**2) / WAVELENGTH
@@ -178,15 +178,24 @@ class SimulationStageAxis:
 
     def _goto_piezo(self, position: Distance) -> MoveResult:
         """Sets the piezo position, clamping it within its limits."""
-        clamped_microns = max(self.PIEZO_LIMITS[0].microns,
-                              min(self.PIEZO_LIMITS[1].microns, position.microns))
-        self.piezo_position = Distance(clamped_microns, 'microns')
+        clamped = max(self.PIEZO_LIMITS[0].volts,
+                              min(self.PIEZO_LIMITS[1].volts, position.volts))
+        if clamped != position.volts:
+            log.warning(f"Cannot move {self.axis.upper()} to {clamped} because it is" +
+            "outside the piezo's limits of" +
+            f"({self.PIEZO_LIMITS[0].volts}, {self.PIEZO_LIMITS[1].volts}) volts")
+        self.piezo_position = Distance(clamped, 'volts')
         return MoveResult(self.piezo_position, MovementType.PIEZO)
 
     def _goto_stepper(self, position: Distance) -> MoveResult:
         """Sets the stepper position, clamping it within its limits."""
-        clamped_steps = max(self.STEPPER_LIMITS[0].steps, min(self.STEPPER_LIMITS[1].steps, position.steps))
-        self.stepper_position = Distance(clamped_steps, 'steps')
+        clamped = max(self.STEPPER_LIMITS[0].steps,
+                            min(self.STEPPER_LIMITS[1].steps, position.steps))
+        if clamped != position.steps:
+            log.warning(f"Cannot move {self.axis.upper()} to {clamped} because it is" +
+            "outside the stepper's stage limits of" +
+            f"({self.PIEZO_LIMITS[0].steps}, {self.PIEZO_LIMITS[1].steps}) steps")
+        self.stepper_position = Distance(clamped, 'steps')
         return MoveResult(self.stepper_position, MovementType.STEPPER)
 
     def goto(self, position: Distance, which: Optional[MovementType] = None) -> MoveResult:

@@ -2,7 +2,7 @@ import inspect
 import warnings
 from typing import List, Sequence, Optional
 
-from MovementClasses import Distance
+from MovementClasses import Distance, StageDevices
 
 
 def parse_str_values(value):
@@ -85,7 +85,7 @@ def sequence_to_str(sequence, joined = True):
             if len(sub_dict_list) == 0:
                 sub_dict_print = '{}'
             elif len(sub_dict_list) == 1:
-                sub_dict_print = '{ ' + sub_dict_list[0] + ' }'
+                sub_dict_print = '{ ' + sub_dict_list[0] + ', }'
             else:
                 sub_dict_print = '{\n' + '\n'.join(sub_dict_list) + "\n}"
             sub_dict_print = sub_dict_print.replace('\n', '\n' + ' ' * 8)
@@ -97,20 +97,22 @@ def sequence_to_str(sequence, joined = True):
             if len(sub_seq_list) == 0:
                 sub_seq_print = '()'
             elif len(sub_seq_list) == 1:
-                sub_seq_print = '( ' + sub_seq_list[0] + ' )'
+                sub_seq_print = '( ' + sub_seq_list[0] + ', )'
             else:
                 sub_seq_print = '(\n' + '\n'.join(sub_seq_list) + "\n)"
             sub_seq_print = sub_seq_print.replace('\n', '\n' + ' ' * 8)
 
             if isinstance(elem, list):
-                sub_seq_print = sub_seq_print.replace('(', '[')
-                sub_seq_print = sub_seq_print.replace(')', ']')
+                sub_seq_print = sub_seq_print.replace('(', '[', 1)
+                sub_seq_print = sub_seq_print[::-1].replace(')', ']', 1)
 
             sequence_print.append(sub_seq_print)
             continue
 
         elif isinstance(elem, Distance):
             sequence_print.append(elem.prettyprint(stacked=True))
+        elif isinstance(elem, StageDevices):
+            sequence_print.append(elem.name)
         else:
             sequence_print.append(str(elem))
 
@@ -128,7 +130,7 @@ def dict_to_str(mydict, joined = True):
             if len(sub_dict_list) == 0:
                 sub_dict_print += '{}'
             elif len(sub_dict_list) == 1:
-                sub_dict_print += '{ ' + sub_dict_list[0] + ' }'
+                sub_dict_print += '{ ' + sub_dict_list[0] + ', }'
             else:
                 sub_dict_print += '{\n' + '\n'.join(sub_dict_list) + "\n}"
             sub_dict_print = sub_dict_print.replace('\n', '\n' + ' ' * 8)
@@ -141,20 +143,22 @@ def dict_to_str(mydict, joined = True):
             if len(sub_seq_list) == 0:
                 sub_seq_print += '()'
             elif len(sub_seq_list) == 1:
-                sub_seq_print += '( ' + sub_seq_list[0] + ' )'
+                sub_seq_print += '( ' + sub_seq_list[0] + ', )'
             else:
                 sub_seq_print += '(\n' + '\n'.join(sub_seq_list) + "\n)"
             sub_seq_print = sub_seq_print.replace('\n', '\n' + ' ' * 8)
 
             if isinstance(value, list):
-                sub_seq_print = sub_seq_print.replace('(', '[')
-                sub_seq_print = sub_seq_print.replace(')', ']')
+                sub_seq_print = sub_seq_print.replace('(', '[', 1)
+                sub_seq_print = sub_seq_print[::-1].replace(')', ']', 1)[::-1]
 
             dict_print.append(sub_seq_print)
             continue
 
         elif isinstance(value, Distance):
             dict_print.append(f"{str(key)} : {value.prettyprint(stacked=True)}")
+        elif isinstance(value, StageDevices):
+            dict_print.append(f"{str(key)} : {value.name}")
         else:
             dict_print.append(f"{str(key)} : {str(value)}")
 

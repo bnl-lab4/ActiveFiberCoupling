@@ -16,13 +16,26 @@ from Distance import Distance
 
 # unique logger name for this module
 log = logging.getLogger(__name__)
+
+# max numpy arr size before it summarizes when printed
+np.set_printoptions(threshold = 2000, linewidth=250)
+
 VALID_AXES = {'x', 'y', 'z'}
 
 
+def fit_string(fit_result, axes):
+    param_dict = {axes[0] : 'centerx', axes[1] : 'centery',
+                  r'$\sigma_r$' : 'sigmax'}
+    best_fit = [f"A = {fit_result.params['height'].value:.2f}", ]
+    best_fit += [f"{key} = {fit_result.params[name].value:.0f}" for key, name in param_dict.items()]
+    return ', '.join(best_fit)
+
+
 def plot_plane(response_grid: np.array, axis0_grid: np.array, axis1_grid: np.array,
-               axes: list, fit_result = None):
+               axes: list, plane: Distance, fit_result = None):
+    focus_axis = list(VALID_AXES.difference(set(axes)))[0]
     if fit_result is None:
-        fig, data_ax = plt.subplots()
+        fig, data_ax = plt.subplots(layout = 'constrained')
         # pcolormesh correctly handles the cell centering for the given x and y arrays
         c = data_ax.pcolormesh(axis0_grid, axis1_grid, response_grid, shading='auto')
         fig.colorbar(c, ax=data_ax, label='Intensity')
@@ -30,9 +43,9 @@ def plot_plane(response_grid: np.array, axis0_grid: np.array, axis1_grid: np.arr
         data_ax.set_xlabel(axes[0] + ' (microns)')
         data_ax.set_ylabel(axes[1] + ' (microns)')
         data_ax.set_title('Data')
+        fig.suptitle(f"{focus_axis.upper()} = {plane.prettyprint()}")
 
-        plt.show(block=True)
-        return
+        return fig
 
     fig, axs = plt.subplots(figsize=(18, 5), nrows = 1, ncols = 5, layout = 'constrained',
                             gridspec_kw = dict(width_ratios = (1, 0.05, 1, 1, 0.05)))
@@ -60,6 +73,10 @@ def plot_plane(response_grid: np.array, axis0_grid: np.array, axis1_grid: np.arr
         ax.set_xlabel(axes[0] + ' (microns)')
         ax.set_ylabel(axes[1] + ' (microns)')
         ax.set_title(title)
+
+    fig.suptitle(f"{focus_axis.upper()} = {plane.prettyprint()}")
+    axs[2].annotate(fit_string(fit_result, axes), (0.5, 0.95), xytext=(0.1, 0.95), xycoords='axes fraction',
+                        annotation_clip=True, fontsize=10, color='white')
 
     return fig
 
@@ -111,15 +128,17 @@ def grid_search(stage: StageDevices, movementType: MovementType,
     log.info(f"Best fit peak of {maximum} at {axes} = " +
             f"{maximum_pos_distance} with width {width_distance}")
 
+    if movementType == MovementType.PIEZO:
+        plane = stage.axes[focus_axis].get_piezo_position()
+    if movementType == MovementType.STEPPER:
+        plane = stage.axes[focus_axis].get_stepper_position()
+
+    fig = plot_plane(response_grid, axis0_grid, axis1_grid, axes, plane, result)
     log.info("Plot Generated")
-    fig = plot_plane(response_grid, axis0_grid, axis1_grid, axes, result)
     if log_plot:
-        if movementType == MovementType.PIEZO:
-            plane = stage.axes[focus_axis].get_piezo_position()
-        if movementType == MovementType.STEPPER:
-            plane = stage.axes[focus_axis].get_stepper_position()
         fig.savefig(f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_" +
-            f"{movementType.value}_{focus_axis}-{plane.prettyprint()}.png")
+            f"{movementType.value}_{focus_axis}-{plane.prettyprint()}.png",
+                    format='png', facecolor='white', dpi=200)
     if show_plot:
         plt.show(block=True)
 
@@ -131,7 +150,7 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
         num_points: Tuple[None, int, Sequence[int]] = None,
         center: Union[None, str, Sequence[Distance]] = None,
         limits: Optional[list] = None, # must be mutable; 2-list of (2-lists of) Distance objects
-        axes: str = 'yz', planes: Union[None, int, Sequence[Distance]] = None,   # default 3 planes
+        axes: str = 'xz', planes: Union[None, int, Sequence[Distance]] = None,   # default 3 planes
         grid_search_kwargs: dict = {}):
 
     assert movementType in (MovementType.PIEZO, MovementType.STEPPER), \
@@ -200,11 +219,12 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
         limits[1][1] += center[1]
 
     if spacing is not None:
-        axis0 = np.arange(limits[0][0].microns, 1.1*limits[0][1].microns, spacing[0].microns)
-        axis1 = np.arange(limits[1][0].microns, 1.1*limits[1][1].microns, spacing[1].microns)
+        axis0 = np.arange(limits[0][0].microns, (1+1e-6)*limits[0][1].microns, spacing[0].microns)
+        axis1 = np.arange(limits[1][0].microns, (1+1e-6)*limits[1][1].microns, spacing[1].microns)
+        # 1+1e-6 is so that the upper limit is included in the resulting list
     if num_points is not None:
-        axis0 = np.linspace(limits[0][0].microns, limits[0][1].microns, num_points)
-        axis1 = np.linspace(limits[1][0].microns, limits[1][1].microns, num_points)
+        axis0 = np.linspace(limits[0][0].microns, limits[0][1].microns, num_points[0])
+        axis1 = np.linspace(limits[1][0].microns, limits[1][1].microns, num_points[1])
 
     #   grid search in planes
     plane_maxima = []
@@ -237,7 +257,7 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
     if len(planes) == 1:
         stage.goto(axes[0], Distance(plane_maxima_pos[0][0], "microns"), movementType)
         stage.goto(axes[1], Distance(plane_maxima_pos[0][1], "microns"), movementType)
-        print("Done!")
+        log.info("Moved to this plane's maximum position")
         return
 
     if len(planes): # >= 2:

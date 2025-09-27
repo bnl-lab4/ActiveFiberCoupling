@@ -1,10 +1,11 @@
 ################ TODO
-# convert main menu to YAML
-# create simulator StageDevice with fake data
+# CONTINUOUS SENSOR READOUT FUNCTON
 # 3d fitting in grid_search
 # populate default kwargs dictionaries
+# move logging funcs to their own script
+# add general movement mode to manual control
 # rewrite command line arg handling to be more flexible (dict?)
-# add simulate bool to command line args
+# convert main menu to YAML
 #####################
 
 
@@ -38,10 +39,12 @@ SIPM0 = dict(addr = 0, channel = 1, sensortype = SensorType.SIPM)
 SIPM1 = dict(addr = 0, channel = 2, sensortype = SensorType.SIPM)
 PHOTODIODE0 = dict(addr = 0, channel = 1, sensortype = SensorType.PHOTODIODE)
 PHOTODIODE1 = dict(addr = 0, channel = 2, sensortype = SensorType.PHOTODIODE)
-SIMSENSOR = dict(propagation_axis = 'y', focal_ratio = 4.0, angle_of_deviation = math.pi/180)
+SIMSENSOR_ASPH = dict(propagation_axis = 'y', focal_ratio = 4.0, angle_of_deviation = math.pi/180)
+SIMSENSOR_LABTELE = dict(propagation_axis = 'y', focal_ratio = 28.0, angle_of_deviation = math.pi/180)
+SIMSENSOR_SKYTELE = dict(propagation_axis = 'y', focal_ratio = 7.0, angle_of_deviation = math.pi/180)
 
 SENSOR0 = PHOTODIODE0
-SENSOR1 = PHOTODIODE1
+SENSOR1 = SIMSENSOR_LABTELE
 
 PIEZO_PORT0 = '/dev/ttyACM0'
 PIEZO_PORT1 = '/dev/ttyACM1'
@@ -353,7 +356,6 @@ def main():
     AutoHome = True # home motors upon establishing connection
     RequireConnection = False # raise exception if device connections fail to establish
     ExposureTime = 200  # default exposure time (units are sensor dependent)
-    Simulate = True
     LoggingSettings = [None] * 4
 
     if len(sys.argv) > 1:
@@ -365,21 +367,23 @@ def main():
     setup_logging(*LoggingSettings)
 
     with contextlib.ExitStack() as stack:
-        if not Simulate:
+        if "propogation_axis" not in SENSOR0:
             sensor0 = stack.enter_context(Sensor(SENSOR0, SENSOR0['sensortype']))
             stage0 = stack.enter_context(StageDevices('stage0', PIEZO_PORT0, STEPPER_DICT0,
                                         sensor = sensor0, require_connection = RequireConnection,
                                                  autohome = AutoHome))
+        else:
+            sensor0 = stack.enter_context(SimulationSensor(**SENSOR0))
+            stage0 = stack.enter_context(SimulationStageDevices('simstage0', sensor = sensor0))
 
+        if "propagation_axis" not in SENSOR1:
             sensor1 = stack.enter_context(Sensor(SENSOR1, SENSOR1['sensortype']))
             stage1 = stack.enter_context(StageDevices('stage1', PIEZO_PORT1, STEPPER_DICT1,
                                         sensor = sensor1, require_connection = RequireConnection,
                                                  autohome = AutoHome))
-        else:
-            sensor0 = stack.enter_context(SimulationSensor(**SIMSENSOR))
-            stage0 = stack.enter_context(SimulationStageDevices('simstage0', sensor = sensor0))
 
-            sensor1 = stack.enter_context(SimulationSensor(**SIMSENSOR))
+        else:
+            sensor1 = stack.enter_context(SimulationSensor(**SENSOR1))
             stage1 = stack.enter_context(SimulationStageDevices('simstage1', sensor = sensor1))
 
         MENU_DICT = {
