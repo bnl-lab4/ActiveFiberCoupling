@@ -85,7 +85,7 @@ def sequence_to_str(sequence, joined = True):
             if len(sub_dict_list) == 0:
                 sub_dict_print = '{}'
             elif len(sub_dict_list) == 1:
-                sub_dict_print = '{ ' + sub_dict_list[0] + ', }'
+                sub_dict_print = '{ ' + sub_dict_list[0] + ' }'
             else:
                 sub_dict_print = '{\n' + '\n'.join(sub_dict_list) + "\n}"
             sub_dict_print = sub_dict_print.replace('\n', '\n' + ' ' * 8)
@@ -97,7 +97,7 @@ def sequence_to_str(sequence, joined = True):
             if len(sub_seq_list) == 0:
                 sub_seq_print = '()'
             elif len(sub_seq_list) == 1:
-                sub_seq_print = '( ' + sub_seq_list[0] + ', )'
+                sub_seq_print = '( ' + sub_seq_list[0] + ' )'
             else:
                 sub_seq_print = '(\n' + '\n'.join(sub_seq_list) + "\n)"
             sub_seq_print = sub_seq_print.replace('\n', '\n' + ' ' * 8)
@@ -130,7 +130,7 @@ def dict_to_str(mydict, joined = True):
             if len(sub_dict_list) == 0:
                 sub_dict_print += '{}'
             elif len(sub_dict_list) == 1:
-                sub_dict_print += '{ ' + sub_dict_list[0] + ', }'
+                sub_dict_print += '{ ' + sub_dict_list[0] + ' }'
             else:
                 sub_dict_print += '{\n' + '\n'.join(sub_dict_list) + "\n}"
             sub_dict_print = sub_dict_print.replace('\n', '\n' + ' ' * 8)
@@ -143,7 +143,7 @@ def dict_to_str(mydict, joined = True):
             if len(sub_seq_list) == 0:
                 sub_seq_print += '()'
             elif len(sub_seq_list) == 1:
-                sub_seq_print += '( ' + sub_seq_list[0] + ', )'
+                sub_seq_print += '( ' + sub_seq_list[0] + ' )'
             else:
                 sub_seq_print += '(\n' + '\n'.join(sub_seq_list) + "\n)"
             sub_seq_print = sub_seq_print.replace('\n', '\n' + ' ' * 8)

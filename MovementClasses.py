@@ -1,4 +1,5 @@
 # SOCKET TODO:
+#   stepper clamping hangs on while loop
 #   stage status function
 #   smart homing function
 #   parallelize stepper movement
