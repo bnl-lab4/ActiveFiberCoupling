@@ -1,5 +1,4 @@
-# SOCKET TODO:
-#   stepper clamping hangs on while loop
+# TODO:
 #   stage status function
 #   smart homing function
 #   parallelize stepper movement
@@ -184,7 +183,7 @@ class StageAxis:
             log.warning(f"Cannot move {self.stepper_SN} to {steps} because it is" +
             "outside the stepper's stage limits of" +
             f"({self.STEPPER_LIMITS[0].steps}, {self.STEPPER_LIMITS[1].steps}) steps")
-        self.stepper.set_target_position(steps)
+        self.stepper.set_target_position(clamped)
         while self.stepper.get_target_position() != self.stepper.get_current_position():
             time.sleep(0.01)
         return MoveResult(Distance(steps, 'steps'), MovementType.STEPPER)

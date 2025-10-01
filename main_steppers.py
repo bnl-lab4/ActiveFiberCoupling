@@ -1,6 +1,5 @@
 ################ TODO
 # CONTINUOUS SENSOR READOUT FUNCTON
-# 3d fitting in grid_search
 # populate default kwargs dictionaries
 # move logging funcs to their own script
 # add general movement mode to manual control
