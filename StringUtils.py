@@ -18,6 +18,8 @@ def parse_str_values(value):
             if val.startswith('D('):
                 list_values[i] = list_values[i] + ',' + list_values[i+1]
                 del list_values[i+1]
+        if any(['=' in elem for elem in list_values]):
+            raise ValueError("You must use : between keys and values in a dictionary, not =")
         list_values = [elem.split(':') for elem in list_values]
         value = {key : parse_str_values(value) for key, value in list_values}
         return value
@@ -171,7 +173,7 @@ def menu_help(func_key: Optional[str] = None, menu: Optional[dict] = None):
     MAIN_MENU_HELP = """
 MAIN MENU HELP
 Function call syntax is '<func name> <stagenum device> <default kwarg name> <key=value> <key=value>'.
-Call 'help func=<func name>' to see the required args and optional kwargs.
+Call 'help <func name>' to see the required args and optional kwargs.
 Space is the delimiter between arguments, so do not use spaces anywhere else.
 Keyword argument values can be ints, floats, strings, Distance objects, and lists thereof.
 Strings are handled lazily and do not need to be wrapped with ' or " (but can be).
@@ -180,9 +182,10 @@ Distance objects are denoted by starting with 'D(' or 'Distance(' and ending wit
 The first argument of Distance is the value, the second is the units, separated by only a comma.
 
 Some examples:
-help func=reload
+help reload
         -- Show the input parameters of reload.
-        -- Certain functions like help don't need an arg.
+log
+        -- Certain functions don't need an arg.
 center 0s
         -- Centers the steppers of stage 0.
 grid 0s fine axes='yz' planes=[D(100,"fullsteps"),D(500,fullsteps)]

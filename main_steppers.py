@@ -11,7 +11,6 @@
 
 import os
 import sys
-import math
 import importlib    # for reloading modules
 import logging
 import warnings
@@ -481,7 +480,7 @@ def main():
                 'args'   : {},
                     },
             'help'   : {
-                'text'   : 'Help with menu or with a function (func=func_name)',
+                'text'   : "Help with menu or with a function ('help <func_name>')",
                 'func'   : StringUtils.menu_help,
                 'args'   : {}
                     }

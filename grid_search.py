@@ -1,7 +1,5 @@
 ########### TODO:
-# more testing
-# deviation angles in 3d fit
-# spiral order of grid locations
+# deviation angles in 3d fit (maybe)
 ###########
 
 import logging
@@ -15,6 +13,7 @@ from datetime import datetime
 
 from MovementClasses import MovementType, StageDevices
 from Distance import Distance
+from grid_plotting import plot_plane, plot_3dfit, plot_2dfit, plot_para_fit, plot_lin_fit
 
 # unique logger name for this module
 log = logging.getLogger(__name__)
@@ -24,6 +23,21 @@ np.set_printoptions(threshold = 2000, linewidth=250)
 
 VALID_AXES = {'x', 'y', 'z'}
 WAVELENGTH = 0.65   # microns
+
+
+def accept_fit():
+    while True:
+        print("Do you accept the fit?")
+        user_input = input("(y/n): ").strip().lower()
+
+        if user_input == 'n':
+            log.info("Fit rejected")
+            return False
+        if user_input == 'y':
+            log.info("Fit accepted")
+            return True
+
+        print("Could not interpret; input must be 'y' or 'n'.")
 
 
 def gaussbeam(x1, x2, x3, waistx1=0.0, waistx2=0.0, waistx3=0.0, I0=1.0, w0=8*np.pi*WAVELENGTH, C=0.0):
@@ -36,7 +50,7 @@ def gaussbeam(x1, x2, x3, waistx1=0.0, waistx2=0.0, waistx3=0.0, I0=1.0, w0=8*np
     return I0 * (w0**2 / wp2) * np.exp(-2 * r2 / wp2) + C
 
 
-def Gbeamfit_3d(axes: str, axis0_cube: np.ndarray, axis1_cube: np.ndarray,
+def Gbeamfit_3d(axes: str, movementType: MovementType, axis0_cube: np.ndarray, axis1_cube: np.ndarray,
                 focus_cube: np.ndarray, data_cube: np.ndarray,
                 show_plot: bool = False, log_plot: bool = True):
 
@@ -63,28 +77,32 @@ def Gbeamfit_3d(axes: str, axis0_cube: np.ndarray, axis1_cube: np.ndarray,
     log.debug("Fit complete")
 
     # plot logic
-    fig = plot_3dfit(axes, *[cube.reshape(focus_cube.shape) for cube in position_cubes.values()], result)
-    log.info("Plot Generated")
-    if log_plot:
-        fig.savefig(f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_" +
-            "Gaussian_beam_fit.png",
-                    format='png', facecolor='white', dpi=200)
-    if show_plot:
-        plt.show(block=True)
-    plt.close()
+    if log_plot or show_plot:
+        fig = plot_3dfit(axes, *[cube.reshape(focus_cube.shape) for cube in position_cubes.values()], result)
+        log.info("Plot Generated")
+        if log_plot:
+            fig.savefig(f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_" +
+                f"{movementType.value}_Gaussian_beam_fit.png",
+                        format='png', facecolor='white', dpi=200)
+            log.info("Plot saved to ./log_plots")
+        if show_plot:
+            plt.show(block=True)
+        plt.close()
 
     return result
 
 
-def Gbeamfit_2d(axes: str, axis0_grid: np.ndarray,
+def Gbeamfit_2d(axes: str, movementType: MovementType, axis0_grid: np.ndarray,
                 axis1_grid: np.ndarray, grid_values: np.ndarray,
                 plane: Distance, show_plot: bool = False, log_plot: bool = True):
+
+    focus_axis = list(VALID_AXES.difference(set(axes)))[0]
 
     gmodel = lmfit.models.Gaussian2dModel()
     params = gmodel.guess(grid_values.flatten(), axis0_grid.flatten(), axis1_grid.flatten())
     model = gmodel + lmfit.models.ConstantModel()
     params.add('c', value=grid_values.mean())
-    params['sigmay'].expr('sigmax')     # circular gaussian
+    params['sigmay'].exp = 'sigmax'     # circular gaussian
 
     weights = grid_values
     weights = weights - weights.min() + 1e-6 * np.ones_like(weights)
@@ -92,128 +110,89 @@ def Gbeamfit_2d(axes: str, axis0_grid: np.ndarray,
     weights = np.sqrt(weights)
 
     result = model.fit(grid_values.flatten(), x=axis0_grid.flatten(), y=axis1_grid.flatten(),
-                       params=params, weights=weights)
+                       params=params, weights=weights.flatten())
     # logic
-    plot_2dfit()
+    if log_plot or show_plot:
+        fig = plot_2dfit(grid_values, axis0_grid, axis1_grid, axes, plane, result)
+        log.info(f"Plot Generated for plane {plane.prettyprint()}")
+        if log_plot:
+            fig.savefig(f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_2dfit_" +
+                f"{movementType.value}_{focus_axis}-{plane.microns}um.png",
+                        format='png', facecolor='white', dpi=200)
+            log.info("Plot saved to ./log_plots")
+        if show_plot:
+            plt.show(block=True)
+        plt.close()
 
     return result
 
 
-def plot_3dfit(axes: str, axis0_cube: np.ndarray, axis1_cube: np.ndarray, focus_cube: np.ndarray,
-               result: lmfit.model.ModelResult):
+def waist_parafit(axes: str, movementType: MovementType, planes: Sequence[Distance],
+                  results: Sequence[lmfit.model.ModelResult],
+                  show_plot: bool = False, log_plot: bool = True):
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
-    data_cube = result.data.reshape(axis0_cube.shape)
 
-    axis0_dense = np.arange(axis0_cube.min(), axis0_cube.max() + 1e-3, 1)
-    axis1_dense = np.arange(axis1_cube.min(), axis1_cube.max() + 1e-3, 1)
-    axis0_grid_dense, axis1_grid_dense = np.meshgrid(axis0_dense, axis1_dense)
+    waists = np.array([result.params['sigmax'].value for result in results])
+    waists_unc = np.array([result.params['sigmax'].stderr for result in results])
+    planes_microns = np.array([plane.microns for plane in planes])
 
-    fig, axs = plt.subplots(nrows=len(focus_cube), ncols=5, figsize=((10, 3*len(focus_cube)+1)),
-                            layout='constrained', gridspec_kw = dict(width_ratios = (1, 0.05, 1, 1, 0.05)))
-    for axrow, grid_values, focus_grid in zip(axs, data_cube, focus_cube):
-        plane = focus_grid[0, 0]
-        focus_grid_dense = plane * np.ones_like(axis0_grid_dense)
-        fit_grid_dense = result.eval(x1=axis0_grid_dense, x2=axis1_grid_dense, x3=focus_grid_dense)
-        fit_grid = result.eval(x1=axis0_cube[0], x2=axis1_cube[0], x3=focus_grid)
-        resid_grid = grid_values - fit_grid
+    model = lmfit.models.QuadraticModel()
+    params = model.guess(waists, x=planes_microns)
+    para_result = model.fit(waists, x=planes_microns, params=params, weights=1/waists_unc)
 
-        vmin = min(grid_values.min(), fit_grid_dense.min())
-        vmax = max(grid_values.max(), fit_grid_dense.max())
+    if show_plot or log_plot:
+        fig = plot_para_fit(axes, waists, waists_unc, planes_microns,
+                            para_result)
+        log.info("Plot Generated")
+        if log_plot:
+            fig.savefig(f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_parafit_" +
+                f"{movementType.value}_w-vs-{focus_axis}.png",
+                        format='png', facecolor='white', dpi=200)
+        if show_plot:
+            plt.show(block=True)
+        plt.close()
 
-        data_cbar = axrow[0].pcolormesh(axis0_cube[0], axis1_cube[0], grid_values,
-                            vmin=vmin, vmax=vmax, shading='auto')
-        axrow[2].pcolormesh(axis0_grid_dense, axis1_grid_dense, fit_grid_dense,
-                            vmin=vmin, vmax=vmax, shading='auto')
-        resid_cbar = axrow[3].pcolormesh(axis0_cube[0], axis1_cube[0], resid_grid, shading='auto')
-
-        fig.colorbar(data_cbar, cax=axrow[1], label='Intensity')
-        fig.colorbar(resid_cbar, cax=axrow[4], label='Residual (Absolute)')
-
-        axrow[2].sharey(axrow[0])
-        axrow[2].set_yticklabels([])
-        axrow[3].sharey(axrow[0])
-        axrow[3].set_yticklabels([])
-
-        axrow[0].set_title("Data")
-        axrow[2].set_title(f"Fit\nPlane {focus_axis} = {plane:.0f} microns")
-        axrow[3].set_title('Data - Fit')
-
-        axrow[0].set_ylabel(axes[1] + ' (microns)')
-        for ax in (axrow[0], axrow[2], axrow[3]):
-            ax.set_xlabel(axes[0] + ' (microns)')
-
-    for ax in axs[:-1, 0]:
-        ax.sharex(axs[-1, 0])
-        ax.set_xticklabels([])
-    for ax in axs[:-1, 2]:
-        ax.sharex(axs[-1, 2])
-        ax.set_xticklabels([])
-    for ax in axs[:-1, 3]:
-        ax.sharex(axs[-1, 3])
-        ax.set_xticklabels([])
-
-    return fig
+    return para_result
 
 
-def plane_fit_string(fit_result, axes):
-    param_dict = {axes[0] : 'centerx', axes[1] : 'centery',
-                  r'$\sigma_r$' : 'sigmax'}
-    best_fit = [f"A = {fit_result.params['height'].value:.2f}", ]
-    best_fit += [f"{key} = {fit_result.params[name].value:.0f}" for key, name in param_dict.items()]
-    return ', '.join(best_fit)
-
-
-def plot_plane(response_grid: np.array, axis0_grid: np.array, axis1_grid: np.array,
-               axes: list, plane: Distance):
+def peaks_linfit(axes: str, first_axis: bool, movementType: MovementType, planes: Sequence[Distance],
+                 results: Sequence[lmfit.model.ModelResult], focus_pos: Distance,
+                 show_plot: bool = False, log_plot: bool = True):
+    # fit peak position values (in case the beam is not parallel with the focal axis)
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
-    fig, data_ax = plt.subplots(layout = 'constrained')
-    # pcolormesh correctly handles the cell centering for the given x and y arrays
-    c = data_ax.pcolormesh(axis0_grid, axis1_grid, response_grid, shading='auto')
-    fig.colorbar(c, ax=data_ax, label='Intensity')
+    centerstr = 'centerx' if first_axis else 'centery'
+    planes_microns = np.array([plane.microns for plane in planes])
+    axis_peak_pos = np.array([result.params[centerstr].value for result in results])
+    axis_peak_unc = np.array([result.params[centerstr].stderr for result in results])
+    model = lmfit.models.LinearModel()
+    params = model.guess(axis_peak_pos, x=planes_microns)
+    lin_result = model.fit(axis_peak_pos, x=planes_microns,
+                           params=params, weights=1/axis_peak_unc)
 
-    data_ax.set_xlabel(axes[0] + ' (microns)')
-    data_ax.set_ylabel(axes[1] + ' (microns)')
-    data_ax.set_title('Data')
-    fig.suptitle(f"{focus_axis.upper()} = {plane.prettyprint()}")
+    if show_plot or log_plot:
+        axis = axes[0] if first_axis else axes[1]
+        fig = plot_lin_fit(axis, focus_axis, axis_peak_pos, axis_peak_unc,
+                           planes_microns, lin_result)
+        log.info("Plot Generated")
+        if log_plot:
+            fig.savefig(f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_linfit_" +
+                f"{movementType.value}_{axis}-vs-{focus_axis}.png",
+                        format='png', facecolor='white', dpi=200)
+        if show_plot:
+            plt.show(block=True)
+        plt.close()
 
-    return fig
+    accepted = True
+    if not lin_result.success:
+        accepted = False
+    elif show_plot:
+        accepted = accept_fit()
 
+    if accepted:
+        return Distance(lin_result.eval(x=focus_pos), 'microns')
 
-def plot_2dfit(response_grid: np.array, axis0_grid: np.array, axis1_grid: np.array,
-               axes: list, plane: Distance, fit_result: lmfit.model.ModelResult):
-    focus_axis = list(VALID_AXES.difference(set(axes)))[0]
-    fig, axs = plt.subplots(figsize=(18, 5), nrows = 1, ncols = 5, layout = 'constrained',
-                            gridspec_kw = dict(width_ratios = (1, 0.05, 1, 1, 0.05)))
-    dense_axes = [np.linspace(axis.min(), axis.max(), 750) for axis in
-                    (axis0_grid, axis1_grid)]
-    dense_grids = np.meshgrid(*dense_axes)
-    dense_result = fit_result.eval(x = dense_grids[0], y = dense_grids[1])
-    result = fit_result.eval(x = axis0_grid, y = axis1_grid)
-    resid = response_grid - result
-    vmin = min(response_grid.min(), dense_result.min())
-    vmax = max(response_grid.max(), dense_result.max())
-
-    data_c = axs[0].pcolormesh(axis0_grid, axis1_grid, response_grid,
-                           shading='auto', vmin=vmin, vmax=vmax)
-    fig.colorbar(data_c, cax=axs[1], label='Intensity')
-    axs[2].pcolormesh(*dense_grids, dense_result,
-                           shading='auto', vmin=vmin, vmax=vmax)
-    resid_c = axs[3].pcolormesh(axis0_grid, axis1_grid, resid, shading='auto')
-    fig.colorbar(resid_c, cax=axs[4], label='Residual Intensity (Absolute)')
-
-    titles = ('Data', '', 'Best Fit', 'Data - Best Fit')
-    for ax, title in zip(axs, titles):
-        if ax == axs[1]:
-            continue
-        ax.set_xlabel(axes[0] + ' (microns)')
-        ax.set_ylabel(axes[1] + ' (microns)')
-        ax.set_title(title)
-
-    fig.suptitle(f"{focus_axis.upper()} = {plane.prettyprint()}")
-    axs[2].annotate(plane_fit_string(fit_result, axes), (0.5, 0.95), xytext=(0.1, 0.95), xycoords='axes fraction',
-                        annotation_clip=True, fontsize=10, color='white')
-
-    return fig
+    # Take mean value if linear fit fails
+    return Distance(axis_peak_pos.mean(), 'microns')
 
 
 def plane_grid(stage: StageDevices, movementType: MovementType, plane: Distance,
@@ -227,21 +206,27 @@ def plane_grid(stage: StageDevices, movementType: MovementType, plane: Distance,
     response_grid = np.zeros_like(axis0_grid)
     for i, pos0 in enumerate(axis0):
         stage.goto(axes[0], Distance(pos0, "microns"), movementType)
-        for j, pos1 in enumerate(axis1):
-            stage.goto(axes[1], Distance(pos1, "microns"), movementType)
-            response_grid[j, i] += stage.integrate(exposureTime)
+        if i % 2:   # to snake along the grid
+            for j, pos1 in enumerate(axis1):
+                stage.goto(axes[1], Distance(pos1, "microns"), movementType)
+                response_grid[j, i] += stage.integrate(exposureTime)
+        else:
+            for j, pos1 in enumerate(axis1[::-1]):
+                stage.goto(axes[1], Distance(pos1, "microns"), movementType)
+                response_grid[-j-1, i] += stage.integrate(exposureTime)
 
     log.info(f"Grid values:\n{response_grid}")
 
-    fig = plot_plane(response_grid, axis0_grid, axis1_grid, axes, plane)
-    log.info("Plot Generated")
-    if log_plot:
-        fig.savefig(f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_" +
-            f"{movementType.value}_{focus_axis}-{plane.prettyprint()}.png",
-                    format='png', facecolor='white', dpi=200)
-    if show_plot:
-        plt.show(block=True)
-    plt.close()
+    if log_plot or show_plot:
+        fig = plot_plane(response_grid, axis0_grid, axis1_grid, axes, plane)
+        log.info("Plot Generated")
+        if log_plot:
+            fig.savefig(f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_gridvalues_" +
+                f"{movementType.value}_{focus_axis}-{plane.microns}um.png",
+                        format='png', facecolor='white', dpi=200)
+        if show_plot:
+            plt.show(block=True)
+        plt.close()
 
     return response_grid
 
@@ -252,8 +237,10 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
         center: Union[None, str, Sequence[Distance]] = None,
         limits: Optional[Sequence[Distance]] = None, # 2-list of (2-lists of) Distance objects
         axes: str = 'xz', planes: Union[None, int, Sequence[Distance]] = None,   # default 3 planes
-        fit_planes: bool = True, fit_3d: bool = True,
-        grid_kwargs: dict = {}, fit_3d_kwargs: dict = {}, fit_2d_kwargs: dict = {}):
+        fit_3d: bool = True, fit_2d: bool = True, fit_para: bool = True, fit_lin: bool = True,
+        show_plots: Optional[bool] = None, log_plots: Optional[bool] = None,
+        plane_kwargs: dict = {}, fit_3d_kwargs: dict = {}, fit_2d_kwargs: dict = {},
+        fit_para_kwargs: dict = {}, fit_lin_kwargs: dict = {}):
 
     assert movementType in (MovementType.PIEZO, MovementType.STEPPER), \
             "movementType must be MovementType.PIEZO or .STEPPER"
@@ -266,6 +253,16 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
             "axes must be two of 'x', 'y', or 'z'"
     assert axes[0] != axes[1], "axes must be unique"
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
+
+    # show_plots and log_plots will not override explicitly provided kwargs
+    if show_plots is not None:
+        for kwargs in (plane_kwargs, fit_3d_kwargs, fit_2d_kwargs, fit_para_kwargs, fit_lin_kwargs):
+            if 'show_plot' not in kwargs.keys():
+                kwargs.update({'show_plot' : show_plots})
+    if log_plots is not None:
+        for kwargs in (plane_kwargs, fit_3d_kwargs, fit_2d_kwargs, fit_para_kwargs, fit_lin_kwargs):
+            if 'log_plot' not in kwargs.keys():
+                kwargs.update({'log_plot' : log_plots})
 
     #   Default values
     if spacing is None and num_points is None:
@@ -338,7 +335,7 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
         stage.goto(focus_axis, plane, movementType)
 
         plane_values = plane_grid(stage, movementType, plane,
-                                    axes, axis0, axis1, exposureTime, **grid_kwargs)
+                                    axes, axis0, axis1, exposureTime, **plane_kwargs)
         grid_values.append(plane_values)
 
     # make cubes
@@ -349,13 +346,21 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
 
     if fit_3d:
         if len(planes) <= 1:
-            log.warning("There are not enough planes to do a 3d Gaussian beam model fit")
+            log.info("There are not enough planes to do a 3d Gaussian beam model fit")
         else:
             log.info("Attempting to fit data with a 3d Gaussian beam model")
 
-            result = Gbeamfit_3d(axes, axis0_cube, axis1_cube, focus_cube, grid_values, **fit_3d_kwargs)
-            if result.success:
+            result = Gbeamfit_3d(axes, movementType,
+                                 axis0_cube, axis1_cube, focus_cube, grid_values, **fit_3d_kwargs)
 
+            accepted = True
+            if not result.success:
+                log.info("Fit Rejected: 3d Gaussian beam fit did not finish successfully")
+                accepted = False
+            elif fit_3d_kwargs['show_plot']:
+                accepted = accept_fit()
+
+            if accepted:
                 peak = result.params['I0'].value
                 best_pos = [Distance(result.params[f"waistx{n}"].value, 'microns') for n in range(1, 4)]
                 stage.goto(axes[0], best_pos[0], movementType)
@@ -366,88 +371,70 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
                         f"({best_pos[0].prettyprint()}, {best_pos[1].prettyprint()}," +
                         f"{best_pos[2].prettyprint()})")
                 return
-            log.info("3d Gaussian beam fit failed")
 
     if fit_planes:
-        log.info("Attempting to fit planes with Gaussian models")
-        plane_results = []
-        for plane in planes:
-            result = Gbeamfit_2d(axes, axis0_grid, axis1_grid, grid_values,
+        log.info("Attempting to fit planes with 2d Gaussian model")
+        accepted_results = []
+        accepted_planes = []
+        for plane, plane_values in zip(planes, grid_values):
+            result = Gbeamfit_2d(axes, movementType, axis0_grid, axis1_grid, plane_values,
                                                      plane, **fit_2d_kwargs)
-            plane_results.append(result)
-            log.info("plane fit information")
+            accepted = True
+            if not result.success:
+                log.info(f"Fit to plane {focus_axis} = {plane.prettyprint()} failed")
+                accepted = False
+                continue
 
-        successful = []
-        successful_planes = []
-        for plane, result in zip(planes, plane_results):
-            if result.success:
-                successful.append(result)
-                successful_planes.append(plane)
+            elif fit_2d_kwargs['show_plot']:
+                accepted = accept_fit()
 
-        log.info(f"{len(successful)} of {len(planes)} planes successfully fit to")
+            if accepted:
+                accepted_results.append(result)
+                accepted_planes.append(plane)
 
-        if len(successful) >= 3:
+        # fit parabola to waists if able
+        if len(accepted_results) >= 3:
             log.info("Fitting parabola to waists")
-            waists = np.array([result.params['sigmax'].value for result in successful])
-            waists_unc = np.array([result.params['sigmax'].stderr for result in successful])
+            para_result = waist_parafit(axes, movementType, accepted_planes, accepted_results,
+                                        **fit_para_kwargs)
+            accepted = True
+            if not para_result.success:
+                log.info(f"Quadratic fit to waists vs {focus_axis} failed")
+                accepted = False
 
-            # fit parabola to waists
-            model = lmfit.models.QuadraticModel()
-            params = model.guess(waists, x=successful_planes)
-            para_result = model.fit(waists, x=successful_planes, params=params, weights=1/waists_unc)
-            focus_pos = - para_result.params['b'].value / 2 * para_result.params['a'].value
-            waist_min = Distance(para_result.eval(focus_pos), 'microns')
-            waist_pos = [None, None, Distance(focus_pos, 'microns')]
+            elif fit_para_kwargs['show_plot']:
+                accepted = accept_fit()
 
-            if para_result.success:
+            if accepted:
                 log.info("Fitting linear functions to peak center values")
-                # fit peak position values (in case the beam is not parallel with the focal axis)
-                axis0_peak_pos = np.array([result.params['centerx'].value for result in successful])
-                axis0_peak_unc = np.array([result.params['centerx'].stderr for result in successful])
-                model = lmfit.models.LinearModel()
-                params = model.guess(axis0_peak_pos, x=successful_planes)
-                lin_result0 = model.fit(axis0_peak_pos, x=successful_planes,
-                                       params=params, weights=1/axis0_peak_unc)
 
-                # Take mean value if linear fit fails
-                if lin_result0.success:
-                    waist_pos[0] = Distance(lin_result0.eval(waist_pos[2].microns), 'microns')
-                else:
-                    waist_pos[0] = Distance(axis0_peak_pos.mean(), 'microns')
-                    log.info(f"{axes[0]} linear fit failed")
-
-                axis1_peak_pos = np.array([result.params['centery'].value for result in successful])
-                axis1_peak_unc = np.array([result.params['centery'].stderr for result in successful])
-                model = lmfit.models.LinearModel()
-                params = model.guess(axis1_peak_pos, x=successful_planes)
-                lin_result1 = model.fit(axis1_peak_pos, x=successful_planes,
-                                       params=params, weights=1/axis1_peak_unc)
-
-                if lin_result1.success:
-                    waist_pos[1] = Distance(lin_result1.eval(waist_pos[2].microns), 'microns')
-                else:
-                    waist_pos[1] = Distance(axis0_peak_pos.mean(), 'microns')
-                    log.info(f"{axes[1]} linear fit failed")
+                focus_pos = - para_result.params['b'].value / 2 * para_result.params['a'].value
+                waist_min = Distance(para_result.eval(x=focus_pos), 'microns')
+                waist_pos = [None, None, Distance(focus_pos, 'microns')]
+                waist_pos[0] = peaks_linfit(axes, True, movementType, accepted_planes,
+                                            accepted_results, focus_pos, **fit_lin_kwargs)
+                waist_pos[1] = peaks_linfit(axes, False, movementType, accepted_planes,
+                                            accepted_results, focus_pos, **fit_lin_kwargs)
 
                 stage.goto(axes[0], waist_pos[0], movementType)
                 stage.goto(axes[1], waist_pos[1], movementType)
                 stage.goto(focus_axis, waist_pos[2], movementType)
 
-                log.info(f"Moved to minimum waist of {waist_min} at ({axes[0]}, {axes[1]}, {focus_axis}) = " +
-                        f"({waist_pos[0].prettyprint()}, {waist_pos[1].prettyprint()}," +
+                log.info(f"Moved to minimum waist of {waist_min.prettyprint()} at ({axes[0]}, {axes[1]}, {focus_axis}) = " +
+                        f"({waist_pos[0].prettyprint()}, {waist_pos[1].prettyprint()}, " +
                         f"{waist_pos[2].prettyprint()})")
                 return
 
         # if any fits were successful, go to the highest known best-fit peak
-        if len(successful) != 0:
-            plane_peaks = np.array([result.params['height'].value for result in successful])
+        if len(accepted_results) != 0:
+            plane_peaks = np.array([result.params['height'].value for result in accepted_results])
             max_peak = plane_peaks.max()
-            max_peak_idx = np.unravel_index(plane_peaks.argmax(), plane_peaks.shape)
+            max_peak_idx = plane_peaks.argmax()
 
-            best_plane = successful[max_peak_idx]
+            best_plane = accepted_results[max_peak_idx]
             best_pos = [Distance(best_plane.params['centerx'].value, 'microns'),
                         Distance(best_plane.params['centery'].value, 'microns'),
-                        successful_planes[max_peak_idx]]
+                        accepted_planes[max_peak_idx]]
 
             stage.goto(axes[0], best_pos[0], movementType)
             stage.goto(axes[1], best_pos[1], movementType)
