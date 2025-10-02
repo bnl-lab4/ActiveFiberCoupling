@@ -30,6 +30,7 @@ import MovementUtils
 import grid_search
 import StringUtils
 import HillClimb
+import StageStatus
 
 
 # Device info constants
@@ -475,6 +476,24 @@ def main():
                 'kwargs' : {},
                     },
             '_misc'      : "Miscillaneous",
+            'status'    : {
+                'text'   : 'Report the status of a stage',
+                'func'   : StageStatus.run,
+                'args'   : {
+                            '0'  : (stage0, ExposureTime, 'all'),
+                            '0p' : (stage0, ExposureTime, 'piezo'),
+                            '0s' : (stage0, ExposureTime, 'stepper'),
+                            '0r' : (stage0, ExposureTime, 'sensor'),
+                            '1'  : (stage1, ExposureTime, 'all'),
+                            '1p' : (stage1, ExposureTime, 'piezo'),
+                            '1s' : (stage1, ExposureTime, 'stepper'),
+                            '1r' : (stage1, ExposureTime, 'sensor'),
+                            },
+                'kwargs' : {
+                            'quick' : dict(verbose=False),
+                            'log'   : dict(log=True),
+                            },
+                    },
             'reload'  : {
                 'text'   : 'Reload all ActiveFiberCoupling modules',
                 'func'   : None,
@@ -524,8 +543,8 @@ def main():
                     print('\nNo input given')
                     continue
                 if len(user_input) == 1:
-                    misc_start = int(list(MENU_DICT.keys()).index('_misc')) + 1 # relies on ordering :/
-                    if user_input[0].lower() in list(MENU_DICT.keys())[misc_start:]:  # if it is in miscellaneous
+                    no_args = ('reload', 'help', 'log', 'texp')
+                    if user_input[0].lower() in no_args:
                         MENU_DICT[user_input[0].lower()]['func']()
                     else:
                         print('\nInvalid input: not enough space-separated arguments')
@@ -538,7 +557,7 @@ def main():
                 func = MENU_DICT[func_key]['func']
                 args_key = ''.join(sorted(user_input[1].lower()))   # sort to allow e.g. s1 or 1s
 
-                if func_key in ('manual', 'home', 'energize', 'deenergize', 'status'):
+                if func_key in ('manual', 'home', 'energize', 'deenergize'):
                     # device-agnostic functions
                     args_key = args_key[0]
 

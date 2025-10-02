@@ -1,3 +1,4 @@
+from StageStatus import run as status
 from MovementClasses import MovementType
 from Distance import Distance
 
@@ -13,6 +14,7 @@ Examples: >>y piezo 15.2     >>x s -10     >>z p 5 v     >>x s 600 volts
 Switch between goto (default) and move modes with 'goto' and 'move'.
 """)
     goto = True
+    status_mode = False
     WHICH_DICT = dict(p=(MovementType.PIEZO, 'volts'), s=(MovementType.STEPPER, 'steps'),
                       piezo=(MovementType.PIEZO, 'volts'), stepper=(MovementType.STEPPER, 'steps'))
     AXES = ('x', 'y', 'z')
@@ -45,6 +47,24 @@ Switch between goto (default) and move modes with 'goto' and 'move'.
             goto = True
             continue
 
+        if user_input == 'status':
+            status(stage, Texp, 'all')
+            continue
+        if user_input == 'status on':
+            if status_mode:
+                print('Status mode already on')
+            else:
+                print('Status mode turned on')
+            status_mode = True
+            continue
+        if user_input == 'status off':
+            if status_mode:
+                print('Status mode turned off')
+            else:
+                print('Status mode already off')
+            status_mode = False
+            continue
+
         user_input = user_input.split()
         if len(user_input) == 2 and set(user_input[0].lower()) == set('texp'):
             Texp = int(user_input[1])
@@ -74,7 +94,11 @@ Switch between goto (default) and move modes with 'goto' and 'move'.
         else:
             unit = WHICH_DICT[device][1]
 
+        devicename = WHICH_DICT[device][0]
         if goto:
-            stage.goto(axis, Distance(value, unit), WHICH_DICT[device][0])
+            stage.goto(axis, Distance(value, unit), devicename)
         else:
-            stage.move(axis, Distance(value, unit), WHICH_DICT[device][0])
+            stage.move(axis, Distance(value, unit), devicename)
+
+        if status_mode:
+            status(stage, Texp, devicename.value)

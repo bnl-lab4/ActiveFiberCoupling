@@ -285,6 +285,7 @@ class StageDevices:
         self.sensor = sensor
         self.axes = {axis : None for axis in stepper_SNs.keys()}
         self.piezo_port = piezo_port
+        self.piezo_baud_rate = piezo_baud_rate
         self._exit_stack = contextlib.ExitStack()   # for context management
 
         piezo = None
