@@ -4,3 +4,4 @@ log_output.txt
 *.swp
 **/*.pyc
 log_plots/*
+HC_recursion_structure.py

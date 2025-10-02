@@ -29,6 +29,7 @@ import manual_control
 import MovementUtils
 import grid_search
 import StringUtils
+import HillClimb
 
 
 # Device info constants
@@ -461,6 +462,17 @@ def main():
                             'coarse' : dict(spacing = Distance(15, "volts"), plot=True, planes=3),
                             'fine'   : dict()
                             },
+                    },
+            'hillclimb' : {
+                'text'   : 'Hill climbing with piezos or steppers',
+                'func'   : HillClimb.run,
+                'args'   : {
+                            '0p' : (stage0, MovementType.PIEZO, ExposureTime),
+                            '0s' : (stage0, MovementType.STEPPER, ExposureTime),
+                            '1p' : (stage1, MovementType.PIEZO, ExposureTime),
+                            '1s' : (stage1, MovementType.STEPPER, ExposureTime)
+                            },
+                'kwargs' : {},
                     },
             '_misc'      : "Miscillaneous",
             'reload'  : {

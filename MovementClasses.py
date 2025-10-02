@@ -12,7 +12,7 @@ import enum
 import yaml
 import contextlib
 from ticlib import TicUSB
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 from SensorClasses import Sensor
 from Distance import Distance
@@ -362,7 +362,7 @@ class StageDevices:
             return None
         return self.sensor.read()
 
-    def integrate(self, Texp: int, avg: bool = True):
+    def integrate(self, Texp: Union[int, float], avg: bool = True):
         if self.sensor is None:
             log.warning("No sensor assigned to {self.name}")
             return None

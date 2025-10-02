@@ -50,7 +50,8 @@ def gaussbeam(x1, x2, x3, waistx1=0.0, waistx2=0.0, waistx3=0.0, I0=1.0, w0=8*np
     return I0 * (w0**2 / wp2) * np.exp(-2 * r2 / wp2) + C
 
 
-def Gbeamfit_3d(axes: str, movementType: MovementType, axis0_cube: np.ndarray, axis1_cube: np.ndarray,
+def Gbeamfit_3d(axes: str, movementType: MovementType, stagename: str,
+                axis0_cube: np.ndarray, axis1_cube: np.ndarray,
                 focus_cube: np.ndarray, data_cube: np.ndarray,
                 show_plot: bool = False, log_plot: bool = True):
 
@@ -82,7 +83,7 @@ def Gbeamfit_3d(axes: str, movementType: MovementType, axis0_cube: np.ndarray, a
         log.info("Plot Generated")
         if log_plot:
             fig.savefig(f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_" +
-                f"{movementType.value}_Gaussian_beam_fit.png",
+                f"{stagename}_{movementType.value}_Gaussian_beam_fit.png",
                         format='png', facecolor='white', dpi=200)
             log.info("Plot saved to ./log_plots")
         if show_plot:
@@ -92,7 +93,7 @@ def Gbeamfit_3d(axes: str, movementType: MovementType, axis0_cube: np.ndarray, a
     return result
 
 
-def Gbeamfit_2d(axes: str, movementType: MovementType, axis0_grid: np.ndarray,
+def Gbeamfit_2d(axes: str, movementType: MovementType, stagename: str, axis0_grid: np.ndarray,
                 axis1_grid: np.ndarray, grid_values: np.ndarray,
                 plane: Distance, show_plot: bool = False, log_plot: bool = True):
 
@@ -117,7 +118,7 @@ def Gbeamfit_2d(axes: str, movementType: MovementType, axis0_grid: np.ndarray,
         log.info(f"Plot Generated for plane {plane.prettyprint()}")
         if log_plot:
             fig.savefig(f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_2dfit_" +
-                f"{movementType.value}_{focus_axis}-{plane.microns}um.png",
+                f"{stagename}_{movementType.value}_{focus_axis}-{plane.microns}um.png",
                         format='png', facecolor='white', dpi=200)
             log.info("Plot saved to ./log_plots")
         if show_plot:
@@ -127,8 +128,8 @@ def Gbeamfit_2d(axes: str, movementType: MovementType, axis0_grid: np.ndarray,
     return result
 
 
-def waist_parafit(axes: str, movementType: MovementType, planes: Sequence[Distance],
-                  results: Sequence[lmfit.model.ModelResult],
+def waist_parafit(axes: str, movementType: MovementType, stagename: str,
+                  planes: Sequence[Distance], results: Sequence[lmfit.model.ModelResult],
                   show_plot: bool = False, log_plot: bool = True):
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
 
@@ -146,7 +147,7 @@ def waist_parafit(axes: str, movementType: MovementType, planes: Sequence[Distan
         log.info("Plot Generated")
         if log_plot:
             fig.savefig(f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_parafit_" +
-                f"{movementType.value}_w-vs-{focus_axis}.png",
+                f"{stagename}_{movementType.value}_w-vs-{focus_axis}.png",
                         format='png', facecolor='white', dpi=200)
         if show_plot:
             plt.show(block=True)
@@ -155,9 +156,9 @@ def waist_parafit(axes: str, movementType: MovementType, planes: Sequence[Distan
     return para_result
 
 
-def peaks_linfit(axes: str, first_axis: bool, movementType: MovementType, planes: Sequence[Distance],
-                 results: Sequence[lmfit.model.ModelResult], focus_pos: Distance,
-                 show_plot: bool = False, log_plot: bool = True):
+def peaks_linfit(axes: str, first_axis: bool, movementType: MovementType, stagename: str,
+                 planes: Sequence[Distance], results: Sequence[lmfit.model.ModelResult],
+                 focus_pos: Distance, show_plot: bool = False, log_plot: bool = True):
     # fit peak position values (in case the beam is not parallel with the focal axis)
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
     centerstr = 'centerx' if first_axis else 'centery'
@@ -176,7 +177,7 @@ def peaks_linfit(axes: str, first_axis: bool, movementType: MovementType, planes
         log.info("Plot Generated")
         if log_plot:
             fig.savefig(f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_linfit_" +
-                f"{movementType.value}_{axis}-vs-{focus_axis}.png",
+                f"{stagename}_{movementType.value}_{axis}-vs-{focus_axis}.png",
                         format='png', facecolor='white', dpi=200)
         if show_plot:
             plt.show(block=True)
@@ -222,7 +223,7 @@ def plane_grid(stage: StageDevices, movementType: MovementType, plane: Distance,
         log.info("Plot Generated")
         if log_plot:
             fig.savefig(f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_gridvalues_" +
-                f"{movementType.value}_{focus_axis}-{plane.microns}um.png",
+                f"{stage.name}_{movementType.value}_{focus_axis}-{plane.microns}um.png",
                         format='png', facecolor='white', dpi=200)
         if show_plot:
             plt.show(block=True)
@@ -350,7 +351,7 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
         else:
             log.info("Attempting to fit data with a 3d Gaussian beam model")
 
-            result = Gbeamfit_3d(axes, movementType,
+            result = Gbeamfit_3d(axes, movementType, stage.name,
                                  axis0_cube, axis1_cube, focus_cube, grid_values, **fit_3d_kwargs)
 
             accepted = True
@@ -372,13 +373,13 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
                         f"{best_pos[2].prettyprint()})")
                 return
 
-    if fit_planes:
+    if fit_2d:
         log.info("Attempting to fit planes with 2d Gaussian model")
         accepted_results = []
         accepted_planes = []
         for plane, plane_values in zip(planes, grid_values):
-            result = Gbeamfit_2d(axes, movementType, axis0_grid, axis1_grid, plane_values,
-                                                     plane, **fit_2d_kwargs)
+            result = Gbeamfit_2d(axes, movementType, stage.name,
+                                 axis0_grid, axis1_grid, plane_values, plane, **fit_2d_kwargs)
             accepted = True
             if not result.success:
                 log.info(f"Fit to plane {focus_axis} = {plane.prettyprint()} failed")
@@ -395,8 +396,8 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
         # fit parabola to waists if able
         if len(accepted_results) >= 3:
             log.info("Fitting parabola to waists")
-            para_result = waist_parafit(axes, movementType, accepted_planes, accepted_results,
-                                        **fit_para_kwargs)
+            para_result = waist_parafit(axes, movementType, stage.name,
+                                        accepted_planes, accepted_results, **fit_para_kwargs)
             accepted = True
             if not para_result.success:
                 log.info(f"Quadratic fit to waists vs {focus_axis} failed")
@@ -411,9 +412,9 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
                 focus_pos = - para_result.params['b'].value / 2 * para_result.params['a'].value
                 waist_min = Distance(para_result.eval(x=focus_pos), 'microns')
                 waist_pos = [None, None, Distance(focus_pos, 'microns')]
-                waist_pos[0] = peaks_linfit(axes, True, movementType, accepted_planes,
+                waist_pos[0] = peaks_linfit(axes, True, movementType, stage.name, accepted_planes,
                                             accepted_results, focus_pos, **fit_lin_kwargs)
-                waist_pos[1] = peaks_linfit(axes, False, movementType, accepted_planes,
+                waist_pos[1] = peaks_linfit(axes, False, movementType, stage.name, accepted_planes,
                                             accepted_results, focus_pos, **fit_lin_kwargs)
 
                 stage.goto(axes[0], waist_pos[0], movementType)

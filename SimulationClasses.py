@@ -192,7 +192,7 @@ class SimulationStageAxis:
         clamped = max(self.STEPPER_LIMITS[0].steps,
                             min(self.STEPPER_LIMITS[1].steps, position.steps))
         if clamped != position.steps:
-            log.warning(f"Cannot move {self.axis.upper()} to {clamped} because it is" +
+            log.warning(f"Cannot move {self.axis.upper()} to {clamped} because it is " +
             "outside the stepper's stage limits of" +
             f"({self.PIEZO_LIMITS[0].steps}, {self.PIEZO_LIMITS[1].steps}) steps")
         self.stepper_position = Distance(clamped, 'steps')
@@ -226,9 +226,9 @@ class SimulationStageAxis:
             which = MovementType.GENERAL
 
         if which == MovementType.PIEZO:
-            return self._goto_piezo(self.get_piezo_position() + movement)
+            return self._goto_piezo(self.get_piezo_position + movement)
         if which == MovementType.STEPPER:
-            return self._goto_stepper(self.stepper_position() + movement)
+            return self._goto_stepper(self.stepper_position + movement)
 
         if which == MovementType.GENERAL:
             stepper_position = self.get_stepper_position()

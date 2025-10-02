@@ -1,3 +1,4 @@
+import sigfig
 from typing import Union, Sequence
 
 
@@ -144,13 +145,13 @@ class Distance:
 
         output = []
         if 'microns' in which:
-            output.append(f'{self.microns:.1f} microns')
+            output.append(f'{sigfig.round(self.microns, 3, warn=False)} microns')
         if 'volts' in which:
-            output.append(f'{self.volts:.1f} volts')
+            output.append(f'{sigfig.round(self.volts, 3, warn=False)} volts')
         if 'steps' in which:
-            output.append(f'{self.steps:.1f} steps')
+            output.append(f'{sigfig.round(self.steps, 3, warn=False)} steps')
         if 'fullsteps' in which:
-            output.append(f'{self.fullsteps:.1f} full steps')
+            output.append(f'{sigfig.round(self.fullsteps, 3, warn=False)} full steps')
 
         output = 'Distance(' + ', '.join(output) + ')'
 
