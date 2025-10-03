@@ -1,5 +1,13 @@
 import sigfig
 from typing import Union, Sequence
+from numbers import Real
+
+
+def sfround(number, sigfigs = 3, decimals = 1):
+    if abs(number) >= 1:
+        return sigfig.round(number, decimals=decimals, warn=False)
+    else:
+        return sigfig.round(number, sigfigs=sigfigs, warn=False)
 
 
 class Distance:
@@ -22,6 +30,12 @@ class Distance:
 
 ############# Operations
 
+    def __neg__(self):
+        return Distance(-self.microns, 'microns')
+
+    def __abs__(self):
+        return Distance(abs(self.microns), 'microns')
+
     def __add__(self, other):
         if isinstance(other, Distance):
             new_microns = self.microns + other.microns
@@ -37,13 +51,13 @@ class Distance:
             new_microns = self.microns - other.microns
             return Distance(new_microns, 'microns')
 
-        raise TypeError("Addition is only supported with other Distance objects")
+        raise TypeError("Subtraction is only supported with other Distance objects")
 
     def __rsub__(self, other):
         return self.__sub__(other)
 
     def __mul__(self, other):
-        if isinstance(other, (int, float)):
+        if isinstance(other, Real):
             new_microns = self.microns * other
             return Distance(new_microns, 'microns')
 
@@ -53,11 +67,11 @@ class Distance:
         return self.__mul__(other)
 
     def __truediv__(self, other):
-        if isinstance(other, (int, float)):
+        if isinstance(other, Real):
             new_microns = self.microns / other
             return Distance(new_microns, 'microns')
 
-        raise TypeError("Multiplication is only supported with scalars")
+        raise TypeError("Division is only supported with scalars")
 
     def __rtruediv__(self, other):
         return self.__truediv__(other)
@@ -145,13 +159,13 @@ class Distance:
 
         output = []
         if 'microns' in which:
-            output.append(f'{sigfig.round(self.microns, 3, warn=False)} microns')
+            output.append(f'{sfround(self.microns)} microns')
         if 'volts' in which:
-            output.append(f'{sigfig.round(self.volts, 3, warn=False)} volts')
+            output.append(f'{sfround(self.volts)} volts')
         if 'steps' in which:
-            output.append(f'{sigfig.round(self.steps, 3, warn=False)} steps')
+            output.append(f'{sfround(self.steps)} steps')
         if 'fullsteps' in which:
-            output.append(f'{sigfig.round(self.fullsteps, 3, warn=False)} full steps')
+            output.append(f'{sfround(self.fullsteps)} full steps')
 
         output = 'Distance(' + ', '.join(output) + ')'
 

@@ -1,3 +1,5 @@
+from numbers import Real
+
 from StageStatus import run as status
 from MovementClasses import MovementType
 from Distance import Distance
@@ -84,6 +86,7 @@ Switch between goto (default) and move modes with 'goto' and 'move'.
         if device.lower() not in WHICH_DICT.keys():
             print('Invalid input: Device must be s, p, stepper, or piezo')
             continue
+
         if unit is not None:
             if unit in UNITS:
                 pass
@@ -91,10 +94,32 @@ Switch between goto (default) and move modes with 'goto' and 'move'.
                 unit = UNITS_ABRV[unit]
             else:
                 print('Invalid input: Unit must be u, v, s, fs')
+                continue
         else:
             unit = WHICH_DICT[device][1]
 
         devicename = WHICH_DICT[device][0]
+
+        try:
+            value = float(value)
+        except Exception:
+            print('Invalid input: Value must be a real number')
+            continue
+
+        if goto and value < 0:
+            breakflag = False
+            while True:
+                print("Entered negative position while in goto mode, are you sure?")
+                user_input = input('(y/n): ').strip().lower()
+                if user_input == 'y':
+                    break
+                if user_input == 'n':
+                    breakflag = True
+                    break
+                print("Could not interpret input")
+            if breakflag:
+                break
+
         if goto:
             stage.goto(axis, Distance(value, unit), devicename)
         else:

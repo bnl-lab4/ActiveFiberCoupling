@@ -4,7 +4,7 @@ from typing import Union
 
 from MovementClasses import StageDevices, Distance
 
-VALID_AXES = {'x', 'y', 'z'}
+VALID_AXES = ['x', 'y', 'z']
 
 
 def run(stage: StageDevices, exposureTime: Union[int, float], which: str,
@@ -33,7 +33,7 @@ def run(stage: StageDevices, exposureTime: Union[int, float], which: str,
             lines.append(f"    channel = {stage.sensor.sensor.channel}")
         if sensortype == 'SimulationSensor':
             prop_axis = stage.sensor.propagation_axis
-            deviation_plane = list(VALID_AXES.difference({prop_axis, }))
+            deviation_plane = list(set(VALID_AXES).difference({prop_axis, }))
             deviation_plane = f"({deviation_plane[0]}, {deviation_plane[1]})"
             lines.append(f"Model details:\n    propagation axis = {prop_axis}")
             lines.append("    angle of deviation from propagation axis = " +

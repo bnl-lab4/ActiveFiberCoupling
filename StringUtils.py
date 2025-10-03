@@ -38,7 +38,10 @@ def parse_str_values(value):
     if (value.startswith('D(') or value.startswith('Distance(')) and \
                         value.endswith(')'):
         # Check if value is meant to be a Distance object
-        value = value[2:-1]
+        if value.startswith('D('):
+            value = value[2:-1]
+        else:
+            value = value[9:-1]
         value = [item.strip() for item in value.split(',')]
         distance_args = [parse_str_values(arg) for arg in value]
         return Distance(*distance_args)

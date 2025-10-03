@@ -1,16 +1,19 @@
 ############### TODO
-# better process for softening (require n points monatonically decreasing?)
 # after each climb, move stage to first position after crossing the peak
-# absolute tolerance and/or softening?
 # recursive hill climbing?
 ###############
 import math
 import logging
+import sigfig
 import numpy as np
 import matplotlib.pyplot as plt
+from copy import copy
 from datetime import datetime
 from collections.abc import Sequence as sequence    # sorry
-from typing import Optional, Union, Sequence, Tuple, Dict, List
+from collections.abc import Callable
+from collections import deque
+from typing import Optional, Union, Sequence, Tuple, List, Type
+from numbers import Real
 
 from MovementClasses import Distance, MovementType, StageDevices
 
@@ -26,7 +29,7 @@ def plot_climber(climber_results: List[np.ndarray], stagename: str, axis: str,
     position = init_position
     step = init_step
     if not init_positive:
-        step = -1 * step
+        step = -step
 
     step_sizes = []
     climber_positions = []
@@ -35,29 +38,41 @@ def plot_climber(climber_results: List[np.ndarray], stagename: str, axis: str,
         for j, result in enumerate(results):
             climb_positions.append(position.microns)
             position += step
+        position -= step    # do not move after stopping climb
         climber_positions.append(climb_positions)
-        step = -1 * step * step_factor
         step_sizes.append(step)
+        step = -1 * step * step_factor
 
     ncols = math.ceil(math.sqrt(len(climber_results)))
     nrows = math.ceil(len(climber_results) / ncols)
 
     fig, axs = plt.subplots(nrows=nrows, ncols=ncols, layout='constrained',
                             figsize=(3*ncols, 0.2+3*nrows))
+    if nrows == ncols == 1:
+        axs = np.array([axs, ])
+
     for n, (ax, positions, results, step_size) in \
             enumerate(zip(axs.flatten(), climber_positions, climber_results, step_sizes)):
-        ax.scatter(positions[:1], results[:1], c='g', marker='+', label='start',
-                   s=20, linewidth=1)
+        start = sigfig.round(positions[0], step_size.microns,
+                                   sep=' ', output_type=str).split()[0]
+        startlabel = f"start ({start}um, {sigfig.round(results[0], 6)})"
+        end = sigfig.round(positions[-1], step_size.microns,
+                                   sep=' ', output_type=str).split()[0]
+        endlabel = f"end ({end}um, {sigfig.round(results[-1], 6)})"
+
+        ax.scatter(positions[:1], results[:1], c='g', marker='+',
+                   label=startlabel, s=20, linewidth=1)
         ax.scatter(positions[1:-1], results[1:-1], c='b', marker='x',
                    s=15, linewidth=0.7, alpha=0.6,
                    label=f"step size =\n{step_size.prettyprint(stacked=True)}")
-        ax.scatter(positions[-1:], results[-1:], c='r', marker='+', label='end',
-                   s=20, linewidth=1)
+        ax.scatter(positions[-1:], results[-1:], c='r', marker='+',
+                   label=endlabel, s=20, linewidth=1)
 
         ax.set_xlabel(f"{axis} (microns)")
         ax.set_title(str(n), fontsize=12)
         ax.legend(fontsize=6, framealpha=0.3)
         ax.tick_params(axis='both', which='both', labelsize=6)
+        ax.grid(alpha=0.4, zorder=0)
 
     if len(climber_results) < len(axs.flatten()):
         for n in range(len(climber_results), len(axs.flatten())):
@@ -72,41 +87,39 @@ def plot_climber(climber_results: List[np.ndarray], stagename: str, axis: str,
     return fig
 
 
-def hill_climb(stage: StageDevices, axis: str, movementType: MovementType, step: Distance,
-               max_steps: int, positive: bool, softening: float, exposureTime: Union[int, float]):
+def hill_climb(stage: StageDevices, axis: str, movementType: MovementType,
+               step: Distance, max_steps: int, softening: float,
+               Ndecrease: int, exposureTime: Union[int, float]):
 
-    log.info(f"Hill climbing on {stage.name} axis {axis} {movementType.value} in the" +
-            f" {'positive' if positive else 'negative'} direction with exposure time" +
-             f" {exposureTime} and step size {step.prettyprint()}")
+    log.info(f"Hill climbing on {stage.name} axis {axis} {movementType.value}" +
+            f" with step size {step.prettyprint()} and exposure time {exposureTime}")
 
-    if not positive:
-        step = -1 * step
+    step_size = copy(step)
 
-    last = -np.inf
+    last = deque(maxlen=Ndecrease)
     current = stage.integrate(exposureTime)
     results = [current, ]
     for n in range(max_steps):
-        last = current
-        _ = stage.move(axis, step, movementType)
+        last.append(current * (1 + softening))
+        _ = stage.move(axis, step_size, movementType)
         current = stage.integrate(exposureTime)
         results.append(current)
 
-        if current * (1 + softening) < last:
+        if all(current < softlast for softlast in last):
             break
+    else:
+        log.warning(f"Climb hit max steps of {max_steps} without finding a peak")
+        return np.array(results), False
 
-    results = np.array(results)
-    return results
+    return np.array(results), True
 
 
-def hill_climber(stage: StageDevices, axis: str,
-                 movementType: MovementType, init_step: float, step_factor: float,
-                 tolerance: float, softening: float, exposureTime: Union[int, float],
-                 init_positive: Optional[bool],
-                 max_climbs: int = 100, max_steps: int = 100, show_plot: bool = False,
-                 log_plot: bool = True, recurse: Optional[Dict[str, dict]] = None):
+def hill_climber(stage: StageDevices, axis: str, exposureTime: Union[int, float],
+                 movementType: MovementType, init_step: Distance, step_factor: float,
+                 init_positive: bool, rel_tol: float, softening: float,
+                 abs_tol: Distance, Ndecrease: int, max_climbs: int,
+                 max_steps: int, min_step: Distance, show_plot: bool = False, log_plot: bool = True):
 
-    # recurse on the key axes with value kwargs, IN ORDER (may not work on Python <3.7)
-    assert recurse is None, "Recursion may be added later"
     assert movementType != MovementType.GENERAL, "General movement hill climb may be added later"
 
     log.info(f"Activating hill climber on {stage.name} axis {axis} {movementType.value}" +
@@ -119,25 +132,52 @@ def hill_climber(stage: StageDevices, axis: str,
     if movementType == MovementType.STEPPER or movementType == MovementType.GENERAL:
         init_position += stage.axes[axis].get_stepper_position()
 
-    positive = init_positive
-    step = init_step
-    soften = softening
+    step = copy(init_step)
+    if not init_positive:
+        step = -step
 
     last = -np.inf
     current = stage.integrate(exposureTime)
     climber_results = []
     for n in range(max_climbs):
         last = current
-        results = hill_climb(stage, axis, movementType, step, max_steps,
-                             positive, soften, exposureTime)
+        results, success = hill_climb(stage, axis, movementType, step,
+                          max_steps, softening, Ndecrease, exposureTime)
+        if not success:
+            log.info("Hill climber stopped because last climb did not find peak")
+            break
         current = results.max()
         climber_results.append(results)
 
-        if current < (1 + tolerance) * last:
+        if current / last < 1 + rel_tol:
+            # go back to highest recorded point
+            stage.move(axis, step * (results.argmax() - len(results) + 1), movementType)
+            log.info("Hill climber successfully converged to within" +
+                     f" relative tolerance of {sigfig.round(rel_tol, 3, warn=False)}" +
+                     f" at {axis} = {stage.axes[axis].get_stepper_position().prettyprint()}")
             break
+
+        if current < abs_tol:
+            # go back to highest recorded point
+            stage.move(axis, step * (results.argmax() - len(results) + 1), movementType)
+            log.info("Hill climber succesfully converged to within" +
+                     f" absolute tolerance of {sigfig.round(abs_tol, 3, warn=False)}" +
+                     f" at {axis} = {stage.axes[axis].get_stepper_position().prettyprint()}")
+            break
+
+        stage.move(axis, -step * (Ndecrease - 1), movementType)
+        # go back to the first point that is definitely past the peak
+
         step = step * step_factor
-        soften = soften * step_factor
-        positive = not positive
+        softening = softening * step_factor
+        step = -step
+
+        if abs(step) < min_step:
+            log.warning(f"Hill climber hit minimum step size {min_step.prettyprint()}, " +
+                        "consider incresing tolerances")
+            break
+    else:
+        log.warning(f"Hill climber hit max climb limit of {max_climbs} withough converging")
 
     if show_plot or log_plot:
         fig = plot_climber(climber_results, stage.name, axis,
@@ -154,15 +194,41 @@ def hill_climber(stage: StageDevices, axis: str,
     return
 
 
-def run(stage: StageDevices, movementType: Union[MovementType, Tuple[MovementType, ...]],
-        exposureTime: Union[int, float], axes: Optional[str] = None,
-        init_step: Union[None, Distance, Tuple[Distance, ...]] = None,
-        step_factor: Union[float, Tuple[float, ...]] = 2e-1,
-        tolerance: float = 1e-2, softening: float = 1e-2,
+def arg_check(arg, argname, argtype: Type, axes,
+              extra: Optional[Callable] = None, extra_text: str = ''):
+    if extra is None:
+        extra = lambda x: True      # noqa E731
+
+    if isinstance(arg, argtype):
+        if extra(arg):
+            return [arg, ] * len(axes)
+        else:
+            raise ValueError(f"{argname} ({arg}) must satisfy: {extra_text}")
+    if isinstance(arg, sequence) and \
+            all(isinstance(elem, argtype) and extra(elem) for elem in arg):
+        if len(arg) == len(axes):
+            return arg
+        raise ValueError(f"{argname} ({arg}) must have same length as axes")
+    raise ValueError(f"{argname} ({arg}) must be a {argtype.__name__} {extra_text} or a sequence thereof")
+
+
+def run(stage: StageDevices,
+        movementType: Union[MovementType, Sequence[MovementType]],
+        exposureTime: Union[int, float, Sequence[Union[int, float]]],
+        axes: Optional[str] = None,
+        init_step: Union[None, Distance, Sequence[Distance]] = None,
+        step_factor: Union[float, Sequence[float]] = 2e-1,
         init_positive: Union[bool, Sequence[bool]] = True,
-        max_climbs: int = 16, max_steps: int = 100,
+        rel_tol: Union[float, Sequence[float]] = 1e-2,
+        softening: Union[float, Sequence[float]] = 0.0,
+        abs_tol: Union[float, Sequence[float]] = 0.0,
+        Ndecrease: Union[int, Sequence[int]] = 1,
+        max_climbs: Union[int, Sequence[int]] = 16,
+        max_steps: Union[int, Sequence[int]] = 100,
+        min_step: Union[None, Distance, Sequence[Distance]] = None,
         order: Optional[Tuple[int, ...]] = None,
-        show_plot: bool = False, log_plot: bool = True):
+        show_plot: Union[bool, Sequence[bool]] = False,
+        log_plot: Union[bool, Sequence[bool]] = True):
     # axes are the axes you want to hill climb on
     # movementType can be general, and must either be a single or have same length as axes
     # init_step is the initial step size either for all axes or for each axis
@@ -170,18 +236,26 @@ def run(stage: StageDevices, movementType: Union[MovementType, Tuple[MovementTyp
     # init_positive can tell whether to start moving forwards or backwards first
     # order determines whether to hill climb RECURSIVELY, not just which axis to do first
 
+    # FOR NOW, NO RECURSION
+    assert order is None, "No recursion for now"
+
+    # default values
     if axes is None:
         axes = 'xzy'
 
-    assert all([ax.lower() in VALID_AXES for ax in axes]), "axes must be x, y, or z"
+    if movementType is None:
+        movementType = MovementType.GENERAL
 
-    if isinstance(movementType, MovementType):
-        movementType = (movementType, ) * len(axes)
-    elif isinstance(movementType, sequence) and \
-            all([isinstance(elem, MovementType) for elem in movementType]):
-        pass
-    else:
-        raise ValueError("movementType must be an enum MovementType or a sequence thereof")
+    # has to go before the for loops below
+    movementType = arg_check(movementType, 'movementType', MovementType, axes)
+
+    if min_step is None:
+        min_step = []
+        for movetype in movementType:
+            if movetype == MovementType.PIEZO or movetype == MovementType.GENERAL:
+                min_step.append(Distance(0.1, 'volts'))
+            if movetype == MovementType.STEPPER:
+                min_step.append(Distance(1, 'steps'))
 
     if init_step is None:
         init_step = []
@@ -191,78 +265,45 @@ def run(stage: StageDevices, movementType: Union[MovementType, Tuple[MovementTyp
             if movetype == MovementType.PIEZO:
                 init_step.append(Distance(1, 'microns'))
 
-    if isinstance(init_step, Distance):
-        init_step = (init_step, ) * len(axes)
-    elif isinstance(init_step, sequence) and \
-            all([isinstance(elem, Distance) for elem in init_step]):
-        pass
-    else:
-        raise ValueError("init_step must be a Distance class or a sequence thereof")
-
-    if isinstance(step_factor, float):
-        if 0 < step_factor < 1:
-            step_factor = (step_factor, ) * len(axes)
-        else:
-            raise ValueError("step_factor must be between 0 and 1")
-    elif isinstance(step_factor, sequence) and \
-            all([isinstance(elem, float) and 0 < step_factor < 1 for elem in step_factor]):
-        pass
-    else:
-        raise ValueError("step_factor must be a float between 0 and 1 or a sequence thereof")
-
-    if isinstance(tolerance, float):
-        if tolerance > 0:
-            tolerance = (tolerance, ) * len(axes)
-        else:
-            raise ValueError("tolerance must be greater than zero")
-    elif isinstance(tolerance, sequence) and \
-            all([isinstance(elem, float) and tolerance > 0 for elem in tolerance]):
-        pass
-    else:
-        raise ValueError("tolerance must be a float greater than zero or a sequence thereof")
-
-    if isinstance(softening, float):
-        if softening > 0:
-            softening = (softening, ) * len(axes)
-        else:
-            raise ValueError("softening must be greater than zero")
-    elif isinstance(softening, sequence) and \
-            all([isinstance(elem, float) and softening > 0 for elem in softening]):
-        pass
-    else:
-        raise ValueError("softening must be a float greater than zero or a sequence thereof")
-
     if order is None:
-        pass
-    elif isinstance(order, sequence) and \
-            all([isinstance(elem, int) for elem in order]):
-        pass
-    else:
-        raise ValueError("order must be a None or a tuple of ints")
+        order = 0
 
-    if init_positive is None:
-        pass
-    elif isinstance(init_positive, bool):
-        init_positive = (init_positive, ) * len(axes)
-    elif isinstance(init_positive, sequence) and \
-            all([isinstance(elem, bool) for elem in init_positive]):
-        pass
-    else:
-        raise ValueError("init_positive must be None, a bool, or a sequence of bools")
+    # veryfing and ducking inputs
+    assert all(ax.lower() in VALID_AXES for ax in axes), "axes must be x, y, or z"
+    assert isinstance(exposureTime, int) or isinstance(exposureTime, float)
 
-    assert isinstance(show_plot, bool)
-    assert isinstance(log_plot, bool)
+    Gthan0 = (lambda x: x > 0, 'greater than zero')     # common requirements
+    Geqthan0 = (lambda x: x >= 0, 'greater than or equal to zero')
 
-    # FOR NOW, NO RECURSION
-    assert order is None, "No recursion for now"
+    init_step = arg_check(init_step, 'init_step', Distance, axes)
+    step_factor = arg_check(step_factor, 'step_factor', Real, axes,
+                            lambda f: 0 < f < 1, "between 0 and 1")
+    init_positive = arg_check(init_positive, 'init_positive', bool, axes)
+    rel_tol = arg_check(rel_tol, 'rel_tol', Real, axes, *Geqthan0)
+    softening = arg_check(softening, 'softening', Real, axes, *Geqthan0)
+    abs_tol = arg_check(abs_tol, 'abs_tol', Real, axes)
+    Ndecrease = arg_check(Ndecrease, 'Ndecrease', int, axes, *Gthan0)
+    max_climbs = arg_check(max_climbs, 'max_climbs', int, axes, *Gthan0)
+    max_steps = arg_check(max_steps, 'max_steps', int, axes, *Gthan0)
+    min_step = arg_check(min_step, 'min_step', Distance, axes)
+    order = arg_check(order, 'order', int, axes)
+    show_plot = arg_check(show_plot, 'show_plot', bool, axes)
+    log_plot = arg_check(log_plot, 'log_plot', bool, axes)
 
-    assert len(axes) == len(movementType) == len(init_step) == \
-            len(step_factor) == len(tolerance) == len(init_positive), \
-            "these args must all have the same length"
+    # not the best way of doing this
+    hill_climber_kwargs_values = [init_step, step_factor, init_positive,
+                                   rel_tol, softening, abs_tol, Ndecrease,
+                                   max_climbs, max_steps, min_step,
+                                   show_plot, log_plot]
+    hill_climber_kwargs_keys = ['init_step', 'step_factor', 'init_positive',
+                                'rel_tol', 'softening', 'abs_tol', 'Ndecrease',
+                                'max_climbs', 'max_steps', 'min_step',
+                                'show_plot', 'log_plot']
+    hill_climber_kwargs = zip(hill_climber_kwargs_keys, hill_climber_kwargs_values)
 
-    for axis, movetype, step, factor, tol, soft, positive in zip(
-            axes, movementType, init_step, step_factor, tolerance, softening, init_positive):
-        hill_climber(stage, axis, movetype, step, factor, tol, soft, exposureTime,
-                     positive, max_climbs, max_steps, show_plot, log_plot)
+    # run hill climbers
+    for i, (axis, movetype) in enumerate(zip(axes, movementType)):
+        kwargs = {key : val[i] for key, val in hill_climber_kwargs}
+        _ = hill_climber(stage, axis, exposureTime, movetype, **kwargs)
 
     return
