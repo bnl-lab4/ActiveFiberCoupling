@@ -176,14 +176,13 @@ class StageAxis:
         if self._position_uncertain():
             raise RuntimeError(f"Stepper {self.stepper_SN} position is uncertain and needs homing")
 
-        steps = int(steps)  # steps expected in microsteps
         clamped = max(self.STEPPER_LIMITS[0].steps,
                       min(self.STEPPER_LIMITS[1].steps, steps)) #piezo steps limits
         if clamped != steps:
             log.warning(f"Cannot move {self.stepper_SN} to {steps} because it is" +
             "outside the stepper's stage limits of" +
             f"({self.STEPPER_LIMITS[0].steps}, {self.STEPPER_LIMITS[1].steps}) steps")
-        self.stepper.set_target_position(clamped)
+        self.stepper.set_target_position(int(clamped))
         while self.stepper.get_target_position() != self.stepper.get_current_position():
             time.sleep(0.01)
         return MoveResult(Distance(steps, 'steps'), MovementType.STEPPER)
@@ -325,6 +324,12 @@ class StageDevices:
         self._exit_stack.close()
         log.debug("Exited context stack gracefully")
         return False
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.name
 
     def deenergize(self, axes: Optional[str] = None):
         if axes is None or axes.lower() == 'all':

@@ -1,13 +1,13 @@
 import math
 import sigfig
-from typing import Union
+from typing import Union, Optional
 
 from MovementClasses import StageDevices, Distance
 
 VALID_AXES = ['x', 'y', 'z']
 
 
-def run(stage: StageDevices, exposureTime: Union[int, float], which: str,
+def run(stage: StageDevices, exposureTime: Union[int, float], which: Optional[str] = None,
         expose: bool = True, verbose: bool = True, log: bool = False):
     if which is not None:
         which = which.lower()

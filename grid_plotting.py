@@ -19,6 +19,7 @@ def plane_fit_string(fit_result, axes):
     best_fit.append(r'$\sigma_r$' + f" = {val_unc(fit_result.params['sigmax'])}" + r'$\mathrm{\mu m}$')
     best_fit.append(f"{axes[0].upper()} = {val_unc(fit_result.params['centerx'])}" + r'$\mathrm{\mu m}$')
     best_fit.append(f"{axes[1].upper()} = {val_unc(fit_result.params['centery'])}" + r'$\mathrm{\mu m}$')
+    best_fit.append(r'C' + f" = {val_unc(fit_result.params['c'])}")
     return '\n'.join(best_fit)
 
 
@@ -44,7 +45,7 @@ def Gbeam_fit_string(fit_result, axes):
     best_fit = []
     best_fit.append(f"$I_0$ = {val_unc(fit_result.params['I0'])}")
     best_fit.append(f"$w_0$ = {val_unc(fit_result.params['w0'])}" + r"$\mathrm{\mu m}$")
-    best_fit.append(f"$C$ = {val_unc(fit_result.params['C'])}" + r"$\mathrm{\mu m}$")
+    best_fit.append(f"$C$ = {val_unc(fit_result.params['C'])}")
     best_fit.append("$" + axes[0] + r"_\mathrm{waist}$" +
             f" = {val_unc(fit_result.params['waistx1'])}" + r"$\mathrm{\mu m}$")
     best_fit.append("$" + axes[1] + r"_\mathrm{waist}$" +
@@ -115,6 +116,7 @@ def plot_plane(response_grid: np.array, axis0_grid: np.array, axis1_grid: np.arr
 def plot_para_fit(axes: str, waists: np.ndarray, waists_unc: np.ndarray, planes_microns: np.ndarray,
                   result: lmfit.model.ModelResult, show_plot: bool = False, log_plot: bool = True):
 
+    fake_unc = all(waists_unc == 1)
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
     planes_range = planes_microns.max() - planes_microns.min()
     ext_factor = 0.1
@@ -128,10 +130,12 @@ def plot_para_fit(axes: str, waists: np.ndarray, waists_unc: np.ndarray, planes_
     fig, axs = plt.subplots(nrows=2, figsize=(6, 6), layout='constrained', sharex=True,
                             gridspec_kw = dict(height_ratios = (1, 0.3)))
     axs[0].scatter(planes_microns, waists)
-    axs[0].errorbar(planes_microns, waists, yerr=waists_unc, fmt='none')
+    if not fake_unc:
+        axs[0].errorbar(planes_microns, waists, yerr=waists_unc, fmt='none')
     axs[0].plot(planes_dense, waists_dense, color='C1', label=para_fit_string(result, focus_axis))
     axs[1].scatter(planes_microns, resid)
-    axs[1].errorbar(planes_microns, resid, yerr=waists_unc, fmt='none')
+    if not fake_unc:
+        axs[1].errorbar(planes_microns, resid, yerr=waists_unc, fmt='none')
 
     axs[1].axhline(0, color='black', alpha=0.3)
 
@@ -200,6 +204,7 @@ def plot_3dfit(axes: str, axis0_cube: np.ndarray, axis1_cube: np.ndarray, focus_
 
 def plot_lin_fit(axis: str, focus_axis: str, axis_peak_pos: np.ndarray,
                  axis_peak_unc: np.ndarray, planes_microns: np.ndarray, result: lmfit.model.ModelResult):
+    fake_unc = all(axis_peak_unc == 1)
     planes_range = planes_microns.max() - planes_microns.min()
     ext_factor = 0.1
     dense_lims = (planes_microns.min() - ext_factor * planes_range,
@@ -212,10 +217,12 @@ def plot_lin_fit(axis: str, focus_axis: str, axis_peak_pos: np.ndarray,
     fig, axs = plt.subplots(nrows=2, figsize=(6, 6), layout='constrained', sharex=True,
                             gridspec_kw = dict(height_ratios = (1, 0.3)))
     axs[0].scatter(planes_microns, axis_peak_pos)
-    axs[0].errorbar(planes_microns, axis_peak_pos, yerr=axis_peak_unc, fmt='none')
+    if not fake_unc:
+        axs[0].errorbar(planes_microns, axis_peak_pos, yerr=axis_peak_unc, fmt='none')
     axs[0].plot(planes_dense, axis_peak_dense, color='C1', label=lin_fit_string(result, axis + focus_axis))
     axs[1].scatter(planes_microns, resid)
-    axs[1].errorbar(planes_microns, resid, yerr=axis_peak_unc, fmt='none')
+    if not fake_unc:
+        axs[1].errorbar(planes_microns, resid, yerr=axis_peak_unc, fmt='none')
 
     axs[1].axhline(0, color='black', alpha=0.3)
 

@@ -1,10 +1,8 @@
 ################ TODO
 # CONTINUOUS SENSOR READOUT FUNCTON
 # populate default kwargs dictionaries
-# move logging funcs to their own script
 # add general movement mode to manual control
 # rewrite command line arg handling to be more flexible (dict?)
-# convert main menu to YAML
 #####################
 
 
@@ -16,14 +14,14 @@ import warnings
 import contextlib   # better than nested 'with' statements
 import readline     # enables input() to save history just by being loaded
 import atexit       # for saving readline history file
-import inspect      # checking kwargs match to function
+import inspect      # checking input kwargs match to function in menu
 import traceback    # show traceback in main menu
-from typing import Optional, Union
+from typing import Tuple, Dict, Optional
+from collections.abc import Callable
 
 # Import alignment algorithms and control modes
 from MovementClasses import StageDevices, MovementType
 from SensorClasses import Sensor, SensorType
-from Distance import Distance
 from SimulationClasses import SimulationSensor, SimulationStageDevices
 import manual_control
 import MovementUtils
@@ -31,6 +29,8 @@ import grid_search
 import StringUtils
 import HillClimb
 import StageStatus
+import LoggingUtils
+import ContinuousReadout
 
 
 # Device info constants
@@ -43,8 +43,8 @@ SIMSENSOR_ASPH = dict(propagation_axis = 'y', focal_ratio = 4.0, angle_of_deviat
 SIMSENSOR_LABTELE = dict(propagation_axis = 'y', focal_ratio = 28.0, angle_of_deviation = 0)
 SIMSENSOR_SKYTELE = dict(propagation_axis = 'y', focal_ratio = 7.0, angle_of_deviation = 0)
 
-SENSOR0 = PHOTODIODE0
-SENSOR1 = SIMSENSOR_LABTELE
+SENSOR0 = SIPM0
+SENSOR1 = SIMSENSOR_ASPH
 
 PIEZO_PORT0 = '/dev/ttyACM0'
 PIEZO_PORT1 = '/dev/ttyACM1'
@@ -52,6 +52,18 @@ BAUD_RATE = 115200
 
 STEPPER_DICT0 = dict(x = '00485175', y = '00485185', z = '00485159')
 STEPPER_DICT1 = dict(x = None, y = None, z = None)
+
+MOVEMENT_TYPE_MAP = {
+    'p': MovementType.PIEZO,
+    's': MovementType.STEPPER,
+    'g': MovementType.GENERAL
+}
+
+WHICH_DEVICE_MAP = {
+    'p': 'piezo',
+    's': 'stepper',
+    'r': 'sensor'
+}
 
 
 # custom warning format to remove the source line
@@ -62,8 +74,6 @@ def custom_formatwarning(message, category, filename, lineno, line=None):
 
 # Initial logging/warning configuration
 log = logging.getLogger(__name__)
-logging.captureWarnings(True)
-warnings.formatwarning = custom_formatwarning
 
 
 def AcceptInputArgs(inputTuple, inputArgs):
@@ -89,7 +99,7 @@ def AcceptInputArgs(inputTuple, inputArgs):
             inputTuple[3] = CommandArg_ValueDict[val]
             continue
         if arg == 'logfile':
-            if verify_logfile(val):
+            if LoggingUtils.verify_logfile(val):
                 inputTuple[4] = val
         if arg == 'consoleloglevel':
             try:
@@ -113,250 +123,301 @@ def AcceptInputArgs(inputTuple, inputArgs):
     return inputTuple
 
 
-def verify_logfile(filepath):
-    try:
-        # Check if the file exists
-        if not os.path.exists(filepath):
-            # If the file does not exist, create it
-            # The 'x' mode is used for exclusive creation, failing if the file already exists.
-            # This is a safe way to create a new file and handle potential race conditions.
-            with open(filepath, 'x'):
-                pass  # Do nothing, just create the file
-            print(f"Log file created successfully at: {filepath}")
-            return True
-        else:
-            print(f"Log file already exists at: {filepath}")
-            return True
-    except FileExistsError:
-        # This is a good practice to handle a rare race condition where a file
-        # is created by another process between the 'os.path.exists' check and 'open' call.
-        print(f"Log file already exists at: {filepath}")
-        return True
-    except OSError as e:
-        # Catch other OS-related errors, such as an invalid file path or permissions issues
-        warnings.warn(f"Error: Invalid file path or other OS error: {e}\nUsing default log file")
-        return False
-
-
-def setup_logging(log_to_console: Optional[bool] = None, log_to_file: Optional[bool] = None,
-                  filename: Optional[str] = None, console_log_level: Union[str, int, None] = None,
-                              log_level: Union[str, int, None] = None):
-    # Logging Defaults
-    if log_to_console is None:
-        log_to_console = True
-    if log_to_file is None:
-        log_to_file = True
-    if filename is None:
-        filename = './log_output.txt'
-
-    if log_level is None:
-        level = logging.DEBUG
-    elif isinstance(log_level, str):
-        # Map string to logging level
-        level = getattr(logging, log_level.upper(), logging.INFO)
-    elif log_level in [int(10 * i) for i in range(1, 6)]:
-        level = log_level
-    else:
-        raise ValueError(f"log_level {log_level} is not in an acceptable form")
-
-    if console_log_level is None or not log_to_console:
-        console_level = logging.INFO    # INFO for now, WARNING during science use
-    elif isinstance(console_log_level, str):
-        # Map string to logging level
-        console_level = getattr(logging, console_log_level.upper(), logging.INFO)
-    elif console_log_level in [int(10 * i) for i in range(1, 6)]:
-        console_level = console_log_level
-    else:
-        raise ValueError(f"console_log_level {console_log_level} is not in an acceptable form")
-
-    standard_format = logging.Formatter("%(asctime)s-%(levelname)s-" +
-                "%(module)s-line%(lineno)d-%(funcName)s :: %(message)s")
-    caught_warning_format = logging.Formatter("%(asctime)s-WARNING(CAUGHT)-%(message)s")
-
-    root_logger = logging.getLogger()
-    root_logger.setLevel(level)
-    warnings_logger = logging.getLogger('py.warnings')
-    warnings_logger.setLevel(logging.WARNING)
-    warnings_logger.propagate = False    # so root_logger does not also get caught warning logs
-
-    # clears existing handlers to avoid duplicates
-    if root_logger.hasHandlers():
-        root_logger.handlers.clear()
-    if warnings_logger.hasHandlers():
-        warnings_logger.handlers.clear()
-
-    # logic for which level done above, never truly off
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(console_level)
-    console_handler.setFormatter(standard_format)
-    root_logger.addHandler(console_handler)
-
-    console_handler_warnings = logging.StreamHandler()
-    console_handler_warnings.setLevel(console_level)
-    console_handler_warnings.setFormatter(caught_warning_format)
-    warnings_logger.addHandler(console_handler_warnings)
-
-    # Check and add file handling
-    if log_to_file and filename:
-        file_handler = logging.FileHandler(filename)
-        file_handler.setFormatter(standard_format)
-        root_logger.addHandler(file_handler)
-
-        file_handler_warnings = logging.FileHandler(filename)
-        file_handler_warnings.setFormatter(caught_warning_format)
-        warnings_logger.addHandler(file_handler_warnings)
-
-    if not (log_to_console or log_to_file):
-        logging.disable(logging.CRITICAL)
-
-    log_locations = []
-    log_levels = []
-
-    log_locations.append('console')
-    log_levels.append(logging.getLevelName(console_level))
-    if log_to_file:
-        log_locations.append(filename)
-        log_levels.append(logging.getLevelName(level))
-    if len(log_locations) == 0:
-        log.info("Logging to nowhere")
-    else:
-        for loc, level in zip(log_locations, log_levels):
-            log.info(f"Logging to {loc} with level {level}")
-
-
-def Update_Logging():
-    SettingNames = ["Log to console", 'Log to file', 'Log filename', 'Console log level', 'Log level']
-    LoggingSettings = {name : None for name in SettingNames}
-
-    while True: # Log to console?
-        user_input = input("Log to console? [y/n/s]: ").strip().lower()
-        if user_input == 's':
-            break
-        if user_input == 'y':
-            LoggingSettings['Log to console'] = True
-            break
-        if user_input == 'n':
-            LoggingSettings['Log to console'] = False
-            break
-        print(f"Could not interpret {user_input}")
-
-    while True: # log to file?
-        user_input = input("Log to file? [y/n/s]: ").strip().lower()
-        if user_input == 's':
-            break
-        if user_input == 'y':
-            LoggingSettings['Log to file'] = True
-            break
-        if user_input == 'n':
-            LoggingSettings['Log to file'] = False
-            break
-        print(f"Could not interpret {user_input}")
-
-    while LoggingSettings['Log to file']: # log file?
-        user_input = input("Log filename? [s]: ").strip()
-        if user_input == 's':
-            break
-        try:
-            if verify_logfile(user_input):
-                LoggingSettings['Log filename'] = user_input
-                break
-        except Exception as e:
-            print(f"Error while verifying input filename: {e}")
-        print(f"Could not update log file to {user_input}")
-
-    while LoggingSettings['Log to console']: # console log level?
-        user_input = input("Console log level? [debug/info/warning/error/critical/skip]: ").strip().lower()
-        if user_input == 's' or user_input == 'skip':
-            break
-        try:
-            LoggingSettings['Console log level'] = getattr(logging, user_input.upper())
-            break
-        except AttributeError:
-            print(f"Could not find log level matching {user_input}")
-        print(f"Could not update log level to {user_input}")
-
-    while True: # log level?
-        user_input = input("Log level? [debug/info/warning/error/critical/skip]: ").strip().lower()
-        if user_input == 's' or user_input == 'skip':
-            break
-        try:
-            LoggingSettings['Log level'] = getattr(logging, user_input.upper())
-            break
-        except AttributeError:
-            print(f"Could not find log level matching {user_input}")
-        print(f"Could not update log level to {user_input}")
-
-    setup_logging(*list(LoggingSettings.values()))
-
-
-def Update_ExposureTime():
-    global ExposureTime
-    print(f"Update default exposure time (currently {ExposureTime}):" +
+def Update_ExposureTime(texp):
+    print(f"Update default exposure time (currently {texp}):" +
         "(iterations for SiPMs or photodiodes, milliseconds for sockets)")
     user_input = input(">> ").strip()
     try:
         user_input = int(float(user_input))
     except ValueError:
-        print(f"Input {user_input} cannot be converted to an int. ExposureTime will remain at {ExposureTime}")
+        print(f"Input {user_input} cannot be converted to an int. texp will remain at {texp}")
         return False
-    ExposureTime = user_input
-    return True
+    texp = user_input
+    return texp
 
 
-def reload_menu(menu):
-    for key in menu.keys():
-        if key.startswith('_') or key == 'reload':
-            continue    # ignore menu section headers and this functions menu entry
+class MenuEntry:
+    def __init__(self, text: str, func: Optional[Callable] = None, args_config: Tuple[str, ...] = (),
+                 kwargs_config: Dict['str', dict] = {}):
+        self.text = text
+        self.func = func
+        self.args_config = args_config
+        self.kwargs_config = kwargs_config
 
-        # get name of module function comes from
-        func_module_name = menu[key]['func'].__module__
-        if func_module_name == '__main__':
-            continue    # can't reload this script itself
+    def to_dict(self):
+        return dict(text=self.text, func=self.func, args=self.args_config,
+                    kwargs=self.kwargs_config)
 
+    def execute(self, controller, user_input_parts):
+        # Handle special case for help function
+        if self.func == StringUtils.menu_help:
+            target_func = user_input_parts[0] if user_input_parts else None
+            self.func(target_func, controller.menu)
+            return
+
+        resolved_args = []
+        if 'stage' in self.args_config:
+            resolved_args.append(controller.stages[user_input_parts[0]])
+        if 'MovementType' in self.args_config:
+            resolved_args.append(MOVEMENT_TYPE_MAP[user_input_parts[1]])
+        if 'ExposureTime' in self.args_config:
+            resolved_args.append(controller.exposure_time)
+
+        args_len = len(self.args_config) - 1 if 'ExposureTime' in self.args_config else len(self.args_config)
+        kwargs = {}
+        if len(user_input_parts) > args_len:
+            if '=' not in user_input_parts[args_len]:
+                kwargs_default_key = user_input_parts[args_len].lower()
+                kwargs.update(self.kwargs_config[kwargs_default_key])
+                args_len += 1
+
+        if len(user_input_parts) > args_len:
+            if any('=' not in kwarg for kwarg in user_input_parts[args_len:]):
+                warnings.warn("All kwargs must be in <key>=<value> form")
+                print("Function call aborted")
+                return
+            kwargs.update(StringUtils.str_to_dict(user_input_parts[args_len:]))
+
+        # check whether kwargs are valid
         try:
-            # get function name in its module
-            func_name = menu[key]['func'].__name__
+            inspect.signature(self.func).bind(*resolved_args, **kwargs)
+        except TypeError as e:
+            warnings.warn(f"Invalid keyword arguments: {e}")
+            print("Function call aborted")
+            return
 
-            # reload the module
-            reloaded_module = importlib.reload(importlib.import_module(func_module_name))
+        if kwargs:
+            kwargs_print = StringUtils.dict_to_str(kwargs)
+            print("Interpreted kwargs:\n" + kwargs_print)
+            yn_input = input("Is this correct? (y/n): ").strip().lower()
+            print('')
+            if yn_input != 'y':
+                print("Function call aborted")
+                return
 
-            # get func from reloaded module
-            new_func = getattr(reloaded_module, func_name)
-
-            # redefine func in menu
-            menu[key]['func'] = new_func
-
-            log.info(f"{key} function reloaded succesfully")
-
-        except (ImportError, AttributeError):
-            log.warning(f"{key} function was not reloaded succesfully")
+        args_string = f" with args {resolved_args}" if resolved_args else ''
+        kwargs_string = f" with kwargs {StringUtils.dict_to_str(kwargs)}" if kwargs else ''
+        if args_string and kwargs_string:
+            args_string += ' and'
+        log.debug(f"Calling {self.func.__name__}" + args_string + kwargs_string)
+        self.func(*resolved_args, **kwargs)
 
 
-def display_menu(menu_dict):
-    max_choice_length = max(map(lambda s: len(s) if not s.startswith('_') else 0,
-                                list(menu_dict.keys())))    # excepting section titles, sorry
-    whitespace = max_choice_length + 2    # for aligning descriptions
-    for key, value in menu_dict.items():
-        if key.startswith('_'):
-            print('\n' + value)
+class ProgramController:
+    def __init__(self, autohome: bool, require_connection: bool, logging_settings: tuple):
+        self.autohome = autohome
+        self.require_connection = require_connection
+        self.logging_settings = logging_settings
+
+        self.running = True
+        self.exposure_time = 1000   # default value
+        self.stages = {}
+        self.stack = contextlib.ExitStack()
+        self.menu = self._build_menu()
+
+    def __enter__(self):
+        LoggingUtils.setup_logging(*self.logging_settings)
+        self._initialize_devices()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stack.close()
+        log.debug("Device contexts closed cleanly")
+        return False
+
+    def _initialize_devices(self):
+        if "propogation_axis" not in SENSOR0:
+            sensor0 = self.stack.enter_context(Sensor(SENSOR0, SENSOR0['sensortype']))
+            stage0 = self.stack.enter_context(StageDevices('stage0', PIEZO_PORT0, STEPPER_DICT0,
+                                        sensor = sensor0, require_connection = self.require_connection,
+                                                 autohome = self.autohome))
         else:
-            print(f"{key}:{' ' * (whitespace - len(key))}{value['text']}")
-    return
+            sensor0 = self.stack.enter_context(SimulationSensor(**SENSOR0))
+            stage0 = self.stack.enter_context(SimulationStageDevices('simstage0', sensor = sensor0))
+        self.stages['0'] = stage0
+
+        if "propagation_axis" not in SENSOR1:
+            sensor1 = self.stack.enter_context(Sensor(SENSOR1, SENSOR1['sensortype']))
+            stage1 = self.stack.enter_context(StageDevices('stage1', PIEZO_PORT1, STEPPER_DICT1,
+                                        sensor = sensor1, require_connection = self.require_connection,
+                                                 autohome = self.autohome))
+
+        else:
+            sensor1 = self.stack.enter_context(SimulationSensor(**SENSOR1))
+            stage1 = self.stack.enter_context(SimulationStageDevices('simstage1', sensor = sensor1))
+        self.stages['1'] = stage1
+
+    def _build_menu(self):
+        return {
+                '_stage_control' : 'Stage Control Options',
+                'manual' : MenuEntry(
+                    text = 'Stage manual control', func = manual_control.run,
+                    args_config = ('stage', 'ExposureTime')
+                    ),
+                'center' : MenuEntry(
+                    text = 'Center piezos or steppers', func = MovementUtils.center,
+                    args_config = ('stage', 'MovementType')
+                    ),
+                'zero' : MenuEntry(
+                    text = 'Zero piezos or steppers', func = MovementUtils.zero,
+                    args_config = ('stage', 'MovementType')
+                    ),
+                'energize' : MenuEntry(
+                    text = 'Energize steppers', func = MovementUtils.energize,
+                    args_config = ('stage',)
+                    ),
+                'deenergize' : MenuEntry(
+                    text = 'Deenergize steppers', func = MovementUtils.deenergize,
+                    args_config = ('stage', )
+                    ),
+                'home' : MenuEntry(
+                    text = 'Home steppers', func = MovementUtils.home,
+                    args_config = ('stage', )
+                    ),
+                'read' : MenuEntry(
+                    text = 'Continuous readout of sensor in terminal',
+                    func = ContinuousReadout.run,
+                    args_config = ('stage', 'ExposureTime')
+                    ),
+                '_optimization' : 'Optimization Algorithms',
+                'grid' : MenuEntry(
+                    text = 'Grid search in one or more planes',
+                    func = grid_search.run,
+                    args_config = ('stage', 'MovementType', 'ExposureTime')
+                    ),
+                'hillclimb' : MenuEntry(
+                    text = 'Hill climbing on one or more axes', func = HillClimb.run,
+                    args_config = ('stage', 'MovementType', 'ExposureTime')
+                    ),
+                '_misc' : 'Miscellaneous',
+                'status' : MenuEntry(
+                    text = 'Report the status of all or part of a stage',
+                    func = StageStatus.run,
+                    args_config = ('stage', 'ExposureTime'),
+                    kwargs_config = {
+                        'quick' : dict(verbose = False),
+                        'log' : dict(log = True)
+                        },
+                    ),
+                'reload' : MenuEntry(text = 'Reload all ActiveFiberCoupling modules'),
+                # reload is a special case, whose function must not be in the menu
+                'texp' : MenuEntry(
+                    text = 'Change the default exposure time', func = Update_ExposureTime,
+                    ),
+                'log' : MenuEntry(
+                    text = 'Change the logging settings',
+                    func = LoggingUtils.Update_Logging,
+                    ),
+                'help' : MenuEntry(
+                    text = "Help with the menu or a function ('help <func_name>')",
+                    func = StringUtils.menu_help,
+                    )
+                }
+
+    def _display_menu(self):
+        max_choice_length = max(map(lambda s: len(s) if not s.startswith('_') else 0,
+                                    list(self.menu.keys())))    # excepting section titles, sorry
+        whitespace = max_choice_length + 2    # for aligning descriptions
+        for key, value in self.menu.items():
+            if key.startswith('_'):
+                print('\n' + value)
+            else:
+                print(f"{key}:{' ' * (whitespace - len(key))}{value.text}")
+        return
+
+    def _reload_menu(self):
+        for key, entry in self.menu.items():
+            if key.startswith('_') or key == 'reload':
+                continue    # ignore menu section headers and this functions menu entry
+
+            # get name of module function comes from
+            func_module_name = entry.func.__module__
+            if func_module_name == '__main__':
+                continue    # can't reload this script itself
+
+            try:
+                func_name = entry.func.__name__
+                reloaded_module = importlib.reload(importlib.import_module(func_module_name))
+                new_func = getattr(reloaded_module, func_name)
+                entry.func = new_func
+                log.info(f"{key} function reloaded succesfully")
+
+            except (ImportError, AttributeError):
+                log.warning(f"{key} function was not reloaded succesfully")
+
+        self.menu = self._build_menu()
+
+    def run(self):
+        while self.running:
+            try:
+                print('\n' * 4)
+                self._display_menu()
+                print('')
+                user_input = input(">> ").strip()
+                print('')
+
+                if not user_input:
+                    continue
+
+                ui_lower = user_input.lower()
+                # special cases
+                if ui_lower == 'q':
+                    self.running = False
+                if ui_lower == 'exec':    # hidden mode :), pls don't abuse
+                    print("WARNING: IN EXEC MODE\nAnything typed here will be executed as python code.")
+                    exec(input('exec >> '))
+                    continue
+                if ui_lower == 'reload':
+                    self._reload_menu()
+                    continue
+                if ui_lower == 'uwu':
+                    print('UwU')
+                    continue
+
+                parts = user_input.split(' ')
+                entry_key = parts[0].lower()
+
+                if entry_key not in self.menu.keys() or entry_key.startswith('_'):
+                    if entry_key != 'q':
+                        print('\nInvalid command')
+                    continue
+
+                # These functions update the state of ProgramController
+                if entry_key == 'reload':
+                    self._reload_menu()
+                elif entry_key == 'log':
+                    self.logging_settings = LoggingUtils.Update_Logging()
+                elif entry_key == 'texp':
+                    self.exposure_time = Update_ExposureTime(self.exposure_time)
+                else:
+                    entry = self.menu[entry_key]
+                    entry.execute(self, parts[1:])
+
+            except Exception as e:
+                func_traceback = traceback.format_exc()
+                warnings.warn(f"An error was encountered: {e}\nFull traceback below:\n{func_traceback}")
+            except KeyboardInterrupt:
+                logging.warning("KeyboardInterrupt caught")
+                print("KeyboardInterrupt was caught, enter 'q' to quit")
 
 
 def main():
+    # warning configuration
+    logging.captureWarnings(True)
+    warnings.formatwarning = custom_formatwarning
+
     # load input history file
     history_file = './.main_history'
     if os.path.exists(history_file):
         readline.read_history_file(history_file)
-    readline.set_history_length(500)        # only save the last 100 entries
+    readline.set_history_length(500)        # only save the last 500 entries
     # before stopping the script, save the input history to the file
     atexit.register(readline.write_history_file, history_file)
+
     # Default runtime variable
     AutoHome = True # home motors upon establishing connection
     RequireConnection = False # raise exception if device connections fail to establish
-    ExposureTime = 200  # default exposure time (units are sensor dependent)
-    LoggingSettings = [None] * 4
+    LoggingSettings = [None] * 5
 
     if len(sys.argv) > 1:
         InputArgs = sys.argv[1:]
@@ -364,250 +425,12 @@ def main():
                 [AutoHome, RequireConnection] + LoggingSettings, InputArgs)
         # print(f"Received input args: {AutoHome}, {RequireConnection}, {LoggingSettings}")
 
-    setup_logging(*LoggingSettings)
-
-    with contextlib.ExitStack() as stack:
-        if "propogation_axis" not in SENSOR0:
-            sensor0 = stack.enter_context(Sensor(SENSOR0, SENSOR0['sensortype']))
-            stage0 = stack.enter_context(StageDevices('stage0', PIEZO_PORT0, STEPPER_DICT0,
-                                        sensor = sensor0, require_connection = RequireConnection,
-                                                 autohome = AutoHome))
-        else:
-            sensor0 = stack.enter_context(SimulationSensor(**SENSOR0))
-            stage0 = stack.enter_context(SimulationStageDevices('simstage0', sensor = sensor0))
-
-        if "propagation_axis" not in SENSOR1:
-            sensor1 = stack.enter_context(Sensor(SENSOR1, SENSOR1['sensortype']))
-            stage1 = stack.enter_context(StageDevices('stage1', PIEZO_PORT1, STEPPER_DICT1,
-                                        sensor = sensor1, require_connection = RequireConnection,
-                                                 autohome = AutoHome))
-
-        else:
-            sensor1 = stack.enter_context(SimulationSensor(**SENSOR1))
-            stage1 = stack.enter_context(SimulationStageDevices('simstage1', sensor = sensor1))
-
-        MENU_DICT = {
-            '_manual_control' : "Manual Control Options",
-            'manual' : {
-                'text'   : 'Stage manual control',
-                'func'   : manual_control.run,
-                'args'   : {
-                            '0' : (stage0, ExposureTime),
-                            '1' : (stage1, ExposureTime),
-                            },
-                    },
-            'center' : {
-                'text'   : 'Center piezo or stepper axes',
-                'func'   : MovementUtils.center,
-                'args'   : {
-                            '0p' : (stage0, MovementType.PIEZO),
-                            '1p' : (stage1, MovementType.PIEZO),
-                            '0s' : (stage0, MovementType.STEPPER),
-                            '1s' : (stage1, MovementType.STEPPER),
-                            },
-                    },
-            'zero' : {
-                'text'   : 'Zero piezo or stepper axes',
-                'func'   : MovementUtils.zero,
-                'args'   : {
-                            '0p' : (stage0, MovementType.PIEZO),
-                            '1p' : (stage1, MovementType.PIEZO),
-                            '0s' : (stage0, MovementType.STEPPER),
-                            '1s' : (stage1, MovementType.STEPPER),
-                            },
-                    },
-            'energize' : {
-                'text'   : 'Energize steppers',
-                'func'   : MovementUtils.energize,
-                'args'   : {
-                            '0' : (stage0,),
-                            '1' : (stage1,),
-                            },
-                'kwargs' : {
-                            'all' : dict(axes='all')
-                            },
-                    },
-            'deenergize' : {
-                'text'   : 'Deenergize steppers',
-                'func'   : MovementUtils.deenergize,
-                'args'   : {
-                            '0' : (stage0,),
-                            '1' : (stage1,),
-                            },
-                'kwargs' : {
-                            'all' : dict(axes='all')
-                            },
-                    },
-            'home' : {
-                'text'   : 'Home steppers',
-                'func'   : MovementUtils.home,
-                'args'   : {
-                            '0' : (stage0,),
-                            '1' : (stage1,),
-                            },
-                'kwargs' : {
-                            'all' : dict(axes='all')
-                            },
-                    },
-            '_optimization' : 'Optimization Algorithms',
-            'grid'    : {
-                'text'   : 'Grid search with piezos or steppers',
-                'func'   : grid_search.run,
-                'args'   : {
-                            '0p' : (stage0, MovementType.PIEZO, ExposureTime),
-                            '1p' : (stage1, MovementType.PIEZO, ExposureTime),
-                            '0s' : (stage0, MovementType.STEPPER, ExposureTime),
-                            '1s' : (stage1, MovementType.STEPPER, ExposureTime),
-                            },
-                'kwargs' : {
-                            'coarse' : dict(spacing = Distance(15, "volts"), plot=True, planes=3),
-                            'fine'   : dict()
-                            },
-                    },
-            'hillclimb' : {
-                'text'   : 'Hill climbing with piezos or steppers',
-                'func'   : HillClimb.run,
-                'args'   : {
-                            '0p' : (stage0, MovementType.PIEZO, ExposureTime),
-                            '0s' : (stage0, MovementType.STEPPER, ExposureTime),
-                            '1p' : (stage1, MovementType.PIEZO, ExposureTime),
-                            '1s' : (stage1, MovementType.STEPPER, ExposureTime)
-                            },
-                'kwargs' : {},
-                    },
-            '_misc'      : "Miscillaneous",
-            'status'    : {
-                'text'   : 'Report the status of a stage',
-                'func'   : StageStatus.run,
-                'args'   : {
-                            '0'  : (stage0, ExposureTime, 'all'),
-                            '0p' : (stage0, ExposureTime, 'piezo'),
-                            '0s' : (stage0, ExposureTime, 'stepper'),
-                            '0r' : (stage0, ExposureTime, 'sensor'),
-                            '1'  : (stage1, ExposureTime, 'all'),
-                            '1p' : (stage1, ExposureTime, 'piezo'),
-                            '1s' : (stage1, ExposureTime, 'stepper'),
-                            '1r' : (stage1, ExposureTime, 'sensor'),
-                            },
-                'kwargs' : {
-                            'quick' : dict(verbose=False),
-                            'log'   : dict(log=True),
-                            },
-                    },
-            'reload'  : {
-                'text'   : 'Reload all ActiveFiberCoupling modules',
-                'func'   : None,
-                'args'   : {},
-                    },
-            'texp'    : {
-                'text'   : 'Change the default exposure time',
-                'func'   : Update_ExposureTime,
-                'args'   : {},
-                    },
-            'log'    : {
-                'text'   : 'Change the logging settings',
-                'func'   : Update_Logging,
-                'args'   : {},
-                    },
-            'help'   : {
-                'text'   : "Help with menu or with a function ('help <func_name>')",
-                'func'   : StringUtils.menu_help,
-                'args'   : {}
-                    }
-                }
-
-        while True:
-            print('\n'*4)   # for readability
-            display_menu(MENU_DICT)
-            print('')
-            user_input = input(">> ").strip()
-            print('\n')
-
-            try:
-                # special cases
-                if user_input.lower() == 'q':
-                    break
-                if user_input.lower() == 'exec':    # hidden mode :), pls don't abuse
-                    print("WARNING: IN EXEC MODE\nAnything typed here will be executed as python code.")
-                    exec(input('exec >> '))
-                    continue
-                if user_input.lower() == 'reload':
-                    reload_menu(MENU_DICT)
-                    continue
-                if user_input.lower() == 'uwu':
-                    print('UwU')
-                    continue
-
-                user_input = user_input.strip().split(' ')
-                if len(user_input) == 0:
-                    print('\nNo input given')
-                    continue
-                if len(user_input) == 1:
-                    no_args = ('reload', 'help', 'log', 'texp')
-                    if user_input[0].lower() in no_args:
-                        MENU_DICT[user_input[0].lower()]['func']()
-                    else:
-                        print('\nInvalid input: not enough space-separated arguments')
-                    continue
-                if user_input[0] not in MENU_DICT.keys() or user_input[0].startswith('_'):
-                    print('\nInvalid input')
-                    continue
-
-                func_key = user_input[0].lower()
-                func = MENU_DICT[func_key]['func']
-                args_key = ''.join(sorted(user_input[1].lower()))   # sort to allow e.g. s1 or 1s
-
-                if func_key in ('manual', 'home', 'energize', 'deenergize'):
-                    # device-agnostic functions
-                    args_key = args_key[0]
-
-                if func_key == 'help':      # help is a special case, handled separately
-                    StringUtils.menu_help(user_input[1], MENU_DICT)
-                    continue
-
-                args = MENU_DICT[func_key]['args'][args_key]
-                if len(user_input) == 2:
-                    func(*args)
-                    continue
-
-                user_input = user_input[2:]
-                kwargs = {}
-                if '=' not in user_input[0]:    # checking for default kwargs key
-                    kwargs_default_key = user_input[0].lower()
-                    kwargs.update(MENU_DICT[func_key]['kwargs'][kwargs_default_key])
-                    user_input = user_input[1:]
-                if any(['=' not in kwarg for kwarg in user_input]):
-                    warnings.warn("All kwargs must be in key=value form")
-                    print("Function call aborted.")
-                    continue
-
-                kwargs.update(StringUtils.str_to_dict(user_input))
-
-                # check whether kwargs are correct
-                try:
-                    inspect.signature(func).bind(*args, **kwargs)
-                except TypeError as e:
-                    warnings.warn(f"Invalid keyword arguments: {e}")
-                    print("Function call aborted.")
-                    continue
-
-                kwargs_print = StringUtils.dict_to_str(kwargs)
-                print("Interpreted kwargs:\n" + kwargs_print)
-                yn_input = input("Is this correct? (y/n): ").strip()
-                if yn_input.lower() == 'y':
-                    print(f"Calling {func_key} with args {args_key} and kwargs as above.\n")
-                    func(*args, **kwargs)
-                    continue
-                elif yn_input.lower() == 'n':
-                    print('')
-                else:
-                    print(f"Input {yn_input} could not be interpreted")
-
-                print("Function call aborted.")
-
-            except Exception as e:
-                func_traceback = traceback.format_exc()
-                warnings.warn(f"An error was encountered: {e}\nFull traceback below:\n" + func_traceback)
+    try:
+        with ProgramController(AutoHome, RequireConnection, LoggingSettings) as controller:
+            controller.run()
+    except Exception as e:
+        log.critical(f"A critical error occurred during initialization: {e}")
+        log.critical(traceback.format_exc())
 
 
 if __name__ == '__main__':

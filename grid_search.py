@@ -4,8 +4,10 @@
 
 import logging
 import numpy as np
+import scipy.stats as stats
 import lmfit
 import copy
+import sigfig
 import matplotlib.pyplot as plt
 from collections.abc import Sequence as sequence
 from typing import Optional, Union, Tuple, Sequence
@@ -129,12 +131,9 @@ def Gbeamfit_2d(axes: str, movementType: MovementType, stagename: str, axis0_gri
 
 
 def waist_parafit(axes: str, movementType: MovementType, stagename: str,
-                  planes: Sequence[Distance], results: Sequence[lmfit.model.ModelResult],
+                  planes: Sequence[Distance], waists: Sequence[float], waists_unc: Sequence[float],
                   show_plot: bool = False, log_plot: bool = True):
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
-
-    waists = np.array([result.params['sigmax'].value for result in results])
-    waists_unc = np.array([result.params['sigmax'].stderr for result in results])
     planes_microns = np.array([plane.microns for plane in planes])
 
     model = lmfit.models.QuadraticModel()
@@ -157,22 +156,20 @@ def waist_parafit(axes: str, movementType: MovementType, stagename: str,
 
 
 def peaks_linfit(axes: str, first_axis: bool, movementType: MovementType, stagename: str,
-                 planes: Sequence[Distance], results: Sequence[lmfit.model.ModelResult],
+                 planes: Sequence[Distance], peak_pos: Sequence[float], peak_unc: Sequence[float],
                  focus_pos: Distance, show_plot: bool = False, log_plot: bool = True):
     # fit peak position values (in case the beam is not parallel with the focal axis)
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
-    centerstr = 'centerx' if first_axis else 'centery'
     planes_microns = np.array([plane.microns for plane in planes])
-    axis_peak_pos = np.array([result.params[centerstr].value for result in results])
-    axis_peak_unc = np.array([result.params[centerstr].stderr for result in results])
+
     model = lmfit.models.LinearModel()
-    params = model.guess(axis_peak_pos, x=planes_microns)
-    lin_result = model.fit(axis_peak_pos, x=planes_microns,
-                           params=params, weights=1/axis_peak_unc)
+    params = model.guess(peak_pos, x=planes_microns)
+    lin_result = model.fit(peak_pos, x=planes_microns,
+                           params=params, weights=1/peak_unc)
 
     if show_plot or log_plot:
         axis = axes[0] if first_axis else axes[1]
-        fig = plot_lin_fit(axis, focus_axis, axis_peak_pos, axis_peak_unc,
+        fig = plot_lin_fit(axis, focus_axis, peak_pos, peak_unc,
                            planes_microns, lin_result)
         log.info("Plot Generated")
         if log_plot:
@@ -183,17 +180,7 @@ def peaks_linfit(axes: str, first_axis: bool, movementType: MovementType, stagen
             plt.show(block=True)
         plt.close()
 
-    accepted = True
-    if not lin_result.success:
-        accepted = False
-    elif show_plot:
-        accepted = accept_fit()
-
-    if accepted:
-        return Distance(lin_result.eval(x=focus_pos), 'microns')
-
-    # Take mean value if linear fit fails
-    return Distance(axis_peak_pos.mean(), 'microns')
+    return lin_result
 
 
 def plane_grid(stage: StageDevices, movementType: MovementType, plane: Distance,
@@ -225,6 +212,7 @@ def plane_grid(stage: StageDevices, movementType: MovementType, plane: Distance,
             fig.savefig(f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_gridvalues_" +
                 f"{stage.name}_{movementType.value}_{focus_axis}-{plane.microns}um.png",
                         format='png', facecolor='white', dpi=200)
+            log.info("plot saved to ./log_plots")
         if show_plot:
             plt.show(block=True)
         plt.close()
@@ -238,10 +226,10 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
         center: Union[None, str, Sequence[Distance]] = None,
         limits: Optional[Sequence[Distance]] = None, # 2-list of (2-lists of) Distance objects
         axes: str = 'xz', planes: Union[None, int, Sequence[Distance]] = None,   # default 3 planes
-        fit_3d: bool = True, fit_2d: bool = True, fit_para: bool = True, fit_lin: bool = True,
-        show_plots: Optional[bool] = None, log_plots: Optional[bool] = None,
+        fit_3d: bool = True, fit_2d: bool = True, fit_waists: bool = True, fit_lin: bool = True,
+        show_plots: Optional[bool] = True, log_plots: Optional[bool] = None,
         plane_kwargs: dict = {}, fit_3d_kwargs: dict = {}, fit_2d_kwargs: dict = {},
-        fit_para_kwargs: dict = {}, fit_lin_kwargs: dict = {}):
+        fit_waists_kwargs: dict = {}, fit_lin_kwargs: dict = {}):
 
     assert movementType in (MovementType.PIEZO, MovementType.STEPPER), \
             "movementType must be MovementType.PIEZO or .STEPPER"
@@ -257,11 +245,11 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
 
     # show_plots and log_plots will not override explicitly provided kwargs
     if show_plots is not None:
-        for kwargs in (plane_kwargs, fit_3d_kwargs, fit_2d_kwargs, fit_para_kwargs, fit_lin_kwargs):
+        for kwargs in (plane_kwargs, fit_3d_kwargs, fit_2d_kwargs, fit_waists_kwargs, fit_lin_kwargs):
             if 'show_plot' not in kwargs.keys():
                 kwargs.update({'show_plot' : show_plots})
     if log_plots is not None:
-        for kwargs in (plane_kwargs, fit_3d_kwargs, fit_2d_kwargs, fit_para_kwargs, fit_lin_kwargs):
+        for kwargs in (plane_kwargs, fit_3d_kwargs, fit_2d_kwargs, fit_waists_kwargs, fit_lin_kwargs):
             if 'log_plot' not in kwargs.keys():
                 kwargs.update({'log_plot' : log_plots})
 
@@ -332,12 +320,39 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
     for n, plane in enumerate(planes):
         log.info(f"Running grid search in plane {focus_axis} = " +
                     f"{plane.prettyprint()} microns with grid:\n" +
-                    f"{axes[0]} = {axis0} microns\n{axes[1]} = {axis1} microns")
+                    f"{axes[0]} = {axis0} microns\n{axes[1]} = {axis1} microns\n" +
+                    "Total integration time ~ " +
+                    f"{sigfig.round(len(axis0)*len(axis1)*exposureTime/1e3, 3)} seconds")
         stage.goto(focus_axis, plane, movementType)
 
         plane_values = plane_grid(stage, movementType, plane,
                                     axes, axis0, axis1, exposureTime, **plane_kwargs)
         grid_values.append(plane_values)
+
+    """
+    Logical flow:
+    If there is more than one plane, fit with 3d Gaussian beam if enabled.
+        If accepted, go to 3d waist position.
+    If 3d fit is not accepted or doesn't run, fit each plane with a 2d Gaussian if enabled.
+    If at least 3 2d Gaussian fits were accept, fit a parabola to the best-fit sigma values.
+        If the parabola fit is accepted, fit each axis' best-fit peak position vs
+                                            focus axis position with a line, if enabled.
+            For each linear fit, if it is not accepted or didn't run, find the mean of the axis' peak  positions.
+            Go to the focus of the fit-waist position, then go to the position in that plane detemined
+                                            by linear fit or or taking the mean.
+        If the parabola fit wasn't accepted or wasn't enabled, and there is at least one successful
+                                            2d Gaussian fit, go to the position of the highest best-fit peak.
+    If no 2d Gaussian fits were accepted or they didn't run, and fit_waists is enabled,
+                                            determine the standard deviation of each plane and fit a
+                                            parabola to those waists.
+        If the parabola fit is accepted, fit each axis' photocenter position vs
+                                            focus axis position with a line, if enabled.
+            For each linear fit, if it is not accepted or didn't run, find the mean of the
+                                            axis' peak photocenter positions.
+            Go to the focus of the std-waist position, then go to the position in that plane detemined
+                                            by linear fit or or taking the mean.
+    If no fitting is enabled (or just linear), then go to the position of the highest recorded intensity.
+    """
 
     # make cubes
     grid_values = np.array(grid_values)
@@ -393,41 +408,77 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
                 accepted_results.append(result)
                 accepted_planes.append(plane)
 
-        # fit parabola to waists if able
+        # fit parabola to plane-fit waists if able
         if len(accepted_results) >= 3:
             log.info("Fitting parabola to waists")
+            waists = np.array([result.params['sigmax'].value for result in accepted_results])
+            waists_unc = np.array([result.params['sigmax'].stderr for result in accepted_results])
+
             para_result = waist_parafit(axes, movementType, stage.name,
-                                        accepted_planes, accepted_results, **fit_para_kwargs)
+                                        accepted_planes, waists, waists_unc, **fit_waists_kwargs)
             accepted = True
             if not para_result.success:
                 log.info(f"Quadratic fit to waists vs {focus_axis} failed")
                 accepted = False
 
-            elif fit_para_kwargs['show_plot']:
+            elif fit_waists_kwargs['show_plot']:
                 accepted = accept_fit()
 
-            if accepted:
+            focus_pos = - para_result.params['b'].value / 2 * para_result.params['a'].value
+            waist_pos = [None, None, Distance(focus_pos, 'microns')]
+            accepteds = [False, False]
+
+            if accepted and fit_lin:
                 log.info("Fitting linear functions to peak center values")
 
-                focus_pos = - para_result.params['b'].value / 2 * para_result.params['a'].value
+                axis_peak_pos0 = np.array([result.params['centerx'].value for result in accepted_results])
+                axis_peak_unc0 = np.array([result.params['centerx'].stderr for result in accepted_results])
+                axis_peak_pos1 = np.array([result.params['centery'].value for result in accepted_results])
+                axis_peak_unc1 = np.array([result.params['centery'].stderr for result in accepted_results])
                 waist_min = Distance(para_result.eval(x=focus_pos), 'microns')
-                waist_pos = [None, None, Distance(focus_pos, 'microns')]
-                waist_pos[0] = peaks_linfit(axes, True, movementType, stage.name, accepted_planes,
-                                            accepted_results, focus_pos, **fit_lin_kwargs)
-                waist_pos[1] = peaks_linfit(axes, False, movementType, stage.name, accepted_planes,
-                                            accepted_results, focus_pos, **fit_lin_kwargs)
+                lin_result0 = peaks_linfit(axes, True, movementType, stage.name, accepted_planes,
+                                            axis_peak_pos0, axis_peak_unc0, focus_pos, **fit_lin_kwargs)
+                lin_result1 = peaks_linfit(axes, False, movementType, stage.name, accepted_planes,
+                                            axis_peak_pos1, axis_peak_unc1, focus_pos, **fit_lin_kwargs)
+
+                lin_results = (lin_result0, lin_result1)
+                for i, result in enumerate(lin_results):
+                    accepteds[i] = True
+                    if not result.success:
+                        accepteds[i] = False
+                    elif fit_lin_kwargs['show_plot']:
+                        accepteds[i] = accept_fit()
+                    if accepteds[i]:
+                        waist_pos[i] = Distance(result.eval(x=focus_pos), 'microns')
+
+                for i, accept in enumerate(accepteds):
+                    centerstr = 'centerx' if i == 0 else 'centery'
+                    if not accept:
+                        waistpos = np.mean([result.params[centerstr].value for result in accepted_results])
+                        waist_pos[i] = waistpos
 
                 stage.goto(axes[0], waist_pos[0], movementType)
                 stage.goto(axes[1], waist_pos[1], movementType)
                 stage.goto(focus_axis, waist_pos[2], movementType)
 
-                log.info(f"Moved to minimum waist of {waist_min.prettyprint()} at ({axes[0]}, {axes[1]}, {focus_axis}) = " +
+                log.info(f"Moved to minimum fit-waist of {waist_min.prettyprint()} at ({axes[0]}, {axes[1]}, {focus_axis}) = " +
                         f"({waist_pos[0].prettyprint()}, {waist_pos[1].prettyprint()}, " +
                         f"{waist_pos[2].prettyprint()})")
                 return
 
-        # if any fits were successful, go to the highest known best-fit peak
-        if len(accepted_results) != 0:
+        # if any fits were successful, go to the highest known best-fit peak if wanted
+        while True:
+            print("Go to highest best-fit peak?")
+            user_input = input('(y/n): ').strip().lower()
+            if user_input == 'y':
+                highest_peak = True
+                break
+            if user_input == 'n':
+                highest_peak = False
+                break
+            print("Input must be 'y' or 'n'")
+
+        if highest_peak and len(accepted_results) != 0:
             plane_peaks = np.array([result.params['height'].value for result in accepted_results])
             max_peak = plane_peaks.max()
             max_peak_idx = plane_peaks.argmax()
@@ -447,6 +498,75 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
             return
 
         log.info("No planes were successfully fit with a gaussian")
+
+    # fit parabola to plane standard deviations
+    if fit_waists:
+        background = stats.mode(grid_values, axis=None)[0]
+        log.info(f"Sensor background determined to be {sigfig.round(background, 3)}" +
+                 "by taking the mode of all grid values")
+        grid_values_bg = grid_values - background
+        waists = np.std(grid_values_bg, axis=(1, 2))
+        log.info(f"Plane standard deviations: {waists}")
+        waists_unc = np.ones_like(waists)
+
+        para_result = waist_parafit(axes, movementType, stage.name, planes,
+                                    waists, waists_unc, **fit_waists_kwargs)
+        accepted = True
+        if not para_result.success:
+            log.info(f"Quadratic fit to std-waists vs {focus_axis} failed")
+            accepted = False
+
+        elif fit_waists_kwargs['show_plot']:
+            accepted = accept_fit()
+
+        focus_pos = - para_result.params['b'].value / 2 * para_result.params['a'].value
+        waist_pos = [None, None, Distance(focus_pos, 'microns')]
+        accepteds = [False, False]
+
+        if accepted and fit_lin:
+            log.info("Fitting linear functions to peak center values")
+
+            plane_xgrid, plane_ygrid = np.meshgrid(*grid_values[0].shape)
+            axis_peak_pos0 = []
+            axis_peak_pos1 = []
+            for grid in grid_values:
+                axis_peak_pos0.append(np.sum(plane_xgrid * grid) / np.sum(plane_xgrid))
+                axis_peak_pos1.append(np.sum(plane_ygrid * grid) / np.sum(plane_ygrid))
+
+            axis_peak_unc0 = np.ones_like(axis_peak_pos0)
+            axis_peak_unc1 = np.ones_like(axis_peak_pos1)
+
+            waist_min = Distance(para_result.eval(x=focus_pos), 'microns')
+            lin_result0 = peaks_linfit(axes, True, movementType, stage.name, planes,
+                                        axis_peak_pos0, axis_peak_unc0, focus_pos, **fit_lin_kwargs)
+            lin_result1 = peaks_linfit(axes, False, movementType, stage.name, planes,
+                                        axis_peak_pos1, axis_peak_unc1, focus_pos, **fit_lin_kwargs)
+
+            lin_results = (lin_result0, lin_result1)
+            for i, result in enumerate(lin_results):
+                accepteds[i] = True
+                if not result.success:
+                    accepteds[i] = False
+                elif fit_lin_kwargs['show_plot']:
+                    accepteds[i] = accept_fit()
+                if accepteds[i]:
+                    waist_pos[i] = Distance(result.eval(x=focus_pos), 'microns')
+
+            axis_peak_poses = (axis_peak_pos0, axis_peak_pos1)
+            for i, accept in enumerate(accepteds):
+                centerstr = 'centerx' if i == 0 else 'centery'
+                if not accept:
+                    waistpos = np.mean(axis_peak_poses[i])
+                    waist_pos[i] = Distance(waistpos, 'microns')
+
+            stage.goto(axes[0], waist_pos[0], movementType)
+            stage.goto(axes[1], waist_pos[1], movementType)
+            stage.goto(focus_axis, waist_pos[2], movementType)
+
+            log.info(f"Moved to minimum fit-waist of {waist_min.prettyprint()} at ({axes[0]}, {axes[1]}, {focus_axis}) = " +
+                    f"({waist_pos[0].prettyprint()}, {waist_pos[1].prettyprint()}, " +
+                    f"{waist_pos[2].prettyprint()})")
+            return
 
     # go to position of brightest position visited
     max_value = grid_values.max()

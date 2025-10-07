@@ -1,3 +1,4 @@
+import time
 import enum
 import logging
 import socket
@@ -42,6 +43,7 @@ class Sipm:
         Texp = int(Texp)
         for i in range(Texp):
             power += self.read()
+            time.sleep(1e-5)
         if avg:
             power /= Texp
         log.debug(f"SiPM addr:{self.addr} channel:{self.channel}  " +
@@ -55,7 +57,7 @@ class Socket:
         self.port = connection_dict['port']
         self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            self.connection.settimeout(5)
+            self.connection.settimeout(20)
             self.connection.connect((self.host, self.port))
             log.info(f"Connected to socket host {self.host} at port {self.port}")
         except TimeoutError:

@@ -197,8 +197,8 @@ grid 0s fine axes='yz' planes=[D(100,"fullsteps"),D(500,fullsteps)]
     """
 
     if func_key is not None and menu is not None:
-        func_dict_str = dict_to_str(menu[func_key])
-        func_sig = inspect.signature(menu[func_key]['func'])
+        func_dict_str = dict_to_str(menu[func_key].to_dict())
+        func_sig = inspect.signature(menu[func_key].func)
         siglist = []
         for _, sig in list(func_sig.parameters.items()):
             siglist.append(str(sig))
