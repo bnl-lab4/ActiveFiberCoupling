@@ -188,12 +188,18 @@ class StageAxis:
         return MoveResult(Distance(steps, 'steps'), MovementType.STEPPER)
 
     def energize(self):
+        if self._energized():
+            log.info(f"Stepper {self.stepper_SN} is already energized")
+            return
         self.stepper.halt_and_set_position(0)
         self.stepper.energize()
         self.stepper.exit_safe_start()
         log.info(f"Stepper {self.stepper_SN} energized")
 
     def deenergize(self):
+        if not self._energized():
+            log.info(f"Stepper {self.stepper_SN} is already deenergized")
+            return
         self.stepper.halt_and_hold()
         self.stepper.deenergize()
         self.stepper.enter_safe_start()

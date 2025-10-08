@@ -30,7 +30,7 @@ def run(stage: StageDevices, exposureTime: Union[int, float], which: Optional[st
     if which == 'piezo':
         show_piezo = True
     if which == 'sensor':
-        show_sensor == True
+        show_sensor = True
     if which == 'general':
         show_piezo = True
         show_stepper = True

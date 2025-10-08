@@ -1,214 +1,446 @@
-#!/usr/bin/python
+################ TODO
+# CONTINUOUS SENSOR READOUT FUNCTON
+# populate default kwargs dictionaries
+# add general movement mode to manual control
+# rewrite command line arg handling to be more flexible (dict?)
+#####################
 
-#to do: change ser to ser0
 
-
+import os
 import sys
-import serial
-import time
-from motion import move
-import numpy as np
-import importlib
-
-#Device Imports
-import piplates.DAQC2plate as DAQ
+import importlib    # for reloading modules
+import logging
+import warnings
+import contextlib   # better than nested 'with' statements
+import readline     # enables input() to save history just by being loaded
+import atexit       # for saving readline history file
+import inspect      # checking input kwargs match to function in menu
+import traceback    # show traceback in main menu
+from typing import Tuple, Dict, Optional
+from collections.abc import Callable
 
 # Import alignment algorithms and control modes
+from MovementClasses import StageDevices, MovementType
+from SensorClasses import Sensor, SensorType
+from SimulationClasses import SimulationSensor, SimulationStageDevices
 import manual_control
-import manual_keycontrol
-import algo_randomsearch
-import algo_gridsearch
-import algo_hill_climbing
-import algo_crossSearch
-import algo_one_cross_section
-import algo_three_cross_sections
-import algo_calculate
-import algo_cross_section_search
-import algo_continuous_search
-import third_algo_one_cross_section_with_plots
-import data_algo_calculate
-import data_algo_continuous_search
-import data_2_algo_calculate
-import data_2_algo_continuous_search
-import center_axes
-import zero_axes
-import photodiode_in
-import algo_focal_estimator
-import algo_PSO
-import warnings
+import MovementUtils
+import grid_search
+import StringUtils
+import HillClimb
+import StageStatus
+import LoggingUtils
+import ContinuousReadout
 
-SERIAL_PORT0 = '/dev/ttyACM0'
-SERIAL_PORT1 = '/dev/ttyACM1'
+
+# Device info constants
+SOCKET0 = dict(host = '192.168.1.10', port = 8000, sensortype = SensorType.SOCKET)
+SIPM0 = dict(addr = 0, channel = 1, sensortype = SensorType.SIPM)
+SIPM1 = dict(addr = 0, channel = 2, sensortype = SensorType.SIPM)
+PHOTODIODE0 = dict(addr = 0, channel = 1, sensortype = SensorType.PHOTODIODE)
+PHOTODIODE1 = dict(addr = 0, channel = 2, sensortype = SensorType.PHOTODIODE)
+SIMSENSOR_ASPH = dict(propagation_axis = 'y', focal_ratio = 4.0, angle_of_deviation = 0)
+SIMSENSOR_LABTELE = dict(propagation_axis = 'y', focal_ratio = 28.0, angle_of_deviation = 0)
+SIMSENSOR_SKYTELE = dict(propagation_axis = 'y', focal_ratio = 7.0, angle_of_deviation = 0)
+
+SENSOR0 = SIPM0
+SENSOR1 = SIMSENSOR_ASPH
+
+PIEZO_PORT0 = '/dev/ttyACM0'
+PIEZO_PORT1 = '/dev/ttyACM1'
 BAUD_RATE = 115200
 
-# Open serial connection
-def initialize_serial():
-    #ser0 = serial.Serial(port=SERIAL_PORT,
-    #    baudrate=BAUD_RATE,
-    #    bytesize=serial.EIGHTBITS,
-    #    parity=serial.PARITY_NONE,
-    #    stopbits=serial.STOPBITS_ONE,
-    #    timeout=2,
-    #    xonxoff=False,
-    #    rtscts=False,
-    #    dsrdtr=False,
-    #)
-    ser0 = None
-    ser1 = None
-    try:
-        ser0 = serial.Serial(SERIAL_PORT0, BAUD_RATE, timeout=1)
-        print(f"Connected to {SERIAL_PORT0} at {BAUD_RATE} baud.")
-    except serial.SerialException as e:
-        warnings.warn(f"Error opening serial port: {e}")
+STEPPER_DICT0 = dict(x = '00485175', y = '00485185', z = '00485159')
+STEPPER_DICT1 = dict(x = None, y = None, z = None)
 
-    try:
-        ser1 = serial.Serial(SERIAL_PORT1, BAUD_RATE, timeout=1)
-        print(f"Connected to {SERIAL_PORT1} at {BAUD_RATE} baud.")
-    except serial.SerialException as e:
-        warnings.warn(f"Error opening serial port: {e}")
+MOVEMENT_TYPE_MAP = {
+    'p': MovementType.PIEZO,
+    's': MovementType.STEPPER,
+    'g': MovementType.GENERAL
+}
 
-    time.sleep(2)  # Give the device time to initialize
-    return ser0, ser1
+WHICH_DEVICE_MAP = {
+    'p': 'piezo',
+    's': 'stepper',
+    'r': 'sensor'
+}
+
+
+# custom warning format to remove the source line
+def custom_formatwarning(message, category, filename, lineno, line=None):
+    # Custom warning formatter that removes the source line.
+    return f"{filename}-line{lineno}-{category.__name__} :: {message}\n"
+
+
+# Initial logging/warning configuration
+log = logging.getLogger(__name__)
+
+
+def AcceptInputArgs(inputTuple, inputArgs):
+    # inputTuple must be in correct order, should be refactored
+
+    CommandArg_ValueDict = dict(t=True, y=True, true=True, f=False, n=False, false=False)
+
+    for arg in inputArgs:
+        if '-' not in arg:
+            warnings.warn(f"Command-line argument {arg} not formatted properly (arg-bool)")
+            continue
+        arg, val = arg.strip().lower().split('-')
+        if arg == 'autohome':
+            inputTuple[0] = CommandArg_ValueDict[val]
+            continue
+        if arg == "requireconnection" or arg == 'requirecon':
+            inputTuple[1] = CommandArg_ValueDict[val]
+            continue
+        if arg == 'logtoconsole':
+            inputTuple[2] = CommandArg_ValueDict[val]
+            continue
+        if arg == 'logtofile':
+            inputTuple[3] = CommandArg_ValueDict[val]
+            continue
+        if arg == 'logfile':
+            if LoggingUtils.verify_logfile(val):
+                inputTuple[4] = val
+        if arg == 'consoleloglevel':
+            try:
+                inputTuple[5] = getattr(logging, val)
+            except AttributeError:
+                warnings.warn(f"Could not find log level {val}, default will be kept")
+                continue
+            inputTuple[5] = val
+            continue
+        if arg == 'loglevel':
+            try:
+                inputTuple[6] = getattr(logging, val)
+            except AttributeError:
+                warnings.warn(f"Could not find log level {val}, default will be kept")
+                continue
+            inputTuple[6] = val
+            continue
+
+        warnings.warn(f"{'-'.join(arg)} is not a valid argument")
+
+    return inputTuple
+
+
+def Update_ExposureTime(texp):
+    print(f"Update default exposure time (currently {texp}):" +
+        "(iterations for SiPMs or photodiodes, milliseconds for sockets)")
+    user_input = input(">> ").strip()
+    try:
+        user_input = int(float(user_input))
+    except ValueError:
+        print(f"Input {user_input} cannot be converted to an int. texp will remain at {texp}")
+        return False
+    texp = user_input
+    return texp
+
+
+class MenuEntry:
+    def __init__(self, text: str, func: Optional[Callable] = None, args_config: Tuple[str, ...] = (),
+                 kwargs_config: Dict['str', dict] = {}):
+        self.text = text
+        self.func = func
+        self.args_config = args_config
+        self.kwargs_config = kwargs_config
+
+    def to_dict(self):
+        return dict(text=self.text, func=self.func, args=self.args_config,
+                    kwargs=self.kwargs_config)
+
+    def execute(self, controller, user_input_parts):
+        # Handle special case for help function
+        if self.func == StringUtils.menu_help:
+            target_func = user_input_parts[0] if user_input_parts else None
+            self.func(target_func, controller.menu)
+            return
+
+        resolved_args = []
+        if 'stage' in self.args_config:
+            resolved_args.append(controller.stages[user_input_parts[0]])
+        if 'MovementType' in self.args_config:
+            resolved_args.append(MOVEMENT_TYPE_MAP[user_input_parts[1]])
+        if 'ExposureTime' in self.args_config:
+            resolved_args.append(controller.exposure_time)
+
+        args_len = len(self.args_config) - 1 if 'ExposureTime' in self.args_config else len(self.args_config)
+        kwargs = {}
+        if len(user_input_parts) > args_len:
+            if '=' not in user_input_parts[args_len]:
+                kwargs_default_key = user_input_parts[args_len].lower()
+                kwargs.update(self.kwargs_config[kwargs_default_key])
+                args_len += 1
+
+        if len(user_input_parts) > args_len:
+            if any('=' not in kwarg for kwarg in user_input_parts[args_len:]):
+                warnings.warn("All kwargs must be in <key>=<value> form")
+                print("Function call aborted")
+                return
+            kwargs.update(StringUtils.str_to_dict(user_input_parts[args_len:]))
+
+        # if exposure time is entered as a kwarg, replace the arg value
+        if 'exposureTime' in kwargs.keys() and 'ExposureTime' in self.args_config:
+            resolved_args[-1] = kwargs.pop('exposureTime')
+
+        # check whether kwargs are valid
+        try:
+            inspect.signature(self.func).bind(*resolved_args, **kwargs)
+        except TypeError as e:
+            warnings.warn(f"Invalid keyword arguments: {e}")
+            print("Function call aborted")
+            return
+
+        if kwargs:
+            kwargs_print = StringUtils.dict_to_str(kwargs)
+            print("Interpreted kwargs:\n" + kwargs_print)
+            yn_input = input("Is this correct? (y/n): ").strip().lower()
+            print('')
+            if yn_input != 'y':
+                print("Function call aborted")
+                return
+
+        args_string = f" with args {resolved_args}" if resolved_args else ''
+        kwargs_string = f" with kwargs {StringUtils.dict_to_str(kwargs)}" if kwargs else ''
+        if args_string and kwargs_string:
+            args_string += ' and'
+        log.debug(f"Calling {self.func.__name__}" + args_string + kwargs_string)
+        self.func(*resolved_args, **kwargs)
+
+
+class ProgramController:
+    def __init__(self, autohome: bool, require_connection: bool, logging_settings: tuple):
+        self.autohome = autohome
+        self.require_connection = require_connection
+        self.logging_settings = logging_settings
+
+        self.running = True
+        self.exposure_time = 1000   # default value
+        self.stages = {}
+        self.stack = contextlib.ExitStack()
+        self.menu = self._build_menu()
+
+    def __enter__(self):
+        LoggingUtils.setup_logging(*self.logging_settings)
+        self._initialize_devices()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stack.close()
+        log.debug("Device contexts closed cleanly")
+        return False
+
+    def _initialize_devices(self):
+        if "propogation_axis" not in SENSOR0:
+            sensor0 = self.stack.enter_context(Sensor(SENSOR0, SENSOR0['sensortype']))
+            stage0 = self.stack.enter_context(StageDevices('stage0', PIEZO_PORT0, STEPPER_DICT0,
+                                        sensor = sensor0, require_connection = self.require_connection,
+                                                 autohome = self.autohome))
+        else:
+            sensor0 = self.stack.enter_context(SimulationSensor(**SENSOR0))
+            stage0 = self.stack.enter_context(SimulationStageDevices('simstage0', sensor = sensor0))
+        self.stages['0'] = stage0
+
+        if "propagation_axis" not in SENSOR1:
+            sensor1 = self.stack.enter_context(Sensor(SENSOR1, SENSOR1['sensortype']))
+            stage1 = self.stack.enter_context(StageDevices('stage1', PIEZO_PORT1, STEPPER_DICT1,
+                                        sensor = sensor1, require_connection = self.require_connection,
+                                                 autohome = self.autohome))
+
+        else:
+            sensor1 = self.stack.enter_context(SimulationSensor(**SENSOR1))
+            stage1 = self.stack.enter_context(SimulationStageDevices('simstage1', sensor = sensor1))
+        self.stages['1'] = stage1
+
+    def _build_menu(self):
+        return {
+                '_stage_control' : 'Stage Control Options',
+                'manual' : MenuEntry(
+                    text = 'Stage manual control', func = manual_control.run,
+                    args_config = ('stage', 'ExposureTime')
+                    ),
+                'zero' : MenuEntry(
+                    text = 'Zero piezos or steppers positions', func = MovementUtils.zero,
+                    args_config = ('stage', 'MovementType')
+                    ),
+                'center' : MenuEntry(
+                    text = 'Center piezos or steppers positions', func = MovementUtils.center,
+                    args_config = ('stage', 'MovementType')
+                    ),
+                'max' : MenuEntry(
+                    text = 'Maximize piezos or steppers positions', func = MovementUtils.max,
+                    args_config = ('stage', 'MovementType')
+                    ),
+                'energize' : MenuEntry(
+                    text = 'Energize steppers', func = MovementUtils.energize,
+                    args_config = ('stage',)
+                    ),
+                'deenergize' : MenuEntry(
+                    text = 'Deenergize steppers', func = MovementUtils.deenergize,
+                    args_config = ('stage', )
+                    ),
+                'home' : MenuEntry(
+                    text = 'Home steppers', func = MovementUtils.home,
+                    args_config = ('stage', )
+                    ),
+                'read' : MenuEntry(
+                    text = 'Continuous readout of sensor in terminal',
+                    func = ContinuousReadout.run,
+                    args_config = ('stage', 'ExposureTime')
+                    ),
+                '_optimization' : 'Optimization Algorithms',
+                'grid' : MenuEntry(
+                    text = 'Grid search in one or more planes',
+                    func = grid_search.run,
+                    args_config = ('stage', 'MovementType', 'ExposureTime')
+                    ),
+                'hillclimb' : MenuEntry(
+                    text = 'Hill climbing on one or more axes', func = HillClimb.run,
+                    args_config = ('stage', 'MovementType', 'ExposureTime')
+                    ),
+                '_misc' : 'Miscellaneous',
+                'status' : MenuEntry(
+                    text = 'Report the status of all or part of a stage',
+                    func = StageStatus.run,
+                    args_config = ('stage', 'ExposureTime'),
+                    kwargs_config = {
+                        'quick' : dict(verbose = False),
+                        'log' : dict(log = True)
+                        },
+                    ),
+                'reload' : MenuEntry(text = 'Reload all ActiveFiberCoupling modules'),
+                # reload is a special case, whose function must not be in the menu
+                'texp' : MenuEntry(
+                    text = 'Change the default exposure time', func = Update_ExposureTime,
+                    ),
+                'log' : MenuEntry(
+                    text = 'Change the logging settings',
+                    func = LoggingUtils.Update_Logging,
+                    ),
+                'help' : MenuEntry(
+                    text = "Help with the menu or a function ('help <func_name>')",
+                    func = StringUtils.menu_help,
+                    )
+                }
+
+    def _display_menu(self):
+        max_choice_length = max(map(lambda s: len(s) if not s.startswith('_') else 0,
+                                    list(self.menu.keys())))    # excepting section titles, sorry
+        whitespace = max_choice_length + 2    # for aligning descriptions
+        for key, value in self.menu.items():
+            if key.startswith('_'):
+                print('\n' + value)
+            else:
+                print(f"{key}:{' ' * (whitespace - len(key))}{value.text}")
+        return
+
+    def _reload_menu(self):
+        for key, entry in self.menu.items():
+            if key.startswith('_') or key == 'reload':
+                continue    # ignore menu section headers and this functions menu entry
+
+            # get name of module function comes from
+            func_module_name = entry.func.__module__
+            if func_module_name == '__main__':
+                continue    # can't reload this script itself
+
+            try:
+                func_name = entry.func.__name__
+                reloaded_module = importlib.reload(importlib.import_module(func_module_name))
+                new_func = getattr(reloaded_module, func_name)
+                entry.func = new_func
+                log.info(f"{key} function reloaded succesfully")
+
+            except (ImportError, AttributeError):
+                log.warning(f"{key} function was not reloaded succesfully")
+
+        self.menu = self._build_menu()
+
+    def run(self):
+        while self.running:
+            try:
+                print('\n' * 4)
+                self._display_menu()
+                print('')
+                user_input = input(">> ").strip()
+                print('')
+
+                if not user_input:
+                    continue
+
+                ui_lower = user_input.lower()
+                # special cases
+                if ui_lower == 'q':
+                    self.running = False
+                if ui_lower == 'exec':    # hidden mode :), pls don't abuse
+                    print("WARNING: IN EXEC MODE\nAnything typed here will be executed as python code.")
+                    exec(input('exec >> '))
+                    continue
+                if ui_lower == 'reload':
+                    self._reload_menu()
+                    continue
+                if ui_lower == 'uwu':
+                    print('UwU')
+                    continue
+
+                parts = user_input.split(' ')
+                parts = [part for part in parts if part != '']
+
+                entry_key = parts[0].lower()
+                if entry_key not in self.menu.keys() or entry_key.startswith('_'):
+                    if entry_key != 'q':
+                        print('\nInvalid command')
+                    continue
+
+                # These functions update the state of ProgramController
+                if entry_key == 'reload':
+                    self._reload_menu()
+                elif entry_key == 'log':
+                    self.logging_settings = LoggingUtils.Update_Logging()
+                elif entry_key == 'texp':
+                    self.exposure_time = Update_ExposureTime(self.exposure_time)
+                else:
+                    entry = self.menu[entry_key]
+                    entry.execute(self, parts[1:])
+
+            except Exception as e:
+                func_traceback = traceback.format_exc()
+                warnings.warn(f"An error was encountered: {e}\nFull traceback below:\n{func_traceback}")
+            except KeyboardInterrupt:
+                logging.warning("KeyboardInterrupt caught")
+                print("KeyboardInterrupt was caught, enter 'q' to quit")
+
 
 def main():
-    ser0, ser1 = initialize_serial()
-    pdn = 500     #default number of times to integrate photodiode input ADC
-   
-   # For random, grid, hill clibing, cross search, one cross
-    # section, three cross sections, and fitting algorithm:
-    # They only work for 0 unless you manually change ser here
-    # and change to (0,1) in photodiode_in
+    # warning configuration
+    logging.captureWarnings(True)
+    warnings.formatwarning = custom_formatwarning
+
+    # load input history file
+    history_file = './.main_history'
+    if os.path.exists(history_file):
+        readline.read_history_file(history_file)
+    readline.set_history_length(500)        # only save the last 500 entries
+    # before stopping the script, save the input history to the file
+    atexit.register(readline.write_history_file, history_file)
+
+    # Default runtime variable
+    AutoHome = True # home motors upon establishing connection
+    RequireConnection = False # raise exception if device connections fail to establish
+    LoggingSettings = [None] * 5
+
+    if len(sys.argv) > 1:
+        InputArgs = sys.argv[1:]
+        AutoHome, RequireConnection, *LoggingSettings = AcceptInputArgs(
+                [AutoHome, RequireConnection] + LoggingSettings, InputArgs)
+        # print(f"Received input args: {AutoHome}, {RequireConnection}, {LoggingSettings}")
 
     try:
-        while True:
-            if ser0 is None or ser1 is None:
-                print("\n" + "*"*60 + "\n")
-                if ser0 is None:
-                    print("WARNING: ser0 has not initialized properly!")
-                if ser1 is None:
-                    print("WARNING: ser1 has not initialized properly!")
-                print("\n" + "*"*60)
-            print("\nManual Control Options")
-            print("0:        Ch 0 w/PD input")
-            print("1:        Ch 1 w/PD input")
-           # print("m:        Duplex w/o PD")
-            print("center 0: Center axes of Ch 0")
-            print("center 1: Center axes of Ch 1")
-            print("zero 0:   V=0 all axes of Ch 0")
-            print("zero 1:   V=0 all axes of Ch 1\n")
+        with ProgramController(AutoHome, RequireConnection, LoggingSettings) as controller:
+            controller.run()
+    except Exception as e:
+        log.critical(f"A critical error occurred during initialization: {e}")
+        log.critical(traceback.format_exc())
 
-            print("Automatic Alignment Options")
-            print("c0:       Coarse search for 0 (calculate function)")
-            print("c1:       Coarse search for 1 (calculate function)")
-            print("f0:       Fine search for 0 (continuous search function)")
-            print("f1:       Fine search for 1 (continuous search function)\n")
-
-            print("Experimental Options")
-            print("r:        Random search algorithm")
-            print("g:        Grid search algorithm")
-            print("h:        Hill climbing algorithm")
-            print("c:        Cross search algorithm")
-            print("1c:       One cross section")
-            print("3c:       Three cross sections")
-            print("f:        Fitting algorithm")
-            print("fe:       Focal estimator")
-            print("pso:      Particle Swarm Optimization\n")
-
-            print("pd:       Change photodiode integration count")
-            print("reload:   Reload all algorithms and control modes")
-            print("q to Quit\n")
-
-            choice = input("> ").strip()
-
-            #file = open("run_data.txt", "w")
-            
-            with open("new_file.txt", "a") as file:
-                if choice == '0':
-                    manual_control.run(ser0, pdn, 0, file)
-                elif choice == '1':
-                    manual_control.run(ser1, pdn, 1, file)
-                elif choice == 'm':
-                    '''
-                    print("\nSelect a controller (0 or 1)")
-                    new_choice = input("Enter your choice: ").strip()
-                    if new_choice == '0':
-                        manual_control.run(ser)
-                    elif new_choice == '1':
-                        manual_control.run(ser1)
-                    else:
-                        print("Invalid choice. Try again.")
-                    '''
-                    manual_control_duplex.run(ser0, ser1)
-                elif choice == 'center 0':
-                    center_axes.run(ser0, 0, file)
-                    photodiode_in.getPower(pdn, 0, file)
-                elif choice == 'center 1':
-                    center_axes.run(ser1, 1, file)
-                    photodiode_in.getPower(pdn, 0, file)
-                elif choice == 'zero 0':
-                    zero_axes.run(ser0, 0, file)
-                    photodiode_in.getPower(pdn, 0, file)
-                elif choice == 'zero 1':
-                    zero_axes.run(ser1, 1, file)
-                    photodiode_in.getPower(pdn, 0, file)
-                elif choice == 'r':
-                    algo_randomsearch.run(ser0, file)
-                elif choice == 'g':
-                    algo_gridsearch.run(ser0, file)
-                elif choice == 'h':
-                    algo_hill_climbing.run(ser0, file)
-                elif choice == 'c':
-                    algo_crossSearch.run(ser0)
-                    #algo_crossSearch.run(ser1)
-                elif choice == '1c':
-                    algo_one_cross_section.run(ser0, file)
-                elif choice == '3c':
-                    algo_three_cross_sections.run(ser0, file)
-                elif choice == 'c0':
-                    #algo_calculate.run(ser, file, 0)
-                    #data_algo_calculate.run(ser, file)
-                    data_2_algo_calculate.run(ser0, file, 0, 0)
-                elif choice == 'c1':
-                    #algo_calculate.run(ser1, file, 1)
-                    data_2_algo_calculate.run(ser1, file, 1, 1)
-                elif choice == 'f0':
-                    #algo_continuous_search.run(ser, file, 0)
-                    #data_algo_continuous_search.run(ser, file)
-                    data_2_algo_continuous_search.run(ser0, file, 0, 0)
-                elif choice == 'f1':
-                    #algo_continuous_search.run(ser1, file, 1)
-                    data_2_algo_continuous_search.run(ser0, file, 1, 1)
-                elif choice == 'f':
-                    third_algo_one_cross_section_with_plots.run(ser0, file)
-                elif choice == 'fe':
-                    algo_focal_estimator.run(ser0, file)
-                elif choice == 'pso':
-                    algo_PSO.run(ser0,file,0,100)
-                elif choice == 'pd':
-                    choice = input("Enter PD integration count: ").strip()
-                    pdn = choice.lower()
-                    pdn = int(pdn)
-                    print(f"New PD n-value = {pdn}")
-                elif choice == 'reload':
-                    for module in list(sys.modules.values()):
-                        try:
-                            if module.__file__.split('/')[4] == 'ActiveFiberCoupling':
-                                importlib.reload(module)
-                                print(f'{module.__name__} reloaded.')
-                        except Error as e:
-                            warnings.warn("RELOAD NOT SUCCESFUL\n" + e)
-                elif choice == 'q':
-                    break
-                else:
-                    print("Invalid choice. Try again.")
-
-
-    finally:
-        if ser0 is not None:
-            ser0.close()
-        if ser1 is not None:
-            ser1.close()
-        print("Serial connection closed.")
 
 if __name__ == '__main__':
     main()

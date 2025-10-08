@@ -129,7 +129,7 @@ Switch between goto and move (default) modes with 'goto' and 'move'.
         try:
             value = float(value)
         except Exception:
-            print('Invalid input: Value must be a real number')
+            print("Invalid input: Value must be a real number or one of 'zero', 'center', 'max'")
             continue
 
         if goto and value < 0:

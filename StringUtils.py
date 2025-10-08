@@ -1,5 +1,6 @@
 import inspect
 import warnings
+from collections.abc import Callable
 from typing import List, Sequence, Optional
 
 from MovementClasses import Distance, StageDevices
@@ -121,6 +122,8 @@ def sequence_to_str(sequence, joined = True):
             sequence_print.append(elem.prettyprint(stacked=True))
         elif isinstance(elem, StageDevices):
             sequence_print.append(elem.name)
+        elif isinstance(elem, Callable):
+            sequence_print.append(f"{elem.__module__}.{elem.__name__}()")
         else:
             sequence_print.append(str(elem))
 
@@ -167,6 +170,8 @@ def dict_to_str(mydict, joined = True):
             dict_print.append(f"{str(key)} : {value.prettyprint(stacked=True)}")
         elif isinstance(value, StageDevices):
             dict_print.append(f"{str(key)} : {value.name}")
+        elif isinstance(value, Callable):
+            dict_print.append(f"{str(key)} : {value.__module__}.{value.__name__}()")
         else:
             dict_print.append(f"{str(key)} : {str(value)}")
 
