@@ -10,6 +10,9 @@ def parse_str_values(value):
     if value.lower() in ['true', 'false']:
         return value.lower() == 'true'
 
+    if value.lower() == 'none':
+        return None
+
     if value.startswith('{') and value.endswith('}'):
         # Check if value is dict
         value = value[1:-1]
@@ -175,7 +178,7 @@ def dict_to_str(mydict, joined = True):
 def menu_help(func_key: Optional[str] = None, menu: Optional[dict] = None):
     MAIN_MENU_HELP = """
 MAIN MENU HELP
-Function call syntax is '<func name> <stagenum device> <default kwarg name> <key=value> <key=value>'.
+Function call syntax is '<func name> <stagenum> < device> <default kwarg name> <key=value> <key=value> ...'.
 Call 'help <func name>' to see the required args and optional kwargs.
 Space is the delimiter between arguments, so do not use spaces anywhere else.
 Keyword argument values can be ints, floats, strings, Distance objects, and lists thereof.
@@ -189,10 +192,10 @@ help reload
         -- Show the input parameters of reload.
 log
         -- Certain functions don't need an arg.
-center 0s
+center 0 s
         -- Centers the steppers of stage 0.
-grid 0s fine axes='yz' planes=[D(100,"fullsteps"),D(500,fullsteps)]
-        -- Run grid search on stage 0 with steppers in y-z planes,
+grid 1 s fine axes='yz' planes=[D(100,"fullsteps"),D(500,microns)]
+        -- Run grid search on stage 1 with steppers in y-z planes,
             using the 'fine' preset kwargs but overriding the planes argument.
     """
 

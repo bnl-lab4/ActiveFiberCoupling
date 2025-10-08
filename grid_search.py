@@ -227,6 +227,7 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
         limits: Optional[Sequence[Distance]] = None, # 2-list of (2-lists of) Distance objects
         axes: str = 'xz', planes: Union[None, int, Sequence[Distance]] = None,   # default 3 planes
         fit_3d: bool = True, fit_2d: bool = True, fit_waists: bool = True, fit_lin: bool = True,
+        max_pos: bool = True, no_fits: Optional[bool] = None,
         show_plots: Optional[bool] = True, log_plots: Optional[bool] = None,
         plane_kwargs: dict = {}, fit_3d_kwargs: dict = {}, fit_2d_kwargs: dict = {},
         fit_waists_kwargs: dict = {}, fit_lin_kwargs: dict = {}):
@@ -252,6 +253,10 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
         for kwargs in (plane_kwargs, fit_3d_kwargs, fit_2d_kwargs, fit_waists_kwargs, fit_lin_kwargs):
             if 'log_plot' not in kwargs.keys():
                 kwargs.update({'log_plot' : log_plots})
+
+    # no_fits will override any other given values of the fit bools
+    if no_fits is not None:
+        fit_3d = fit_2d = fit_waists = fit_lin = max_pos = not no_fits
 
     #   Default values
     if spacing is None and num_points is None:
@@ -292,10 +297,11 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
         num_points = (num_points, num_points)
 
     if isinstance(planes, int):
-        if movementType == MovementType.PIEZO:
-            planes_limits = [limit.microns for limit in stage.axes[focus_axis].PIEZO_LIMITS]
-        elif movementType == MovementType.STEPPER:
-            planes_limits = [limit.microns for limit in stage.axes[focus_axis].STEPPER_LIMITS]
+        # I think planes should always use steppers unless specified
+        # if movementType == MovementType.PIEZO:
+        #     planes_limits = [limit.microns for limit in stage.axes[focus_axis].PIEZO_LIMITS]
+        # elif movementType == MovementType.STEPPER:
+        planes_limits = [limit.microns for limit in stage.axes[focus_axis].STEPPER_LIMITS]
         planes = np.linspace(*planes_limits, planes)
         planes = [Distance(plane, "microns") for plane in planes]
 
@@ -388,6 +394,9 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
                         f"{best_pos[2].prettyprint()})")
                 return
 
+    else:
+        log.debug("Skipped 3d fit")
+
     if fit_2d:
         log.info("Attempting to fit planes with 2d Gaussian model")
         accepted_results = []
@@ -424,7 +433,7 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
             elif fit_waists_kwargs['show_plot']:
                 accepted = accept_fit()
 
-            focus_pos = - para_result.params['b'].value / 2 * para_result.params['a'].value
+            focus_pos = - para_result.params['b'].value / (2 * para_result.params['a'].value)
             waist_pos = [None, None, Distance(focus_pos, 'microns')]
             accepteds = [False, False]
 
@@ -455,7 +464,7 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
                     centerstr = 'centerx' if i == 0 else 'centery'
                     if not accept:
                         waistpos = np.mean([result.params[centerstr].value for result in accepted_results])
-                        waist_pos[i] = waistpos
+                        waist_pos[i] = Distance(waistpos, 'microns')
 
                 stage.goto(axes[0], waist_pos[0], movementType)
                 stage.goto(axes[1], waist_pos[1], movementType)
@@ -499,8 +508,11 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
 
         log.info("No planes were successfully fit with a gaussian")
 
+    else:
+        log.debug("Skipped 2d fits")
+
     # fit parabola to plane standard deviations
-    if fit_waists:
+    if fit_waists and len(planes) >= 3:
         background = stats.mode(grid_values, axis=None)[0]
         log.info(f"Sensor background determined to be {sigfig.round(background, 3)}" +
                  "by taking the mode of all grid values")
@@ -568,18 +580,26 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
                     f"{waist_pos[2].prettyprint()})")
             return
 
+    else:
+        log.debug("Skipped waists fitting")
+
     # go to position of brightest position visited
-    max_value = grid_values.max()
-    max_value_idx = np.unravel_index(grid_values.argmax(), grid_values.shape)
-    max_value_pos = [Distance(axis0_cube[max_value_idx], "microns"),
-                     Distance(axis1_cube[max_value_idx], 'microns'),
-                     Distance(focus_cube[max_value_idx], 'microns')]
+    if max_pos:
+        max_value = grid_values.max()
+        max_value_idx = np.unravel_index(grid_values.argmax(), grid_values.shape)
+        max_value_pos = [Distance(axis0_cube[max_value_idx], "microns"),
+                         Distance(axis1_cube[max_value_idx], 'microns'),
+                         Distance(focus_cube[max_value_idx], 'microns')]
 
-    stage.goto(axes[0], max_value_pos[0], movementType)
-    stage.goto(axes[1], max_value_pos[1], movementType)
-    stage.goto(focus_axis, max_value_pos[2], movementType)
+        stage.goto(axes[0], max_value_pos[0], movementType)
+        stage.goto(axes[1], max_value_pos[1], movementType)
+        stage.goto(focus_axis, max_value_pos[2], movementType)
 
-    log.info(f"Moved to maximum of visited positions {max_value} at ({axes[0]}, {axes[1]}, {focus_axis}) = " +
-            f"({max_value_pos[0].prettyprint()}, {max_value_pos[1].prettyprint()}," +
-            f"{max_value_pos[2].prettyprint()})")
+        log.info(f"Moved to maximum of visited positions {max_value} at ({axes[0]}, {axes[1]}, {focus_axis}) = " +
+                f"({max_value_pos[0].prettyprint()}, {max_value_pos[1].prettyprint()}," +
+                f"{max_value_pos[2].prettyprint()})")
+
+    else:
+        log.debug("Skipped going to maximum position")
+
     return

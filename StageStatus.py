@@ -54,14 +54,16 @@ def run(stage: StageDevices, exposureTime: Union[int, float], which: Optional[st
             lines.append(f"\nSensor current reading (exposure time {exposureTime}): " +
                          f"{sigfig.round(stage.sensor.integrate(exposureTime), 3, warn=False)}")
     if which is None or which == 'piezo':
+        lines.append("\nPiezos:")
         if sensortype != 'SimulationSensor':
             if stage.axes['x'].piezo is None:
                 lines.append("\nNo piezo controller connected")
-        else:
-            lines.append("\nPiezos:")
-            if sensortype != 'SimulationSensor':
+                piezos_exist = False
+            else:
                 lines.append(f"    Port = {stage.piezo_port}\n    Baud rate = {stage.piezo_baud_rate}")
-            for axis in VALID_AXES:
+                piezos_exist = True
+        for axis in VALID_AXES:
+            if piezos_exist:
                 if verbose:
                     lines.append(f"    {axis} = {stage.axes[axis].get_piezo_position().prettyprint()}")
                 else:

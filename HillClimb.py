@@ -100,12 +100,12 @@ def hill_climb(stage: StageDevices, axis: str, movementType: MovementType,
     current = stage.integrate(exposureTime)
     results = [current, ]
     for n in range(max_steps):
-        last.append(current * (1 + softening))
+        last.append(current + abs(current) * softening)
         _ = stage.move(axis, step_size, movementType)
         current = stage.integrate(exposureTime)
         results.append(current)
 
-        if all(current < softlast for softlast in last):
+        if len(last) == Ndecrease and current < sum(last) / Ndecrease:
             break
     else:
         log.warning(f"Climb hit max steps of {max_steps} without finding a peak")
@@ -150,6 +150,7 @@ def hill_climber(stage: StageDevices, axis: str, exposureTime: Union[int, float]
         climber_results.append(results)
 
         if current / last < 1 + rel_tol:
+            print(current / last, 1 + rel_tol)
             # go back to highest recorded point
             stage.move(axis, step * (results.argmax() - len(results) + 1), movementType)
             log.info("Hill climber successfully converged to within" +
@@ -157,7 +158,8 @@ def hill_climber(stage: StageDevices, axis: str, exposureTime: Union[int, float]
                      f" at {axis} = {stage.axes[axis].get_stepper_position().prettyprint()}")
             break
 
-        if current < abs_tol:
+        if current / last < abs_tol:
+            print(current / last, abs_tol)
             # go back to highest recorded point
             stage.move(axis, step * (results.argmax() - len(results) + 1), movementType)
             log.info("Hill climber succesfully converged to within" +
@@ -165,7 +167,7 @@ def hill_climber(stage: StageDevices, axis: str, exposureTime: Union[int, float]
                      f" at {axis} = {stage.axes[axis].get_stepper_position().prettyprint()}")
             break
 
-        stage.move(axis, -step * (Ndecrease - 1), movementType)
+        # stage.move(axis, -step * (Ndecrease - 1), movementType)
         # go back to the first point that is definitely past the peak
 
         step = step * step_factor
@@ -190,6 +192,7 @@ def hill_climber(stage: StageDevices, axis: str, exposureTime: Union[int, float]
             log.info("plot saved to ./log_plots")
         if show_plot:
             plt.show(block=True)
+        plt.close()
 
     return
 
@@ -217,7 +220,7 @@ def run(stage: StageDevices,
         exposureTime: Union[int, float, Sequence[Union[int, float]]],
         axes: Optional[str] = None,
         init_step: Union[None, Distance, Sequence[Distance]] = None,
-        step_factor: Union[float, Sequence[float]] = 2e-1,
+        step_factor: Union[float, Sequence[float]] = 0.5,
         init_positive: Union[bool, Sequence[bool]] = True,
         rel_tol: Union[float, Sequence[float]] = 1e-2,
         softening: Union[float, Sequence[float]] = 0.0,

@@ -26,8 +26,8 @@ def plane_fit_string(fit_result, axes):
 def para_fit_string(fit_result, axis):
     best_fit = []
     best_fit.append(f"$w({axis}) = a x^2 + b x + c$")
-    best_fit.append("$a$" + f" = {val_unc(fit_result.params['a'])}" + r"$\mathrm{\mu m}$")
-    best_fit.append("$b$" + f" = {val_unc(fit_result.params['b'])}" + r"$\mathrm{\mu m}$")
+    best_fit.append("$a$" + f" = {val_unc(fit_result.params['a'])}" + r"$\mathrm{\mu m^{-1}}$")
+    best_fit.append("$b$" + f" = {val_unc(fit_result.params['b'])}")
     best_fit.append("$c$" + f" = {val_unc(fit_result.params['c'])}" + r"$\mathrm{\mu m}$")
     return '\n'.join(best_fit)
 
@@ -108,7 +108,7 @@ def plot_plane(response_grid: np.array, axis0_grid: np.array, axis1_grid: np.arr
 
     data_ax.set_xlabel(axes[0] + ' (microns)')
     data_ax.set_ylabel(axes[1] + ' (microns)')
-    fig.suptitle(f"{focus_axis.upper()} = {plane.prettyprint()}", fontsize=12)
+    fig.suptitle(f"{focus_axis.upper()} = {plane.prettyprint()}", fontsize=10)
 
     return fig
 
@@ -140,6 +140,9 @@ def plot_para_fit(axes: str, waists: np.ndarray, waists_unc: np.ndarray, planes_
     axs[1].axhline(0, color='black', alpha=0.3)
 
     axs[0].legend()
+    axs[0].grid(axis='both', which='both')
+    axs[1].grid(axis='both', which='both')
+
     axs[1].set_xlabel(f"{focus_axis} (microns)")
     axs[0].set_ylabel(f"Width w({focus_axis}) (microns)")
     axs[1].set_ylabel("Residuals (Absolute)")
@@ -227,6 +230,8 @@ def plot_lin_fit(axis: str, focus_axis: str, axis_peak_pos: np.ndarray,
     axs[1].axhline(0, color='black', alpha=0.3)
 
     axs[0].legend()
+    axs[0].grid(axis='both', which='both')
+    axs[1].grid(axis='both', which='both')
 
     axs[1].set_xlabel(f"{focus_axis} (microns)")
     axs[0].set_ylabel(axis + ' (microns)')

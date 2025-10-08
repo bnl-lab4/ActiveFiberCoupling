@@ -50,7 +50,7 @@ class MoveResult:
             values.append(f'{self.distance.steps} steps')
             values.append(f'{self.distance.fullsteps} full steps')
         values = '(' + ', '.join(values) + ')'
-        return f"set {self.movementType} to {values}" + \
+        return f"set {self.movementType.value} to {values}" + \
                     f"{'after centering piezos' if self.centered_piezos else ''}"
 
 
@@ -160,7 +160,7 @@ class StageAxis:
                       min(self.PIEZO_LIMITS[1].volts, voltage)) #piezo voltage limits
         if clamped != voltage:
             log.warning(f"Cannot move {self.axis.upper()} to {voltage} because it is" +
-            "outside the piezo's limits of" +
+            " outside the piezo's limits of" +
             f"({self.PIEZO_LIMITS[0].volts}, {self.PIEZO_LIMITS[1].volts}) volts")
         command = f"{self.axis.lower()}voltage={clamped}\n"
         self.piezo.read(self.piezo.in_waiting).decode("utf-8")
@@ -197,7 +197,7 @@ class StageAxis:
         self.stepper.halt_and_hold()
         self.stepper.deenergize()
         self.stepper.enter_safe_start()
-        log.info(f"Deenergized stepper {self.stepper_SN} upon exit")
+        log.info(f"Deenergized stepper {self.stepper_SN}")
 
     def home(self):
         if not self._energized():
@@ -359,7 +359,7 @@ class StageDevices:
 
     def goto(self, axis: str, position: Distance, which: Optional[MovementType] = None):
         result = self.axes[axis].goto(position, which)
-        log.debug(f"{self.name}, Axis {axis} :" + result.text)
+        log.debug(f"{self.name} Axis {axis} : " + result.text)
         return result
 
     def read(self):

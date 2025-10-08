@@ -178,6 +178,10 @@ class MenuEntry:
                 return
             kwargs.update(StringUtils.str_to_dict(user_input_parts[args_len:]))
 
+        # if exposure time is entered as a kwarg, replace the arg value
+        if 'exposureTime' in kwargs.keys() and 'ExposureTime' in self.args_config:
+            resolved_args[-1] = kwargs.pop('exposureTime')
+
         # check whether kwargs are valid
         try:
             inspect.signature(self.func).bind(*resolved_args, **kwargs)
@@ -375,8 +379,9 @@ class ProgramController:
                     continue
 
                 parts = user_input.split(' ')
-                entry_key = parts[0].lower()
+                parts = [part for part in parts if part != '']
 
+                entry_key = parts[0].lower()
                 if entry_key not in self.menu.keys() or entry_key.startswith('_'):
                     if entry_key != 'q':
                         print('\nInvalid command')

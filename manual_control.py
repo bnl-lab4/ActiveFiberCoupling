@@ -11,14 +11,15 @@ def run(stage, ExposureTime):
 Enter command as [axis] [device] [value], with an optional [unit] argument.
 Arguments must be space separated. [device] can be 'piezo', 'stage', 'p', or 's'.
 Units can be 'microns', 'volts', 'steps', 'fullsteps' (or 'u', 'v', 's', 'fs').
-Piezo unit defaults to volts. Stepper unit defaults to full steps.
+Piezo unit defaults to volts. Stepper unit defaults to microns.
 Examples: >>y piezo 15.2     >>x s -10     >>z p 5 v     >>x s 600 volts
-Switch between goto (default) and move modes with 'goto' and 'move'.
+Switch between goto and move (default) modes with 'goto' and 'move'.
 """)
-    goto = True
+    goto = False
     status_mode = False
-    WHICH_DICT = dict(p=(MovementType.PIEZO, 'volts'), s=(MovementType.STEPPER, 'steps'),
-                      piezo=(MovementType.PIEZO, 'volts'), stepper=(MovementType.STEPPER, 'steps'))
+    WHICH_DICT = dict(p=(MovementType.PIEZO, 'volts'), s=(MovementType.STEPPER, 'microns'),
+                      piezo=(MovementType.PIEZO, 'volts'), stepper=(MovementType.STEPPER, 'microns'))
+    # string in tuples in WHICH_DICT are default units for that devic
     AXES = ('x', 'y', 'z')
     UNITS = ('microns', 'volts', 'steps', 'fullsteps')
     UNITS_ABRV = dict(u=UNITS[0], m=UNITS[0], v=UNITS[1],
@@ -26,7 +27,8 @@ Switch between goto (default) and move modes with 'goto' and 'move'.
     Texp = ExposureTime
 
     while True:
-        user_input = input(">> ").strip().lower()
+        input_msg = 'goto >> ' if goto else 'move >> '
+        user_input = input(input_msg).strip().lower()
         if user_input == 'q':
             break
         if user_input == '':

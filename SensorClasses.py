@@ -1,5 +1,6 @@
 import time
 import enum
+import sigfig
 import logging
 import socket
 import contextlib
@@ -35,9 +36,10 @@ class Sipm:
     def read(self):
         # getADC has several waits in it, we could prbably slim it down
         power = DAQ.getADC(self.addr, self.channel)
+
         return power
 
-    def integrate(self, Texp: Union[int, float], avg: bool = True):
+    def integrate(self, Texp: Union[int, float], avg: bool = False):
         # this would be much better if it integrated over time
         power = 0
         Texp = int(Texp)
@@ -46,8 +48,8 @@ class Sipm:
             time.sleep(1e-5)
         if avg:
             power /= Texp
-        log.debug(f"SiPM addr:{self.addr} channel:{self.channel}  " +
-                f"integrated power {power:.6f}{' averaged' if avg else ''} over {Texp} iterations")
+        log.debug(f"SiPM addr {self.addr} channel {self.channel} : " +
+                f"integrated power {sigfig.round(power, 6)}{' averaged' if avg else ''} over {Texp} iterations")
         return power
 
 
@@ -87,8 +89,8 @@ class Socket:
         if not avg:
             power *= Texp
         power = int(power)
-        log.debug(f"Socket at host {self.host}, port {self.port} returned" +
-                f"{power} {'averaged ' if avg else ''}over {Texp}ms")
+        log.debug(f"Socket at host {self.host} port {self.port} returned : " +
+                f"{sigfig.round(power, 6)} {'averaged ' if avg else ''}over {Texp}ms")
         return power
 
 
@@ -111,7 +113,7 @@ class Photodiode:
     def read(self):
         # getADC has several waits in it, we could prbably slim it down
         power = DAQ.getADC(self.addr, self.channel)
-        return -power       # NOTE THE MINUS SIGN
+        return power    #-power       # NOTE THE MINUS SIGN
 
     def integrate(self, Texp: Union[int, float], avg: bool = True):
         power = 0
@@ -120,8 +122,8 @@ class Photodiode:
             power += self.read()
         if avg:
             power /= Texp
-        log.debug(f"Photodiode addr:{self.addr} channel {self.channel}  " +
-                f"integrated power {power:.6f}{' averaged' if avg else ''} over {Texp} interations")
+        log.debug(f"Photodiode addr {self.addr} channel {self.channel} : " +
+                f"integrated power {sigfig.rounf(power, 6)}{' averaged' if avg else ''} over {Texp} interations")
         return power
 
 
