@@ -3,12 +3,30 @@ import os
 import logging
 from typing import Optional, Union
 
-# Initial logging
-log = logging.getLogger(__name__)
-
 SAFE_MODULES = ['MovementClasses', 'MovementUtils', 'StringUtils', 'SensorClasses',
                 'SimulationClasses', 'HillClimb', 'grid_search', 'Distance',
                 'manual_control', 'StageStatus', 'LoggingUtils']
+
+# Initial logging setup
+log = logging.getLogger(__name__)
+
+
+# Add Trace level to logging
+TRACE_LEVEL_NUM = 5
+logging.TRACE = TRACE_LEVEL_NUM
+logging.addLevelName(TRACE_LEVEL_NUM, 'TRACE')
+
+
+def trace(self, message, *args, **kwargs):
+    if self.isEnabledFor(TRACE_LEVEL_NUM):
+        self._log(TRACE_LEVEL_NUM, message, args, **kwargs) # unexpanded args is correct
+
+
+# Attache to Logger class
+logging.Logger.trace = trace
+
+# Make trace available globally
+logging.trace = lambda msg, *args, **kwargs: logging.log(TRACE_LEVEL_NUM, msg, *args, **kwargs)
 
 
 class OnlyAFCDebugs(logging.Filter):
@@ -76,8 +94,8 @@ def setup_logging(log_to_console: Optional[bool] = None, log_to_file: Optional[b
         level = logging.DEBUG
     elif isinstance(log_level, str):
         # Map string to logging level
-        level = getattr(logging, log_level.upper(), logging.INFO)
-    elif log_level in [int(10 * i) for i in range(1, 6)]:
+        level = getattr(logging, log_level.upper(), logging.DEBUG)
+    elif log_level in (TRACE_LEVEL_NUM, 10, 20, 30, 40, 50):
         level = log_level
     else:
         raise ValueError(f"log_level {log_level} is not in an acceptable form")
@@ -87,7 +105,7 @@ def setup_logging(log_to_console: Optional[bool] = None, log_to_file: Optional[b
     elif isinstance(console_log_level, str):
         # Map string to logging level
         console_level = getattr(logging, console_log_level.upper(), logging.INFO)
-    elif console_log_level in [int(10 * i) for i in range(1, 6)]:
+    elif console_log_level in (TRACE_LEVEL_NUM, 10, 20, 30, 40, 50):
         console_level = console_log_level
     else:
         raise ValueError(f"console_log_level {console_log_level} is not in an acceptable form")
@@ -101,7 +119,7 @@ def setup_logging(log_to_console: Optional[bool] = None, log_to_file: Optional[b
     root_logger.setLevel(level)
     warnings_logger = logging.getLogger('py.warnings')
     warnings_logger.setLevel(logging.WARNING)
-    warnings_logger.propagate = False    # so root_logger does not also get caught warning logs
+    warnings_logger.propagate = False    # so root_logger does not get already caught warning logs
 
     # clears existing handlers to avoid duplicates
     if root_logger.hasHandlers():
@@ -195,7 +213,7 @@ def Update_Logging():
         print(f"Could not update log file to {user_input}")
 
     while LoggingSettings['Log to console']: # console log level?
-        user_input = input("Console log level? [debug/info/warning/error/critical/skip]: ").strip().lower()
+        user_input = input("Console log level? [trace/debug/info/warning/error/critical/skip]: ").strip().lower()
         if user_input == 's' or user_input == 'skip':
             break
         try:
@@ -206,7 +224,7 @@ def Update_Logging():
         print(f"Could not update log level to {user_input}")
 
     while True: # log level?
-        user_input = input("Log level? [debug/info/warning/error/critical/skip]: ").strip().lower()
+        user_input = input("Log level? [trace/debug/info/warning/error/critical/skip]: ").strip().lower()
         if user_input == 's' or user_input == 'skip':
             break
         try:

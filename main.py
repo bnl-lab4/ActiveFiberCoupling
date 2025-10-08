@@ -440,6 +440,7 @@ def main():
     except Exception as e:
         log.critical(f"A critical error occurred during initialization: {e}")
         log.critical(traceback.format_exc())
+        raise e
 
 
 if __name__ == '__main__':

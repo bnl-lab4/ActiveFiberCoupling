@@ -26,17 +26,18 @@ class Sipm:
         log.info(f"Initialized to SiPM at addr {self.addr}, channel {self.channel}")
 
     def __enter__(self):
-        pass    # not sure what to do here yet
+        pass # no context management needed
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        pass    # not sure what to do here yet
+        pass # no context management needed
         return False
 
     def read(self):
         # getADC has several waits in it, we could prbably slim it down
         power = DAQ.getADC(self.addr, self.channel)
-
+        # log.trace(f"SiPM addr {self.addr} channel {self.channel} : " +
+        #             f"read power {sigfig.round(power, 6, warn=False)}")
         return power
 
     def integrate(self, Texp: Union[int, float], avg: bool = False):
@@ -48,8 +49,8 @@ class Sipm:
             time.sleep(1e-5)
         if avg:
             power /= Texp
-        log.debug(f"SiPM addr {self.addr} channel {self.channel} : " +
-                f"integrated power {sigfig.round(power, 6)}{' averaged' if avg else ''} over {Texp} iterations")
+        log.trace(f"SiPM addr {self.addr} channel {self.channel} : " +
+                f"integrated power {sigfig.round(power, 6, warn=False)}{' averaged' if avg else ''} over {Texp} iterations")
         return power
 
 
@@ -81,6 +82,8 @@ class Socket:
         # defaults to a 100ms integration time
         self.connection.sendall(str(100).encode('utf-8'))
         power = int(self.connection.recv(1024).decode('utf-8'))
+        # log.trace(f"Socket at host {self.host} port {self.port} : " +
+        #         f"returned {sigfig.round(power, 6, warn=False)} averaged over 100ms")
         return power
 
     def integrate(self, Texp: Union[int, float], avg: bool = True):
@@ -89,8 +92,8 @@ class Socket:
         if not avg:
             power *= Texp
         power = int(power)
-        log.debug(f"Socket at host {self.host} port {self.port} returned : " +
-                f"{sigfig.round(power, 6)} {'averaged ' if avg else ''}over {Texp}ms")
+        log.trace(f"Socket at host {self.host} port {self.port} : " +
+                f"returned {sigfig.round(power, 6, warn=False)} {'averaged ' if avg else ''}over {Texp}ms")
         return power
 
 
@@ -113,6 +116,8 @@ class Photodiode:
     def read(self):
         # getADC has several waits in it, we could prbably slim it down
         power = DAQ.getADC(self.addr, self.channel)
+        # log.trace(f"Photodiode addr {self.addr} channel {self.channel} : " +
+        #             f"read power {sigfig.round(power, 6, warn=False)}")
         return power    #-power       # NOTE THE MINUS SIGN
 
     def integrate(self, Texp: Union[int, float], avg: bool = True):
@@ -122,7 +127,7 @@ class Photodiode:
             power += self.read()
         if avg:
             power /= Texp
-        log.debug(f"Photodiode addr {self.addr} channel {self.channel} : " +
+        log.trace(f"Photodiode addr {self.addr} channel {self.channel} : " +
                 f"integrated power {sigfig.rounf(power, 6)}{' averaged' if avg else ''} over {Texp} interations")
         return power
 
@@ -150,7 +155,7 @@ class Sensor:
 
     def __exit__(self, exc_type, exc_value, traceback):
         self._exit_stack.close()
-        log.debug("Exited context stack gracefully")
+        log.debug("Exited context stack")
         return False
 
     def read(self):

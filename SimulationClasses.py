@@ -244,11 +244,11 @@ class SimulationStageAxis:
 
     # --- Dummy methods to match the real hardware class interface ---
     def energize(self):
-        log.info(f"Stepper {self.stepper_SN} energized")
+        log.info(f"Axis {self.axis} stepper {self.stepper_SN} energized")
         pass
 
     def deenergize(self):
-        log.info(f"Deenergized stepper {self.stepper_SN} upon exit")
+        log.info(f"Stepper {self.stepper_SN} deenergized")
         pass
 
     def home(self):
@@ -295,13 +295,13 @@ class SimulationStageDevices:
     def move(self, axis: str, movement: Distance, which: Optional[MovementType] = None) -> MoveResult:
         """Delegates a relative move command to the specified axis."""
         result = self.axes[axis].move(movement, which)
-        log.debug(f"{self.name}, Axis {axis} :" + result.text)
+        log.trace(f"{self.name}, Axis {axis} :" + result.text)
         return result
 
     def goto(self, axis: str, position: Distance, which: Optional[MovementType] = None) -> MoveResult:
         """Delegates an absolute move command to the specified axis."""
         result = self.axes[axis].goto(position, which)
-        log.debug(f"{self.name}, Axis {axis} :" + result.text)
+        log.trace(f"{self.name}, Axis {axis} :" + result.text)
         return result
 
     def read(self) -> Optional[float]:

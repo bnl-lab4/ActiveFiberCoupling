@@ -217,7 +217,7 @@ class StageAxis:
         #   set lower stage limit to 0
         self._goto_stepper(self.TRUE_STEPPER_LIMITS[0].steps)
         self.stepper.halt_and_set_position(0)
-        log.info(f"Axis {self.axis} stepper {self.stepper_SN} homing complete, " +
+        log.debug(f"Axis {self.axis} stepper {self.stepper_SN} homing complete, " +
                     f"zeroed at lower stage limit {self.TRUE_STEPPER_LIMITS[0].prettyprint()}")
 
     def get_stepper_position(self):
@@ -329,7 +329,7 @@ class StageDevices:
 
     def __exit__(self, exc_type, exc_value, traceback):
         self._exit_stack.close()
-        log.debug("Exited context stack gracefully")
+        log.debug("Exited context stack")
         return False
 
     def __str__(self):
@@ -361,12 +361,12 @@ class StageDevices:
 
     def move(self, axis: str, movement: Distance, which: Optional[MovementType] = None):
         result = self.axes[axis].move(movement, which)
-        log.debug(f"{self.name}, Axis {axis} :" + result.text)
+        log.trace(f"{self.name}, Axis {axis} :" + result.text)
         return result
 
     def goto(self, axis: str, position: Distance, which: Optional[MovementType] = None):
         result = self.axes[axis].goto(position, which)
-        log.debug(f"{self.name} Axis {axis} : " + result.text)
+        log.trace(f"{self.name} Axis {axis} : " + result.text)
         return result
 
     def read(self):
