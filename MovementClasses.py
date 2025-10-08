@@ -159,7 +159,7 @@ class StageAxis:
         clamped = max(self.PIEZO_LIMITS[0].volts,
                       min(self.PIEZO_LIMITS[1].volts, voltage)) #piezo voltage limits
         if clamped != voltage:
-            log.warning(f"Cannot move {self.axis.upper()} to {voltage} because it is" +
+            log.warning(f"Cannot move {self.axis} to {voltage} because it is" +
             " outside the piezo's limits of" +
             f"({self.PIEZO_LIMITS[0].volts}, {self.PIEZO_LIMITS[1].volts}) volts")
         command = f"{self.axis.lower()}voltage={clamped}\n"
@@ -171,15 +171,15 @@ class StageAxis:
 
     def _goto_stepper(self, steps: int) -> MoveResult:
         if not self._energized():
-            raise RuntimeError(f"Stepper {self.stepper_SN} not energized")
+            raise RuntimeError(f"Axis {self.axis} stepper {self.stepper_SN} not energized")
 
         if self._position_uncertain():
-            raise RuntimeError(f"Stepper {self.stepper_SN} position is uncertain and needs homing")
+            raise RuntimeError(f"Axis {self.axis} stepper {self.stepper_SN} position is uncertain and needs homing")
 
         clamped = max(self.STEPPER_LIMITS[0].steps,
                       min(self.STEPPER_LIMITS[1].steps, steps)) #piezo steps limits
         if clamped != steps:
-            log.warning(f"Cannot move {self.stepper_SN} to {steps} because it is" +
+            log.warning(f"Cannot move {self.axis} stepper {self.stepper_SN} to {steps} because it is" +
             "outside the stepper's stage limits of" +
             f"({self.STEPPER_LIMITS[0].steps}, {self.STEPPER_LIMITS[1].steps}) steps")
         self.stepper.set_target_position(int(clamped))
@@ -189,27 +189,27 @@ class StageAxis:
 
     def energize(self):
         if self._energized():
-            log.info(f"Stepper {self.stepper_SN} is already energized")
+            log.info(f"Axis {self.axis} stepper {self.stepper_SN} is already energized")
             return
         self.stepper.halt_and_set_position(0)
         self.stepper.energize()
         self.stepper.exit_safe_start()
-        log.info(f"Stepper {self.stepper_SN} energized")
+        log.info(f"Axis {self.axis} stepper {self.stepper_SN} energized")
 
     def deenergize(self):
         if not self._energized():
-            log.info(f"Stepper {self.stepper_SN} is already deenergized")
+            log.info(f"Axis {self.axis} stepper {self.stepper_SN} is already deenergized")
             return
         self.stepper.halt_and_hold()
         self.stepper.deenergize()
         self.stepper.enter_safe_start()
-        log.info(f"Deenergized stepper {self.stepper_SN}")
+        log.info(f"Axis {self.axis} stepper {self.stepper_SN} deenergized")
 
     def home(self):
         if not self._energized():
-            raise RuntimeError(f"Stepper {self.stepper_SN} not energized")
+            raise RuntimeError(f"Axis {self.axis} stepper {self.stepper_SN} not energized")
         self.stepper.go_home(0)
-        log.info(f"Stepper {self.stepper_SN} homing")
+        log.info(f"Axis {self.axis} stepper {self.stepper_SN} homing")
         while self._position_uncertain():
             # homing sequence sets "position uncertain" to false upon success
             time.sleep(0.1)
@@ -217,7 +217,7 @@ class StageAxis:
         #   set lower stage limit to 0
         self._goto_stepper(self.TRUE_STEPPER_LIMITS[0].steps)
         self.stepper.halt_and_set_position(0)
-        log.info(f"Stepper {self.stepper_SN} homing complete, " +
+        log.info(f"Axis {self.axis} stepper {self.stepper_SN} homing complete, " +
                     f"zeroed at lower stage limit {self.TRUE_STEPPER_LIMITS[0].prettyprint()}")
 
     def get_stepper_position(self):
@@ -313,10 +313,11 @@ class StageDevices:
                 else:
                     stepper = None
                     log.info(f"{self.name}:: no connection for {axis} provided")
-            except ConnectionException as e:
-                if require_connection:
+            except Exception as e:
+                if require_connection or str(e) != 'USB device not found':
                     raise e
-                log.warn(f"Error opening stepper port {stepper_SNs[axis]} as axis {axis}: {e}")
+                log.warning(f"Error opening stepper port {stepper_SNs[axis]} as axis {axis}: {e}")
+                stepper = None
 
             self.axes[axis] = StageAxis(axis, piezo, stepper, stepper_SN, autohome)
 
