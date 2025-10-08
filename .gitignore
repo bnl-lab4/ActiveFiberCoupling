@@ -6,5 +6,5 @@ log_output.txt
 *.pyd
 *.save
 .flake8
-__pycache__/*
+__pycache__/
 log_plots/
