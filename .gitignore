@@ -4,6 +4,7 @@ log_output.txt
 *.swp
 *.pyc
 *.pyd
+*.save
+.flake8
 __pycache__/
 log_plots/
-HC_recursion_structure.py
