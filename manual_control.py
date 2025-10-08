@@ -1,4 +1,4 @@
-from numbers import Real
+import time
 
 from StageStatus import run as status
 from MovementClasses import MovementType
@@ -9,16 +9,18 @@ def run(stage, ExposureTime):
     print("""
 'q' returns to menu, 'ENTER' returns integrated signal. 'texp' [int] changes exposure time.
 Enter command as [axis] [device] [value], with an optional [unit] argument.
-Arguments must be space separated. [device] can be 'piezo', 'stage', 'p', or 's'.
+Arguments must be space separated. [device] can be 'piezo', 'stage', 'general, 'p', 's', or 'g'.
 Units can be 'microns', 'volts', 'steps', 'fullsteps' (or 'u', 'v', 's', 'fs').
-Piezo unit defaults to volts. Stepper unit defaults to microns.
-Examples: >>y piezo 15.2     >>x s -10     >>z p 5 v     >>x s 600 volts
+Piezo unit defaults to volts. Stepper and general units default to microns.
+Value can be a number, 'zero', 'center', or 'max'. General uses stepper limits.
+Examples: >>y piezo 15.2     >>x g -10     >>z p 5 v     >>x s 600 volts     >>y p center
 Switch between goto and move (default) modes with 'goto' and 'move'.
 """)
     goto = False
     status_mode = False
-    WHICH_DICT = dict(p=(MovementType.PIEZO, 'volts'), s=(MovementType.STEPPER, 'microns'),
-                      piezo=(MovementType.PIEZO, 'volts'), stepper=(MovementType.STEPPER, 'microns'))
+    WHICH_DICT = dict(p=(MovementType.PIEZO, 'volts'), piezo=(MovementType.PIEZO, 'volts'),
+                      s=(MovementType.STEPPER, 'microns'), stepper=(MovementType.STEPPER, 'microns'),
+                      g=(MovementType.GENERAL, 'microns'), general=(MovementType.GENERAL, 'microns'))
     # string in tuples in WHICH_DICT are default units for that devic
     AXES = ('x', 'y', 'z')
     UNITS = ('microns', 'volts', 'steps', 'fullsteps')
@@ -100,7 +102,29 @@ Switch between goto and move (default) modes with 'goto' and 'move'.
         else:
             unit = WHICH_DICT[device][1]
 
-        devicename = WHICH_DICT[device][0]
+        movetype = WHICH_DICT[device][0]
+
+        special = False
+        if value.lower() == 'zero':
+            special = True
+            if movetype == MovementType.PIEZO:
+                value = getattr(stage.axes[axis].PIEZO_LIMITS[0], unit)
+            else:
+                value = getattr(stage.axes[axis].STEPPER_LIMITS[0], unit)
+
+        elif value.lower() == 'max':
+            special = True
+            if movetype == MovementType.PIEZO:
+                value = getattr(stage.axes[axis].PIEZO_LIMITS[1], unit)
+            else:
+                value = getattr(stage.axes[axis].STEPPER_LIMITS[1], unit)
+
+        elif value.lower() == 'center':
+            special = True
+            if movetype == MovementType.PIEZO:
+                value = getattr(stage.axes[axis].PIEZO_CENTER, unit)
+            else:
+                value = getattr(stage.axes[axis].STEPPER_CENTER, unit)
 
         try:
             value = float(value)
@@ -122,10 +146,11 @@ Switch between goto and move (default) modes with 'goto' and 'move'.
             if breakflag:
                 break
 
-        if goto:
-            stage.goto(axis, Distance(value, unit), devicename)
+        if goto or special:
+            _ = stage.goto(axis, Distance(value, unit), movetype)
         else:
-            stage.move(axis, Distance(value, unit), devicename)
+            _ = stage.move(axis, Distance(value, unit), movetype)
 
         if status_mode:
-            status(stage, Texp, devicename.value)
+            time.sleep(0.1)
+            status(stage, Texp, movetype.value, expose=False)

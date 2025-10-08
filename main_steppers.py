@@ -258,12 +258,16 @@ class ProgramController:
                     text = 'Stage manual control', func = manual_control.run,
                     args_config = ('stage', 'ExposureTime')
                     ),
-                'center' : MenuEntry(
-                    text = 'Center piezos or steppers', func = MovementUtils.center,
+                'zero' : MenuEntry(
+                    text = 'Zero piezos or steppers positions', func = MovementUtils.zero,
                     args_config = ('stage', 'MovementType')
                     ),
-                'zero' : MenuEntry(
-                    text = 'Zero piezos or steppers', func = MovementUtils.zero,
+                'center' : MenuEntry(
+                    text = 'Center piezos or steppers positions', func = MovementUtils.center,
+                    args_config = ('stage', 'MovementType')
+                    ),
+                'max' : MenuEntry(
+                    text = 'Maximize piezos or steppers positions', func = MovementUtils.max,
                     args_config = ('stage', 'MovementType')
                     ),
                 'energize' : MenuEntry(

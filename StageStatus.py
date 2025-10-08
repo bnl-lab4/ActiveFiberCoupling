@@ -11,10 +11,29 @@ def run(stage: StageDevices, exposureTime: Union[int, float], which: Optional[st
         expose: bool = True, verbose: bool = True, log: bool = False):
     if which is not None:
         which = which.lower()
+    else:
+        which = 'all'
+
+    assert which in ('all', 'general', 'stepper', 'piezo', 'sensor'), 'Invalid which input'
+
     if which == 'all':
-        which = None
-    assert which is None or which == 'piezo' or \
-            which == 'stepper' or which == 'sensor', "Invalid which name"
+        show_stepper = True
+        show_piezo = True
+        show_sensor = True
+    else:
+        show_stepper = False
+        show_piezo = False
+        show_sensor = False
+
+    if which == 'stepper':
+        show_stepper = True
+    if which == 'piezo':
+        show_piezo = True
+    if which == 'sensor':
+        show_sensor == True
+    if which == 'general':
+        show_piezo = True
+        show_stepper = True
 
     lines = []
     lines.append(f"---------- {stage.name} status ----------\n")
@@ -23,7 +42,7 @@ def run(stage: StageDevices, exposureTime: Union[int, float], which: Optional[st
         sensortype = stage.sensor.sensor.__class__.__name__
     except AttributeError:
         sensortype = stage.sensor.__class__.__name__    # for SimulationSensor
-    if which is None or which == 'sensor':
+    if show_sensor:
         lines.append(f"Sensor type: {sensortype}")
         if sensortype == 'Socket':
             lines.append(f"Connection details:\n    host = {stage.sensor.sensor.host}")
@@ -53,8 +72,9 @@ def run(stage: StageDevices, exposureTime: Union[int, float], which: Optional[st
         if expose:
             lines.append(f"\nSensor current reading (exposure time {exposureTime}): " +
                          f"{sigfig.round(stage.sensor.integrate(exposureTime), 3, warn=False)}")
-    if which is None or which == 'piezo':
-        lines.append("\nPiezos:")
+        lines.append('')
+    if show_piezo:
+        lines.append("Piezos:")
         if sensortype != 'SimulationSensor':
             if stage.axes['x'].piezo is None:
                 lines.append("\nNo piezo controller connected")
@@ -69,8 +89,9 @@ def run(stage: StageDevices, exposureTime: Union[int, float], which: Optional[st
                 else:
                     lines.append(f"    {axis} = " +
                     f"{sigfig.round(stage.axes[axis].get_piezo_position().volts, 3, warn=False)} volts")
-    if which is None or which == 'stepper':
-        lines.append("\nSteppers:")
+        lines.append('')
+    if show_stepper:
+        lines.append("Steppers:")
         for axis in VALID_AXES:
             if sensortype != 'SimulationSensor':
                 if stage.axes[axis].stepper is None:
@@ -88,6 +109,7 @@ def run(stage: StageDevices, exposureTime: Union[int, float], which: Optional[st
             else:
                 lines.append(f"    {axis} (SN {stage.axes[axis].stepper_SN}) = " +
                          f"{sigfig.round(stage.axes[axis].get_stepper_position().microns, 3, warn=False)} microns")
+        lines.append('')
 
     status = '\n'.join(lines)
     print(status)

@@ -2,6 +2,8 @@ venv/
 log_output.txt
 .main_history
 *.swp
-**/*.pyc
-log_plots/*
+*.pyc
+*.pyd
+__pycache__/
+log_plots/
 HC_recursion_structure.py
