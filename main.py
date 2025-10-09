@@ -1,7 +1,5 @@
 ################ TODO
-# CONTINUOUS SENSOR READOUT FUNCTON
 # populate default kwargs dictionaries
-# add general movement mode to manual control
 # rewrite command line arg handling to be more flexible (dict?)
 #####################
 

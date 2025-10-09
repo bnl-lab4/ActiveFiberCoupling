@@ -1,6 +1,5 @@
 ############### TODO
-# after each climb, move stage to first position after crossing the peak
-# recursive hill climbing?
+# recursive hill climbing
 ###############
 import math
 import logging

@@ -1,5 +1,4 @@
 # TODO:
-#   stage status function
 #   smart homing function
 #   parallelize stepper movement
 ####################
