@@ -1,0 +1,8 @@
+venv/
+*.pyc
+*.swp
+log_output.txt
+log_plots/
+__pychache__/
+.main_history
+.flake8
