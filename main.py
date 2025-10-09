@@ -1,6 +1,7 @@
 ################ TODO
 # populate default kwargs dictionaries
 # rewrite command line arg handling to be more flexible (dict?)
+# useful exceptions for input parsing
 #####################
 
 
