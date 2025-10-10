@@ -1,7 +1,11 @@
 ################ TODO
+# recursive hill climbing
+# deviation angles in 3d fit
+# parse unit abbreviations in kwargs
 # populate default kwargs dictionaries
-# rewrite command line arg handling to be more flexible (dict?)
 # useful exceptions for input parsing
+# better handling of non-connected stage devices
+# rewrite command line arg handling to be more flexible (dict?)
 #####################
 
 
@@ -43,7 +47,7 @@ SIMSENSOR_LABTELE = dict(propagation_axis = 'y', focal_ratio = 28.0, angle_of_de
 SIMSENSOR_SKYTELE = dict(propagation_axis = 'y', focal_ratio = 7.0, angle_of_deviation = 0)
 
 SENSOR0 = SIPM0
-SENSOR1 = SIMSENSOR_ASPH
+SENSOR1 = SIPM1
 
 PIEZO_PORT0 = '/dev/ttyACM0'
 PIEZO_PORT1 = '/dev/ttyACM1'
@@ -100,7 +104,7 @@ def AcceptInputArgs(inputTuple, inputArgs):
         if arg == 'logfile':
             if LoggingUtils.verify_logfile(val):
                 inputTuple[4] = val
-        if arg == 'consoleloglevel':
+        if arg == 'consoleloglevel':    # not working? (at least with trace)
             try:
                 inputTuple[5] = getattr(logging, val)
             except AttributeError:
@@ -130,7 +134,7 @@ def Update_ExposureTime(texp):
         user_input = int(float(user_input))
     except ValueError:
         print(f"Input {user_input} cannot be converted to an int. texp will remain at {texp}")
-        return False
+        return texp
     texp = user_input
     return texp
 

@@ -1,4 +1,3 @@
-import time
 import enum
 import sigfig
 import logging
@@ -46,7 +45,6 @@ class Sipm:
         Texp = int(Texp)
         for i in range(Texp):
             power += self.read()
-            time.sleep(1e-5)
         if avg:
             power /= Texp
         log.trace(f"SiPM addr {self.addr} channel {self.channel} : " +

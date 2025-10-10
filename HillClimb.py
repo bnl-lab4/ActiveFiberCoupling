@@ -1,5 +1,6 @@
 ############### TODO
 # recursive hill climbing
+# climb in an arbitrary direction (vector input)
 ###############
 import math
 import logging
@@ -166,9 +167,6 @@ def hill_climber(stage: StageDevices, axis: str, exposureTime: Union[int, float]
                      f" at {axis} = {stage.axes[axis].get_stepper_position().prettyprint()}")
             break
 
-        # stage.move(axis, -step * (Ndecrease - 1), movementType)
-        # go back to the first point that is definitely past the peak
-
         step = step * step_factor
         softening = softening * step_factor
         step = -step
@@ -186,7 +184,7 @@ def hill_climber(stage: StageDevices, axis: str, exposureTime: Union[int, float]
         log.info("plot_generated")
         if log_plot:
             fig.savefig(f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_" +
-                f"{stage.name}_{movementType.value}_HillClimb.png",
+                f"{stage.name}_{axis}_{movementType.value}_HillClimb.png",
                         format='png', facecolor='white', dpi=200)
             log.info("plot saved to ./log_plots")
         if show_plot:

@@ -108,7 +108,6 @@ class SimulationSensor:
 
         # Get current position from the stage in microns
         pos_dict = self.stage.get_current_position()
-        # sensor_pos = (pos_dict.get('x', 0.0), pos_dict.get('y', 0.0), pos_dict.get('z', 0.0))
         sensor_pos = (pos_dict['x'].microns, pos_dict['y'].microns, pos_dict['z'].microns)
         # Do calculation in microns, not Distance objects
 

@@ -82,6 +82,8 @@ def run(stage: StageDevices, exposureTime: Union[int, float], which: Optional[st
             else:
                 lines.append(f"    Port = {stage.piezo_port}\n    Baud rate = {stage.piezo_baud_rate}")
                 piezos_exist = True
+        else:
+            piezos_exist = True
         for axis in VALID_AXES:
             if piezos_exist:
                 if verbose:

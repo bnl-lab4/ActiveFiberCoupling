@@ -62,6 +62,10 @@ class StageAxis:
         self.stepper_SN = stepper_SN
         self.autohome = autohome
 
+        if self.piezo is not None:
+            self.PIEZO_LIMITS = (Distance(0, "volts"), Distance(75, "volts"))
+            self.PIEZO_CENTER = (self.PIEZO_LIMITS[1] - self.PIEZO_LIMITS[0]) / 2
+
         if self.stepper is not None:
             if self.stepper.get_step_mode() != 5:
                 raise Exception(f"Stepper {self.stepper_SN} step mode is set to " +
@@ -70,9 +74,6 @@ class StageAxis:
             self.step_mode_mult = 32    # currently going to enforce this
 
             #   getting stage limits from yaml file, if possible
-            self.PIEZO_LIMITS = (Distance(0, "volts"), Distance(75, "volts"))
-            self.PIEZO_CENTER = (self.PIEZO_LIMITS[1] - self.PIEZO_LIMITS[0]) / 2
-
             if stepper_SN in stepper_info.keys():
                 self.TRUE_STEPPER_LIMITS = (Distance(stepper_info[stepper_SN][0], 'fullsteps'),
                                        Distance(stepper_info[stepper_SN][1], 'fullsteps'))

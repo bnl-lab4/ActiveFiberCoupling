@@ -1,5 +1,5 @@
 ########### TODO:
-# deviation angles in 3d fit (maybe)
+# deviation angles in 3d fit
 ###########
 
 import logging
@@ -269,17 +269,37 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
 
     if limits is None:
         if movementType == MovementType.PIEZO:
-            limits = [copy.deepcopy(stage.axes[axis].PIEZO_LIMITS) for axis in axes]
+            limits = []
+            for axis in axes:
+                axis_center = stage.axes[axis].PIEZO_CENTER
+                lower, upper = stage.axes[axis].PIEZO_LIMITS
+                if center == 'center':
+                    lower -= axis_center
+                    upper -= axis_center
+                limits.append([lower, upper])
         elif movementType == MovementType.STEPPER:
-            limits = [copy.deepcopy(stage.axes[axis].STEPPER_LIMITS) for axis in axes]
+            limits = []
+            for axis in axes:
+                axis_center = stage.axes[axis].STEPPER_CENTER
+                lower, upper = stage.axes[axis].STEPPER_LIMITS
+                if center == 'center':
+                    lower -= axis_center
+                    upper -= axis_center
+                limits.append([lower, upper])
         else:
             raise ValueError("movementType must be a MovementType.PIEZO or " +
                              ".STEPPER enum")
 
     if center == 'center':
-        center = [stage.axes[axis].STEPPER_CENTER for axis in axes]
+        if movementType == MovementType.STEPPER:
+            center = [stage.axes[axis].STEPPER_CENTER for axis in axes]
+        if movementType == MovementType.PIEZO:
+            center = [stage.axes[axis].PIEZO_CENTER for axis in axes]
     if center == 'current':
-        center = [stage.axes[axis].get_stepper_position() for axis in axes]
+        if movementType == MovementType.STEPPER:
+            center = [stage.axes[axis].get_stepper_position() for axis in axes]
+        if movementType == MovementType.PIEZO:
+            center = [stage.axes[axis].get_piezo_position() for axis in axes]
     if not isinstance(center, sequence) and center is not None:
         raise ValueError("center must be None, 'center', 'current', or" +
                          " a 2-tuple of Distances")
@@ -329,7 +349,7 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
                     f"{axes[0]} = {axis0} microns\n{axes[1]} = {axis1} microns\n" +
                     "Total integration time ~ " +
                     f"{sigfig.round(len(axis0)*len(axis1)*exposureTime/1e3, 3)} seconds")
-        stage.goto(focus_axis, plane, movementType)
+        stage.goto(focus_axis, plane, MovementType.STEPPER)
 
         plane_values = plane_grid(stage, movementType, plane,
                                     axes, axis0, axis1, exposureTime, **plane_kwargs)
@@ -410,7 +430,7 @@ def run(stage: StageDevices, movementType: MovementType, exposureTime: Union[int
                 accepted = False
                 continue
 
-            elif fit_2d_kwargs['show_plot']:
+            if fit_2d_kwargs['show_plot']:
                 accepted = accept_fit()
 
             if accepted:
