@@ -346,6 +346,8 @@ def run(stage: StageDevices,
             break
         else:
             pass
+
+    breakpoint()
     recurse_kwargs = {key: value for key, value in zip(hill_climber_kwargs_keys, recurse_kwargs)}
 
     # hill_climber doesn't take order as a kwargs, but does take recurse_(kw)args
@@ -355,7 +357,7 @@ def run(stage: StageDevices,
     hill_climber_kwargs_values = hill_climber_kwargs_values[:-1].tolist()
     hill_climber_kwargs_values.append(recurse_args)
     hill_climber_kwargs_values.append(recurse_kwargs)
-    hill_climber_kwargs_keys = hill_climber_kwargs_keys[:-1] + ['recurse_args'] + ['recurse_kwargs']
+    hill_climber_kwargs_keys = list(hill_climber_kwargs_keys[:-1]) + ['recurse_args'] + ['recurse_kwargs']
 
     # run hill climbers
     for i, (axis, movetype) in enumerate(zip(axes, movementType)):

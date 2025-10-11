@@ -47,7 +47,7 @@ SIMSENSOR_LABTELE = dict(propagation_axis = 'y', focal_ratio = 28.0, angle_of_de
 SIMSENSOR_SKYTELE = dict(propagation_axis = 'y', focal_ratio = 7.0, angle_of_deviation = 0)
 
 SENSOR0 = SIPM0
-SENSOR1 = SIPM1
+SENSOR1 = SIMSENSOR_ASPH
 
 PIEZO_PORT0 = '/dev/ttyACM0'
 PIEZO_PORT1 = '/dev/ttyACM1'
