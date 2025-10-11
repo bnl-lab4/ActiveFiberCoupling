@@ -39,10 +39,10 @@ import ContinuousReadout
 # Device info constants
 SOCKET0 = dict(host = '192.168.1.10', port = 8000, sensortype = SensorType.SOCKET)
 SIPM0 = dict(addr = 0, channel = 1, sensortype = SensorType.SIPM)
-SIPM1 = dict(addr = 0, channel = 2, sensortype = SensorType.SIPM)
+SIPM1 = dict(addr = 0, channel = 0, sensortype = SensorType.SIPM)
 PHOTODIODE0 = dict(addr = 0, channel = 1, sensortype = SensorType.PHOTODIODE)
 PHOTODIODE1 = dict(addr = 0, channel = 2, sensortype = SensorType.PHOTODIODE)
-SIMSENSOR_ASPH = dict(propagation_axis = 'y', focal_ratio = 4.0, angle_of_deviation = 0)
+SIMSENSOR_ASPH = dict(propagation_axis = 'y', focal_ratio = 4.0, angle_of_deviation = 3/180)
 SIMSENSOR_LABTELE = dict(propagation_axis = 'y', focal_ratio = 28.0, angle_of_deviation = 0)
 SIMSENSOR_SKYTELE = dict(propagation_axis = 'y', focal_ratio = 7.0, angle_of_deviation = 0)
 
@@ -54,7 +54,7 @@ PIEZO_PORT1 = '/dev/ttyACM1'
 BAUD_RATE = 115200
 
 STEPPER_DICT0 = dict(x = '00485175', y = '00485185', z = '00485159')
-STEPPER_DICT1 = dict(x = None, y = None, z = None)
+STEPPER_DICT1 = dict(x = '00485149', y = '00485151', z = '00485168')
 
 MOVEMENT_TYPE_MAP = {
     'p': MovementType.PIEZO,
@@ -326,8 +326,9 @@ class ProgramController:
                 }
 
     def _display_menu(self):
+        # excepting section titles
         max_choice_length = max(map(lambda s: len(s) if not s.startswith('_') else 0,
-                                    list(self.menu.keys())))    # excepting section titles, sorry
+                                    list(self.menu.keys())))    # sorry
         whitespace = max_choice_length + 2    # for aligning descriptions
         for key, value in self.menu.items():
             if key.startswith('_'):
