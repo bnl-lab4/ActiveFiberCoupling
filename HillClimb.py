@@ -61,12 +61,12 @@ def plot_climber(climber_results: List[np.ndarray], stagename: str, axis: str,
         endlabel = f"end ({end}um, {sigfig.round(results[-1], 6)})"
 
         ax.scatter(positions[:1], results[:1], c='g', marker='+',
-                   label=startlabel, s=20, linewidth=1)
+                   label=startlabel, s=25, linewidth=1)
         ax.scatter(positions[1:-1], results[1:-1], c='b', marker='x',
                    s=15, linewidth=0.7, alpha=0.6,
                    label=f"step size =\n{step_size.prettyprint(stacked=True)}")
         ax.scatter(positions[-1:], results[-1:], c='r', marker='+',
-                   label=endlabel, s=20, linewidth=1)
+                   label=endlabel, s=25, linewidth=1)
 
         ax.set_xlabel(f"{axis} (microns)")
         ax.set_title(str(n), fontsize=12)
@@ -118,9 +118,16 @@ def hill_climber(stage: StageDevices, axis: str, exposureTime: Union[int, float]
                  movementType: MovementType, init_step: Distance, step_factor: float,
                  init_positive: bool, rel_tol: float, softening: float,
                  abs_tol: Distance, Ndecrease: int, max_climbs: int,
-                 max_steps: int, min_step: Distance, show_plot: bool = False, log_plot: bool = True):
+                 max_steps: int, min_step: Distance, show_plot: bool = False, log_plot: bool = True,
+                 recurse_args: Sequence[Sequence] = [], recurse_kwargs: Sequence[dict] = []):
 
     assert movementType != MovementType.GENERAL, "General movement hill climb may be added later"
+
+    if init_positive is None:
+        init_positive = True
+        try_again = True
+    else:
+        try_again = False
 
     log.info(f"Activating hill climber on {stage.name} axis {axis} {movementType.value}" +
             f" initially in the {'positive' if init_positive else 'negative'} direction" +
@@ -139,8 +146,11 @@ def hill_climber(stage: StageDevices, axis: str, exposureTime: Union[int, float]
     last = -np.inf
     current = stage.integrate(exposureTime)
     climber_results = []
-    for n in range(max_climbs):
+    n = 0
+    while n < max_climbs:
         last = current
+        if len(recurse_args) > 0:
+            run(stage, *recurse_args, **recurse_kwargs)
         results, success = hill_climb(stage, axis, movementType, step,
                           max_steps, softening, Ndecrease, exposureTime)
         if not success:
@@ -150,21 +160,35 @@ def hill_climber(stage: StageDevices, axis: str, exposureTime: Union[int, float]
         climber_results.append(results)
 
         if current / last < 1 + rel_tol:
-            print(current / last, 1 + rel_tol)
             # go back to highest recorded point
             stage.move(axis, step * (results.argmax() - len(results) + 1), movementType)
             log.info("Hill climber successfully converged to within" +
                      f" relative tolerance of {sigfig.round(rel_tol, 3, warn=False)}" +
                      f" at {axis} = {stage.axes[axis].get_stepper_position().prettyprint()}")
+            if n == 0 and try_again:    # if init_positive was None, try both directions
+                log.info("Trying again initially in the " +
+                         f"{'positive' if init_positive else 'negative'} direction")
+                step = -step
+                try_again = False
+                last = -np.inf
+                climber_results = []
+                continue
             break
 
         if current / last < abs_tol:
-            print(current / last, abs_tol)
             # go back to highest recorded point
             stage.move(axis, step * (results.argmax() - len(results) + 1), movementType)
             log.info("Hill climber succesfully converged to within" +
                      f" absolute tolerance of {sigfig.round(abs_tol, 3, warn=False)}" +
                      f" at {axis} = {stage.axes[axis].get_stepper_position().prettyprint()}")
+            if n == 0 and try_again:    # if init_positive was None, try both directions
+                log.info("Trying again initially in the " +
+                         f"{'positive' if init_positive else 'negative'} direction")
+                step = -step
+                try_again = False
+                last = -np.inf
+                climber_results = []
+                continue
             break
 
         step = step * step_factor
@@ -175,7 +199,9 @@ def hill_climber(stage: StageDevices, axis: str, exposureTime: Union[int, float]
             log.warning(f"Hill climber hit minimum step size {min_step.prettyprint()}, " +
                         "consider incresing tolerances")
             break
-    else:
+        n += 1
+
+    if n >= max_climbs:
         log.warning(f"Hill climber hit max climb limit of {max_climbs} withough converging")
 
     if show_plot or log_plot:
@@ -196,6 +222,7 @@ def hill_climber(stage: StageDevices, axis: str, exposureTime: Union[int, float]
 
 def arg_check(arg, argname, argtype: Type, axes,
               extra: Optional[Callable] = None, extra_text: str = ''):
+    # for checking additional conditions
     if extra is None:
         extra = lambda x: True      # noqa E731
 
@@ -218,7 +245,7 @@ def run(stage: StageDevices,
         axes: Optional[str] = None,
         init_step: Union[None, Distance, Sequence[Distance]] = None,
         step_factor: Union[float, Sequence[float]] = 0.5,
-        init_positive: Union[bool, Sequence[bool]] = True,
+        init_positive: Union[None, bool, Sequence[Union[None, bool]]] = None,
         rel_tol: Union[float, Sequence[float]] = 1e-2,
         softening: Union[float, Sequence[float]] = 0.0,
         abs_tol: Union[float, Sequence[float]] = 0.0,
@@ -236,12 +263,11 @@ def run(stage: StageDevices,
     # init_positive can tell whether to start moving forwards or backwards first
     # order determines whether to hill climb RECURSIVELY, not just which axis to do first
 
-    # FOR NOW, NO RECURSION
-    assert order is None, "No recursion for now"
-
     # default values
     if axes is None:
         axes = 'xzy'
+    else:
+        axes = list(axes)
 
     if movementType is None:
         movementType = MovementType.GENERAL
@@ -275,10 +301,11 @@ def run(stage: StageDevices,
     Gthan0 = (lambda x: x > 0, 'greater than zero')     # common requirements
     Geqthan0 = (lambda x: x >= 0, 'greater than or equal to zero')
 
+    exposureTime = arg_check(exposureTime, 'exposureTime', (int, float), axes)
     init_step = arg_check(init_step, 'init_step', Distance, axes)
     step_factor = arg_check(step_factor, 'step_factor', Real, axes,
                             lambda f: 0 < f < 1, "between 0 and 1")
-    init_positive = arg_check(init_positive, 'init_positive', bool, axes)
+    init_positive = arg_check(init_positive, 'init_positive', (bool, type(None)), axes)
     rel_tol = arg_check(rel_tol, 'rel_tol', Real, axes, *Geqthan0)
     softening = arg_check(softening, 'softening', Real, axes, *Geqthan0)
     abs_tol = arg_check(abs_tol, 'abs_tol', Real, axes)
@@ -290,20 +317,49 @@ def run(stage: StageDevices,
     show_plot = arg_check(show_plot, 'show_plot', bool, axes)
     log_plot = arg_check(log_plot, 'log_plot', bool, axes)
 
-    # not the best way of doing this
-    hill_climber_kwargs_values = [init_step, step_factor, init_positive,
+    # could probably do this better using the inspect module
+    run_args = np.array([movementType, exposureTime, axes], dtype=object)
+    hill_climber_kwargs_values = np.array([init_step, step_factor, init_positive,
                                    rel_tol, softening, abs_tol, Ndecrease,
                                    max_climbs, max_steps, min_step,
-                                   show_plot, log_plot]
-    hill_climber_kwargs_keys = ['init_step', 'step_factor', 'init_positive',
+                                   show_plot, log_plot, order], dtype=object)
+    hill_climber_kwargs_keys = np.array(['init_step', 'step_factor', 'init_positive',
                                 'rel_tol', 'softening', 'abs_tol', 'Ndecrease',
                                 'max_climbs', 'max_steps', 'min_step',
-                                'show_plot', 'log_plot']
-    hill_climber_kwargs = zip(hill_climber_kwargs_keys, hill_climber_kwargs_values)
+                                'show_plot', 'log_plot', 'order'], dtype=object)
+
+    # reorder arg and kwarg values based on order of order
+    descending_indices = np.argsort(order)[::-1]
+    run_args = run_args.T[descending_indices].T
+    hill_climber_kwargs_values = hill_climber_kwargs_values.T[descending_indices].T
+
+    # if applicable, move args and kwargs of to-be-recursed axes into the recurse_(kw)args
+    recurse_args = []
+    recurse_kwargs = []
+    for i in range(len(order) - 1):
+        if order[i] > order[i+1]:
+            recurse_args.append(run_args[:, i:])
+            recurse_kwargs.append(hill_climber_kwargs_values[:, i:])
+            # remove to-be-recursed kwargs from outer loop
+            hill_climber_kwargs_values = np.delete(hill_climber_kwargs_values, i, 1)
+            hill_climber_kwargs_keys = np.delete(hill_climber_kwargs_keys, i, 0)
+            break
+        else:
+            pass
+    recurse_kwargs = {key: value for key, value in zip(hill_climber_kwargs_keys, recurse_kwargs)}
+
+    # hill_climber doesn't take order as a kwargs, but does take recurse_(kw)args
+    outer_arg_length = len(hill_climber_kwargs_values[0])
+    recurse_args = [recurse_args for i in range(outer_arg_length)]
+    recurse_kwargs = [recurse_kwargs for i in range(outer_arg_length)]
+    hill_climber_kwargs_values = hill_climber_kwargs_values[:-1].tolist()
+    hill_climber_kwargs_values.append(recurse_args)
+    hill_climber_kwargs_values.append(recurse_kwargs)
+    hill_climber_kwargs_keys = hill_climber_kwargs_keys[:-1] + ['recurse_args'] + ['recurse_kwargs']
 
     # run hill climbers
     for i, (axis, movetype) in enumerate(zip(axes, movementType)):
-        kwargs = {key : val[i] for key, val in hill_climber_kwargs}
+        kwargs = {key : hill_climber_kwargs_values[j][i] for j, key in enumerate(hill_climber_kwargs_keys)}
         _ = hill_climber(stage, axis, exposureTime, movetype, **kwargs)
 
     return
