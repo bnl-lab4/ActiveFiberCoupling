@@ -34,12 +34,14 @@ import HillClimb
 import StageStatus
 import LoggingUtils
 import ContinuousReadout
+# import DriftCompensation
 
 
 # Device info constants
-SOCKET0 = dict(host = '192.168.1.10', port = 8000, sensortype = SensorType.SOCKET)
-SIPM0 = dict(addr = 0, channel = 1, sensortype = SensorType.SIPM)
-SIPM1 = dict(addr = 0, channel = 0, sensortype = SensorType.SIPM)
+SOCKET0 = dict(host = '192.168.0.100', port = 8000, sensortype = SensorType.SOCKET)
+SOCKET1 = dict(host = '192.168.0.100', port = 8000, sensortype = SensorType.SOCKET)
+SIPM0 = dict(addr = 0, channel = 0, sensortype = SensorType.SIPM)
+SIPM1 = dict(addr = 0, channel = 1, sensortype = SensorType.SIPM)
 PHOTODIODE0 = dict(addr = 0, channel = 1, sensortype = SensorType.PHOTODIODE)
 PHOTODIODE1 = dict(addr = 0, channel = 2, sensortype = SensorType.PHOTODIODE)
 SIMSENSOR_ASPH = dict(propagation_axis = 'y', focal_ratio = 4.0, angle_of_deviation = 3/180)
@@ -300,6 +302,30 @@ class ProgramController:
                     text = 'Hill climbing on one or more axes', func = HillClimb.run,
                     args_config = ('stage', 'MovementType', 'ExposureTime')
                     ),
+#                'drift' : MenuEntry(
+#                    text = 'Active drift compensation (continuous stabilization)',
+#                    func = DriftCompensation.run,
+#                    args_config = ('stage', 'MovementType', 'ExposureTime'),
+#                    kwargs_config = {
+#                        'quick' : dict(
+#                            axes='xy',
+#                            check_interval=30,
+#                            max_cycles=20,
+#                            print_stats_interval=5
+#                        ),
+#                        'long' : dict(
+#                            axes='xyz',
+#                            check_interval=60,
+#                            duration=3600,  # 1 hour
+#                            print_stats_interval=10
+#                        ),
+#                        'piezo_only' : dict(
+#                            axes='xy',
+#                            check_interval=60,
+#                            print_stats_interval=5
+#                        )
+#                    }
+#                ),
                 '_misc' : 'Miscellaneous',
                 'status' : MenuEntry(
                     text = 'Report the status of all or part of a stage',
