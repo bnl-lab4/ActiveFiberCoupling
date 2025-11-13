@@ -26,7 +26,8 @@ class Distance:
         elif unit == 'fullsteps':
             self._microns = float(value) * self._MICRONS_PER_FULL_STEP
         else:
-            raise ValueError("Unsupported unit: unit must be 'microns', 'volts', 'steps', or 'fullsteps'")
+            raise ValueError(f"Unsupported unit '{unit}':" +
+                "unit must be 'microns', 'volts', 'steps', or 'fullsteps'")
 
 ############# Operations
 

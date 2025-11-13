@@ -3,10 +3,15 @@
 ####################
 import inspect
 import warnings
+import logging
 from collections.abc import Callable
 from typing import List, Sequence, Optional
 
 from MovementClasses import Distance, StageDevices
+
+
+# Initial logging/warning configuration
+log = logging.getLogger(__name__)
 
 
 def parse_str_values(value):
@@ -22,7 +27,8 @@ def parse_str_values(value):
         value = value[1:-1]
         list_values = [item.strip() for item in value.split(',')]
         for i, val in enumerate(list_values):
-            if val.startswith('D('):
+            # clean up Distance entries if needed
+            if (val.startswith('D(') or val.startswith('Distance(')) and not val.endswith(')'):
                 list_values[i] = list_values[i] + ',' + list_values[i+1]
                 del list_values[i+1]
         if any(['=' in elem for elem in list_values]):
@@ -36,7 +42,8 @@ def parse_str_values(value):
         value = value[1:-1]
         list_values = [item.strip() for item in value.split(',')]
         for i, val in enumerate(list_values):
-            if val.startswith('D('):
+            # clean up Distance entries if needed
+            if (val.startswith('D(') or val.startswith('Distance(')) and not val.endswith(')'):
                 list_values[i] = list_values[i] + ',' + list_values[i+1]
                 del list_values[i+1]
         value = [parse_str_values(value) for value in list_values]
@@ -50,8 +57,7 @@ def parse_str_values(value):
         else:
             value = value[9:-1]
         value = [item.strip() for item in value.split(',')]
-        distance_args = [parse_str_values(arg) for arg in value]
-        return Distance(*distance_args)
+        return Distance(*value)
 
     if value.replace('.', '', 1).isdigit():
         # Check for float or integer

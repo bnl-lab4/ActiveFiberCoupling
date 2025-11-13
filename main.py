@@ -162,9 +162,19 @@ class MenuEntry:
 
         resolved_args = []
         if 'stage' in self.args_config:
-            resolved_args.append(controller.stages[user_input_parts[0]])
+            try:
+                resolved_args.append(controller.stages[user_input_parts[0]])
+            except KeyError as e:
+                warnings.warn(f'{e} is not an acceptable stage key')
+                print("Function call aborted")
+                return
         if 'MovementType' in self.args_config:
-            resolved_args.append(MOVEMENT_TYPE_MAP[user_input_parts[1]])
+            try:
+                resolved_args.append(MOVEMENT_TYPE_MAP[user_input_parts[1]])
+            except KeyError as e:
+                warnings.warn(f'{e} is not an acceptable movement type key')
+                print("Function call aborted")
+                return
         if 'ExposureTime' in self.args_config:
             resolved_args.append(controller.exposure_time)
 
@@ -172,13 +182,20 @@ class MenuEntry:
         kwargs = {}
         if len(user_input_parts) > args_len:
             if '=' not in user_input_parts[args_len]:
-                kwargs_default_key = user_input_parts[args_len].lower()
-                kwargs.update(self.kwargs_config[kwargs_default_key])
-                args_len += 1
+                try:
+                    kwargs_default_key = user_input_parts[args_len].lower()
+                    kwargs.update(self.kwargs_config[kwargs_default_key])
+                    args_len += 1
+                except KeyError as e:
+                    warnings.warn(f'{e} is not a valid kwarg preset.' +
+                            " Perhaps you are missing a '=' or added a space?")
+                    print("Function call aborted")
+                    return
 
         if len(user_input_parts) > args_len:
             if any('=' not in kwarg for kwarg in user_input_parts[args_len:]):
-                warnings.warn("All kwargs must be in <key>=<value> form")
+                warnings.warn("One or more kwargs are not in the form '<key>=<value>'." +
+                                 " Only args and kwargs should be separated by spaces.")
                 print("Function call aborted")
                 return
             kwargs.update(StringUtils.str_to_dict(user_input_parts[args_len:]))
@@ -302,30 +319,6 @@ class ProgramController:
                     text = 'Hill climbing on one or more axes', func = HillClimb.run,
                     args_config = ('stage', 'MovementType', 'ExposureTime')
                     ),
-#                'drift' : MenuEntry(
-#                    text = 'Active drift compensation (continuous stabilization)',
-#                    func = DriftCompensation.run,
-#                    args_config = ('stage', 'MovementType', 'ExposureTime'),
-#                    kwargs_config = {
-#                        'quick' : dict(
-#                            axes='xy',
-#                            check_interval=30,
-#                            max_cycles=20,
-#                            print_stats_interval=5
-#                        ),
-#                        'long' : dict(
-#                            axes='xyz',
-#                            check_interval=60,
-#                            duration=3600,  # 1 hour
-#                            print_stats_interval=10
-#                        ),
-#                        'piezo_only' : dict(
-#                            axes='xy',
-#                            check_interval=60,
-#                            print_stats_interval=5
-#                        )
-#                    }
-#                ),
                 '_misc' : 'Miscellaneous',
                 'status' : MenuEntry(
                     text = 'Report the status of all or part of a stage',
@@ -418,7 +411,7 @@ class ProgramController:
                 entry_key = parts[0].lower()
                 if entry_key not in self.menu.keys() or entry_key.startswith('_'):
                     if entry_key != 'q':
-                        print('\nInvalid command')
+                        print('\nInvalid menu option')
                     continue
 
                 # These functions update the state of ProgramController

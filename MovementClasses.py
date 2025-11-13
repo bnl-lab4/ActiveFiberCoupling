@@ -300,7 +300,7 @@ class StageDevices:
         except serial.SerialException as e:
             if require_connection:
                 raise e
-            log.warn(f"Could not open serial port {piezo_port}: {e}")
+            log.warning(f"Could not open serial port {piezo_port}: {e}")
 
         # loop a similar try-except over the stepper controllers
         # while also creating the axis objects
