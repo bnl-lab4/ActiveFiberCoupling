@@ -42,21 +42,20 @@ SOCKET0 = dict(host = '192.168.0.100', port = 8000, sensortype = SensorType.SOCK
 SOCKET1 = dict(host = '192.168.0.100', port = 8000, sensortype = SensorType.SOCKET)
 SIPM0 = dict(addr = 0, channel = 0, sensortype = SensorType.SIPM)
 SIPM1 = dict(addr = 0, channel = 1, sensortype = SensorType.SIPM)
-PHOTODIODE0 = dict(addr = 0, channel = 1, sensortype = SensorType.PHOTODIODE)
-PHOTODIODE1 = dict(addr = 0, channel = 2, sensortype = SensorType.PHOTODIODE)
+PHOTODIODE0 = dict(addr = 0, channel = 0, sensortype = SensorType.PHOTODIODE)
+PHOTODIODE1 = dict(addr = 0, channel = 1, sensortype = SensorType.PHOTODIODE)
 SIMSENSOR_ASPH = dict(propagation_axis = 'y', focal_ratio = 4.0, angle_of_deviation = 3/180)
 SIMSENSOR_LABTELE = dict(propagation_axis = 'y', focal_ratio = 28.0, angle_of_deviation = 0)
 SIMSENSOR_SKYTELE = dict(propagation_axis = 'y', focal_ratio = 7.0, angle_of_deviation = 0)
 
-SENSOR0 = SIPM0
-SENSOR1 = SIPM1
-
-PIEZO_PORT0 = '/dev/ttyACM0'
-PIEZO_PORT1 = '/dev/ttyACM1'
-BAUD_RATE = 115200
-
 STEPPER_DICT0 = dict(x = '00485175', y = '00485185', z = '00485159')
 STEPPER_DICT1 = dict(x = '00485149', y = '00485151', z = '00485168')
+
+STAGENAME_LIST = ('stage0', 'stage1', 'simstage_asph', 'simstage_labtel', 'simstage_skytel')
+SENSOR_LIST = (SIPM0, SIPM1, SIMSENSOR_ASPH, SIMSENSOR_LABTELE, SIMSENSOR_SKYTELE)
+PIEZO_PORT_LIST = ('/dev/ttyACM0', '/dev/ttyACM1', None, None, None)
+STEPPER_DICT_LIST = (STEPPER_DICT0, STEPPER_DICT1, None, None, None)
+
 
 MOVEMENT_TYPE_MAP = {
     'p': MovementType.PIEZO,
@@ -82,7 +81,7 @@ log = logging.getLogger(__name__)
 
 
 def AcceptInputArgs(inputTuple, inputArgs):
-    # inputTuple must be in correct order, should be refactored
+    # relies upon order of inputTuple, should be refactored
 
     CommandArg_ValueDict = dict(t=True, y=True, true=True, f=False, n=False, false=False)
 
@@ -163,7 +162,7 @@ class MenuEntry:
         resolved_args = []
         if 'stage' in self.args_config:
             try:
-                resolved_args.append(controller.stages[user_input_parts[0]])
+                resolved_args.append(controller.stages[int(user_input_parts[0])])
             except KeyError as e:
                 warnings.warn(f'{e} is not an acceptable stage key')
                 print("Function call aborted")
@@ -252,26 +251,17 @@ class ProgramController:
         return False
 
     def _initialize_devices(self):
-        if "propogation_axis" not in SENSOR0:
-            sensor0 = self.stack.enter_context(Sensor(SENSOR0, SENSOR0['sensortype']))
-            stage0 = self.stack.enter_context(StageDevices('stage0', PIEZO_PORT0, STEPPER_DICT0,
-                                        sensor = sensor0, require_connection = self.require_connection,
-                                                 autohome = self.autohome))
-        else:
-            sensor0 = self.stack.enter_context(SimulationSensor(**SENSOR0))
-            stage0 = self.stack.enter_context(SimulationStageDevices('simstage0', sensor = sensor0))
-        self.stages['0'] = stage0
-
-        if "propagation_axis" not in SENSOR1:
-            sensor1 = self.stack.enter_context(Sensor(SENSOR1, SENSOR1['sensortype']))
-            stage1 = self.stack.enter_context(StageDevices('stage1', PIEZO_PORT1, STEPPER_DICT1,
-                                        sensor = sensor1, require_connection = self.require_connection,
-                                                 autohome = self.autohome))
-
-        else:
-            sensor1 = self.stack.enter_context(SimulationSensor(**SENSOR1))
-            stage1 = self.stack.enter_context(SimulationStageDevices('simstage1', sensor = sensor1))
-        self.stages['1'] = stage1
+        for i, (NAME, SENSOR, PIEZO_PORT, STEPPER_DICT) in enumerate(zip(STAGENAME_LIST, SENSOR_LIST,
+                                                       PIEZO_PORT_LIST, STEPPER_DICT_LIST)):
+            if "propagation_axis" not in SENSOR.keys():
+                sensor = self.stack.enter_context(Sensor(SENSOR, SENSOR['sensortype']))
+                stage = self.stack.enter_context(StageDevices(NAME, PIEZO_PORT, STEPPER_DICT,
+                                            sensor = sensor, require_connection = self.require_connection,
+                                                     autohome = self.autohome))
+            else:
+                sensor = self.stack.enter_context(SimulationSensor(**SENSOR))
+                stage = self.stack.enter_context(SimulationStageDevices(NAME, sensor = sensor))
+            self.stages[i] = stage
 
     def _build_menu(self):
         return {
