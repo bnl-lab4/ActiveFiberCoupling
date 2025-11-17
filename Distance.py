@@ -1,5 +1,5 @@
 """
-Defines `Distance` class as a general quantity with several equivalent units.
+Defines the `Distance` class as a general quantity with several equivalent units.
 """
 import sigfig
 from typing import Union, Sequence
