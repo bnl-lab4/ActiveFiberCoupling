@@ -225,9 +225,9 @@ class SimulationStageAxis:
             which = MovementType.GENERAL
 
         if which == MovementType.PIEZO:
-            return self._goto_piezo(self.get_piezo_position + movement)
+            return self._goto_piezo(self.get_piezo_position() + movement)
         if which == MovementType.STEPPER:
-            return self._goto_stepper(self.stepper_position + movement)
+            return self._goto_stepper(self.get_stepper_position() + movement)
 
         if which == MovementType.GENERAL:
             stepper_position = self.get_stepper_position()

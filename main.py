@@ -44,9 +44,9 @@ PHOTODIODE0 = dict(addr = 0, channel = 1, sensortype = SensorType.PHOTODIODE)
 PHOTODIODE1 = dict(addr = 0, channel = 2, sensortype = SensorType.PHOTODIODE)
 SIMSENSOR_ASPH = dict(propagation_axis = 'y', focal_ratio = 4.0, angle_of_deviation = 3/180)
 SIMSENSOR_LABTELE = dict(propagation_axis = 'y', focal_ratio = 28.0, angle_of_deviation = 0)
-SIMSENSOR_SKYTELE = dict(propagation_axis = 'y', focal_ratio = 7.0, angle_of_deviation = 0)
+SIMSENSOR_SKYTELE = dict(propagation_axis = 'y', focal_ratio = 7.0, angle_of_deviation = 30/180)
 
-SENSOR0 = SIPM0
+SENSOR0 = SIMSENSOR_SKYTELE
 SENSOR1 = SIMSENSOR_ASPH
 
 PIEZO_PORT0 = '/dev/ttyACM0'
@@ -233,7 +233,7 @@ class ProgramController:
         return False
 
     def _initialize_devices(self):
-        if "propogation_axis" not in SENSOR0:
+        if "propagation_axis" not in SENSOR0.keys():
             sensor0 = self.stack.enter_context(Sensor(SENSOR0, SENSOR0['sensortype']))
             stage0 = self.stack.enter_context(StageDevices('stage0', PIEZO_PORT0, STEPPER_DICT0,
                                         sensor = sensor0, require_connection = self.require_connection,
@@ -243,7 +243,7 @@ class ProgramController:
             stage0 = self.stack.enter_context(SimulationStageDevices('simstage0', sensor = sensor0))
         self.stages['0'] = stage0
 
-        if "propagation_axis" not in SENSOR1:
+        if "propagation_axis" not in SENSOR1.keys():
             sensor1 = self.stack.enter_context(Sensor(SENSOR1, SENSOR1['sensortype']))
             stage1 = self.stack.enter_context(StageDevices('stage1', PIEZO_PORT1, STEPPER_DICT1,
                                         sensor = sensor1, require_connection = self.require_connection,
@@ -354,8 +354,10 @@ class ProgramController:
                 entry.func = new_func
                 log.info(f"{key} function reloaded succesfully")
 
-            except (ImportError, AttributeError):
-                log.warning(f"{key} function was not reloaded succesfully")
+            except Exception as e:
+                func_traceback = traceback.format_exc()
+                log.warning(f"{key} function was not reloaded succesfully, " +
+                        f"traceback below:\n{func_traceback}")
 
         self.menu = self._build_menu()
 

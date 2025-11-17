@@ -3,11 +3,16 @@ import sigfig
 import logging
 import socket
 import contextlib
-import piplates.DAQC2plate as DAQ
+import gpiozero
 from typing import Dict, Optional, Union
 
 # unique logger name for this module
 log = logging.getLogger(__name__)
+
+try:
+    import piplates.DAQC2plate as DAQ
+except gpiozero.exc.BadPinFactory as e:
+    log.warning("piplates.DAQC2plate not imported correctly due to BadPinFactory eexception")
 
 
 class SensorType(enum.Enum):

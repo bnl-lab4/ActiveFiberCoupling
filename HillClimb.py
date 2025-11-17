@@ -2,6 +2,11 @@
 # recursive hill climbing
 # climb in an arbitrary direction (vector input)
 ###############
+
+# for Aaron's Ubuntu WSL troubles
+import matplotlib
+matplotlib.use('Agg')
+
 import math
 import logging
 import sigfig
@@ -9,10 +14,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from copy import copy
 from datetime import datetime
-from collections.abc import Sequence as sequence    # sorry
-from collections.abc import Callable
+import collections
 from collections import deque
-from typing import Optional, Union, Sequence, Tuple, List, Type
+from typing import Optional, Union, Sequence, Tuple, List, Type, Dict
 from numbers import Real
 
 from MovementClasses import Distance, MovementType, StageDevices
@@ -89,7 +93,8 @@ def plot_climber(climber_results: List[np.ndarray], stagename: str, axis: str,
 
 def hill_climb(stage: StageDevices, axis: str, movementType: MovementType,
                step: Distance, max_steps: int, softening: float,
-               Ndecrease: int, exposureTime: Union[int, float]):
+               Ndecrease: int, exposureTime: Union[int, float],
+               recurse_args: Sequence[Sequence] = [], recurse_kwargs: Dict[str, Sequence] = []):
 
     log.info(f"Hill climbing on {stage.name} axis {axis} {movementType.value}" +
             f" with step size {step.prettyprint()} and exposure time {exposureTime}")
@@ -102,8 +107,11 @@ def hill_climb(stage: StageDevices, axis: str, movementType: MovementType,
     for n in range(max_steps):
         last.append(current + abs(current) * softening)
         _ = stage.move(axis, step_size, movementType)
+        if len(recurse_args) > 0:
+            run(stage, *recurse_args, **recurse_kwargs)
         current = stage.integrate(exposureTime)
         results.append(current)
+        log.debug(f'{axis} axis step {n}')
 
         if len(last) == Ndecrease and current < sum(last) / Ndecrease:
             break
@@ -119,7 +127,7 @@ def hill_climber(stage: StageDevices, axis: str, exposureTime: Union[int, float]
                  init_positive: bool, rel_tol: float, softening: float,
                  abs_tol: Distance, Ndecrease: int, max_climbs: int,
                  max_steps: int, min_step: Distance, show_plot: bool = False, log_plot: bool = True,
-                 recurse_args: Sequence[Sequence] = [], recurse_kwargs: Sequence[dict] = []):
+                 recurse_args: Sequence[Sequence] = [], recurse_kwargs: Dict[str, Sequence] = []):
 
     assert movementType != MovementType.GENERAL, "General movement hill climb may be added later"
 
@@ -147,13 +155,14 @@ def hill_climber(stage: StageDevices, axis: str, exposureTime: Union[int, float]
     current = stage.integrate(exposureTime)
     climber_results = []
     n = 0
+    # breakpoint()
     while n < max_climbs:
         last = current
-        if len(recurse_args) > 0:
-            run(stage, *recurse_args, **recurse_kwargs)
         results, success = hill_climb(stage, axis, movementType, step,
-                          max_steps, softening, Ndecrease, exposureTime)
+                          max_steps, softening, Ndecrease, exposureTime,
+                          recurse_args, recurse_kwargs)
         if not success:
+            climber_results.append(results)
             log.info("Hill climber stopped because last climb did not find peak")
             break
         current = results.max()
@@ -221,7 +230,7 @@ def hill_climber(stage: StageDevices, axis: str, exposureTime: Union[int, float]
 
 
 def arg_check(arg, argname, argtype: Type, axes,
-              extra: Optional[Callable] = None, extra_text: str = ''):
+              extra: Optional[collections.abc.Callable] = None, extra_text: str = ''):
     # for checking additional conditions
     if extra is None:
         extra = lambda x: True      # noqa E731
@@ -231,7 +240,7 @@ def arg_check(arg, argname, argtype: Type, axes,
             return [arg, ] * len(axes)
         else:
             raise ValueError(f"{argname} ({arg}) must satisfy: {extra_text}")
-    if isinstance(arg, sequence) and \
+    if isinstance(arg, collections.abc.Iterable) and \
             all(isinstance(elem, argtype) and extra(elem) for elem in arg):
         if len(arg) == len(axes):
             return arg
@@ -296,7 +305,6 @@ def run(stage: StageDevices,
 
     # veryfing and ducking inputs
     assert all(ax.lower() in VALID_AXES for ax in axes), "axes must be x, y, or z"
-    assert isinstance(exposureTime, int) or isinstance(exposureTime, float)
 
     Gthan0 = (lambda x: x > 0, 'greater than zero')     # common requirements
     Geqthan0 = (lambda x: x >= 0, 'greater than or equal to zero')
@@ -318,11 +326,12 @@ def run(stage: StageDevices,
     log_plot = arg_check(log_plot, 'log_plot', bool, axes)
 
     # could probably do this better using the inspect module
-    run_args = np.array([movementType, exposureTime, axes], dtype=object)
+    run_args = np.array([movementType, exposureTime, axes], dtype=object) # shape (3, len(axes)
+    hill_climber_args = np.array([axes, exposureTime, movementType]) # shape (3, len(axes))
     hill_climber_kwargs_values = np.array([init_step, step_factor, init_positive,
                                    rel_tol, softening, abs_tol, Ndecrease,
                                    max_climbs, max_steps, min_step,
-                                   show_plot, log_plot, order], dtype=object)
+                                   show_plot, log_plot, order], dtype=object) # shape (13, len(axes))
     hill_climber_kwargs_keys = np.array(['init_step', 'step_factor', 'init_positive',
                                 'rel_tol', 'softening', 'abs_tol', 'Ndecrease',
                                 'max_climbs', 'max_steps', 'min_step',
@@ -330,38 +339,41 @@ def run(stage: StageDevices,
 
     # reorder arg and kwarg values based on order of order
     descending_indices = np.argsort(order)[::-1]
-    run_args = run_args.T[descending_indices].T
-    hill_climber_kwargs_values = hill_climber_kwargs_values.T[descending_indices].T
+    order = np.array(order)[descending_indices]
+    run_args = run_args.T[descending_indices]
+    hill_climber_args = hill_climber_args.T[descending_indices] # (len(axes), 3)
+    hill_climber_kwargs_values = hill_climber_kwargs_values.T[descending_indices] # (len(axes), 13)
 
     # if applicable, move args and kwargs of to-be-recursed axes into the recurse_(kw)args
-    recurse_args = []
-    recurse_kwargs = []
+    recurse_args = np.array([], dtype=object)
+    recurse_kwargs = np.array([], dtype=object)
     for i in range(len(order) - 1):
         if order[i] > order[i+1]:
-            recurse_args.append(run_args[:, i:])
-            recurse_kwargs.append(hill_climber_kwargs_values[:, i:])
-            # remove to-be-recursed kwargs from outer loop
-            hill_climber_kwargs_values = np.delete(hill_climber_kwargs_values, i, 1)
-            hill_climber_kwargs_keys = np.delete(hill_climber_kwargs_keys, i, 0)
+            recurse_args = run_args[i+1:] # (len(inner), 3)
+            recurse_kwargs = hill_climber_kwargs_values[i+1:] # (len(inner), 13)
+            # remove to-be-recursed kwargs from outer climber (kw)args
+            hill_climber_kwargs_values = hill_climber_kwargs_values[:i+1] # (len(outer), 13)
+            hill_climber_args = hill_climber_args[:i+1] # (len(outer), 3)
             break
         else:
             pass
 
-    breakpoint()
+    recurse_args = recurse_args.T # (3, len(inner))
+    recurse_kwargs = np.array(recurse_kwargs).T # (13, len(inner))
     recurse_kwargs = {key: value for key, value in zip(hill_climber_kwargs_keys, recurse_kwargs)}
 
     # hill_climber doesn't take order as a kwargs, but does take recurse_(kw)args
-    outer_arg_length = len(hill_climber_kwargs_values[0])
-    recurse_args = [recurse_args for i in range(outer_arg_length)]
-    recurse_kwargs = [recurse_kwargs for i in range(outer_arg_length)]
-    hill_climber_kwargs_values = hill_climber_kwargs_values[:-1].tolist()
+    outer_arg_length = len(hill_climber_kwargs_values)
+    recurse_args = [recurse_args for i in range(outer_arg_length)] # (len(outer), 3, len(inner))
+    recurse_kwargs = [recurse_kwargs for i in range(outer_arg_length)] # (len(outer), Dict(13, 2))
+    hill_climber_kwargs_values = hill_climber_kwargs_values[:, :-1].T.tolist() # (12, len(outer)
     hill_climber_kwargs_values.append(recurse_args)
-    hill_climber_kwargs_values.append(recurse_kwargs)
-    hill_climber_kwargs_keys = list(hill_climber_kwargs_keys[:-1]) + ['recurse_args'] + ['recurse_kwargs']
+    hill_climber_kwargs_values.append(recurse_kwargs) # (14, len(outer))
+    hill_climber_kwargs_keys = list(hill_climber_kwargs_keys[:-1]) + ['recurse_args', 'recurse_kwargs']
 
     # run hill climbers
-    for i, (axis, movetype) in enumerate(zip(axes, movementType)):
+    for i, args in enumerate(hill_climber_args):
         kwargs = {key : hill_climber_kwargs_values[j][i] for j, key in enumerate(hill_climber_kwargs_keys)}
-        _ = hill_climber(stage, axis, exposureTime, movetype, **kwargs)
+        _ = hill_climber(stage, *args, **kwargs)
 
     return
