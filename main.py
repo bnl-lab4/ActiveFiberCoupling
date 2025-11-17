@@ -40,10 +40,8 @@ import ContinuousReadout
 # Device info constants
 SOCKET0 = dict(host = '192.168.0.100', port = 8000, sensortype = SensorType.SOCKET)
 SOCKET1 = dict(host = '192.168.0.100', port = 8000, sensortype = SensorType.SOCKET)
-SIPM0 = dict(addr = 0, channel = 0, sensortype = SensorType.SIPM)
-SIPM1 = dict(addr = 0, channel = 1, sensortype = SensorType.SIPM)
-PHOTODIODE0 = dict(addr = 0, channel = 0, sensortype = SensorType.PHOTODIODE)
-PHOTODIODE1 = dict(addr = 0, channel = 1, sensortype = SensorType.PHOTODIODE)
+PIPLATE0 = dict(addr = 0, channel = 0, sensortype = SensorType.PIPLATE)
+PIPLATE1 = dict(addr = 0, channel = 1, sensortype = SensorType.PIPLATE)
 SIMSENSOR_ASPH = dict(propagation_axis = 'y', focal_ratio = 4.0, angle_of_deviation = 3/180)
 SIMSENSOR_LABTELE = dict(propagation_axis = 'y', focal_ratio = 28.0, angle_of_deviation = 0)
 SIMSENSOR_SKYTELE = dict(propagation_axis = 'y', focal_ratio = 7.0, angle_of_deviation = 0)
@@ -52,7 +50,7 @@ STEPPER_DICT0 = dict(x = '00485175', y = '00485185', z = '00485159')
 STEPPER_DICT1 = dict(x = '00485149', y = '00485151', z = '00485168')
 
 STAGENAME_LIST = ('stage0', 'stage1', 'simstage_asph', 'simstage_labtel', 'simstage_skytel')
-SENSOR_LIST = (SIPM0, SIPM1, SIMSENSOR_ASPH, SIMSENSOR_LABTELE, SIMSENSOR_SKYTELE)
+SENSOR_LIST = (PIPLATE0, PIPLATE1, SIMSENSOR_ASPH, SIMSENSOR_LABTELE, SIMSENSOR_SKYTELE)
 PIEZO_PORT_LIST = ('/dev/ttyACM0', '/dev/ttyACM1', None, None, None)
 STEPPER_DICT_LIST = (STEPPER_DICT0, STEPPER_DICT1, None, None, None)
 
@@ -129,7 +127,7 @@ def AcceptInputArgs(inputTuple, inputArgs):
 
 def Update_ExposureTime(texp):
     print(f"Update default exposure time (currently {texp}):" +
-        "(iterations for SiPMs or photodiodes, milliseconds for sockets)")
+        "(iterations for piplates, milliseconds for sockets)")
     user_input = input(">> ").strip()
     try:
         user_input = int(float(user_input))

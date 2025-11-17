@@ -1,7 +1,5 @@
 # ========================================================================
 # TODO:
-# Move Sipm and Photodiode context dunders to Sensor.
-# Combine Sipm and Photodiode into a single PiPlate class.
 # Change Sipm and Photodiode integrate methods to count time, not iterations.
 # Implement average in Socket.
 # ========================================================================
@@ -25,79 +23,62 @@ class SensorType(enum.Enum):
     """
     An enumeration of the possible sensor types.
 
-    See `Sipm`, `Photodiode` and `Socket` for info on the specific
-    sensor types.
+    See `Piplate` and `Socket` for info on the specific sensor types.
 
     Members
     -------
-    SIPM : str
-        Represents a SiPM plugged into a Pi-Plate.
-    PHOTODIODE : str
-        Represents a photodiode plugged into a Pi-Plate.
+    PIPLATE : str
+        Represents a sensor that is read via a Pi-Plate.
     SOCKET : str
         Represents a socket connection to another computer that acts as
         a sensor.
     """
 
-    SIPM = "SiPM"
-    """Represents a SiPM sensor."""
-    PHOTODIODE = "photodiode"
-    """Represents a photodiode sensor."""
+    PIPLATE = "piplate"
+    """Represents reading a Pi-Plate input for sensor data."""
     SOCKET = "socket"
-    """Represenst a socket connection querried as a sensor."""
+    """Represents querying a socket server for sensor data."""
 
 
-class Sipm:
+class Piplate:
     """
-    Subclass of `Sensor` for a SiPM device.
+    Subclass of `Sensor` for reading from a Pi-plate.
 
-    The output of a SiPM sensor device is connected to an analog input
-    on a DAQC2plate from Pi-Plates (<https://pi-plates.com/daqc2r1/>).
-    This input can be read once or integrated over (currently integrate via
-    many sequential reads).
+    Reads in a single analog input channel on a DAQC2plate from Pi-Plates
+    (<https://pi-plates.com/daqc2r1/>). This input can be integrated by
+    calling the Pi-Plate read function many times.
 
     Parameters
     ----------
     connection_dict : Dict[str, str]
         A dictionary of the necessary info for reading out the voltage
-        from the Pi-Plate. This will include the Pi-Plate address and channel.
+        from the Pi-Plate. This must include the Pi-Plate address and
+        channel (and the `SensorType` `PIPLATE` enum for `Sensor`).
 
     Methods
     -------
     read()
-        Read the voltage (once) of the analog input.
-    integrate(Texp, avg=False)
+        Read the voltage of the analog input (once) .
+    integrate(Texp, avg=True)
         Read the voltage of the Pi-Plate analog input Texp times and
         return the sum (default) or average value.
+
+    Notes
+    -----
+    Inherits no-op ``__enter__`` and ``__exit__`` dunders from
+    `Sensor` (parent).
     """
+
     def __init__(self, connection_dict: Dict[str, str]):
         self.addr = connection_dict['addr']
         self.channel = connection_dict['channel']
         DAQ.VerifyADDR(self.addr)
         DAQ.VerifyAINchannel(self.channel)
-        log.info(f"Initialized to SiPM at addr {self.addr}, channel {self.channel}")
-
-    def __enter__(self):
-        """
-        No-op method to conform to context manager protocol.
-        
-        Returns self for use in 'with... as...' statements.
-        """
-        pass # no context management needed
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        """
-        No-op method to conform to context manager protocol.
-        
-        Returns ``False``, letting exceptions propogate.
-        """
-        pass # no context management needed
-        return False
+        log.info(f"Initialized to Pi-Plate at addr {self.addr}, channel {self.channel}")
 
     def read(self):
         """
-        Read the voltage (once) of the SiPM from the Pi-Plate input.
+        Read the voltage from the Pi-Plate input (once) .
 
         Notes
         -----
@@ -109,16 +90,16 @@ class Sipm:
         """
         # getADC has several waits in it, we could prbably slim it down
         power = DAQ.getADC(self.addr, self.channel)
-        # log.trace(f"SiPM addr {self.addr} channel {self.channel} : " +
+        # log.trace(f"Pi-Plate addr {self.addr} channel {self.channel} : " +
         #             f"read power {sigfig.round(power, 6, warn=False)}")
         return power
 
-    def integrate(self, Texp: Union[int, float], avg: bool = False):
+    def integrate(self, Texp: Union[int, float], avg: bool = True):
         """
-        Integrate the voltage of the SiPM over many readings.
+        Integrate the voltage of the Pi-plate  over many readings.
 
-        Calls `read` `Texp` times and returns either the sum (default)
-        or the average of the readings.
+        Calls `read` `Texp` times and returns either the sum 
+        or the average (default) of the readings.
 
         Parameters
         ----------
@@ -141,7 +122,7 @@ class Sipm:
             power += self.read()
         if avg:
             power /= Texp
-        log.trace(f"SiPM addr {self.addr} channel {self.channel} : " +
+        log.trace(f"Piplate addr {self.addr} channel {self.channel} : " +
                 f"integrated power {sigfig.round(power, 6, warn=False)}{' averaged' if avg else ''} over {Texp} iterations")
         return power
 
@@ -159,7 +140,8 @@ class Socket:
     ----------
     connection_dict : Dict[str, str]
         A dictionary of the necessary info for reading out the voltage
-        from the Pi-Plate. This will include the host IP address and port.
+        from the Pi-Plate. This must include the host IP address and port
+        (and the `SensorType` `SOCKET` enum for `Sensor`).
 
     Methods
     -------
@@ -170,6 +152,8 @@ class Socket:
 
     Notes
     -----
+    Overrides the no-op ``__enter__`` and ``__exit__`` dunders from `Sensor`.
+
     The other computer must be running a socket server and ready to
     ready to receive instructions from the client (the Pi). So far, this
     has been used to read the output from a SiPM using a quTAG from
@@ -242,104 +226,6 @@ class Socket:
         return power
 
 
-class Photodiode:
-    """
-    Subclass of `Sensor` for a photodiode, possibly amplified.
-
-    The output of a photodiode or amplifier is connected to an analog input
-    on a DAQC2plate from Pi-Plates (<https://pi-plates.com/daqc2r1/>).
-    This input can be read once or integrated over (currently integrates via
-    many sequential reads).
-
-    Parameters
-    ----------
-    connection_dict : Dict[str, str]
-        A dictionary of the necessary info for reading out the voltage
-        from the Pi-Plate. Must include the Pi-Plate address and channel.
-
-    Methods
-    -------
-    read()
-        Read the voltage (once) of the analog input.
-    integrate(Texp, avg=False)
-        Read the voltage of the Pi-Plate analog input Texp times and
-        return the sum (default) or average value.
-    """
-    def __init__(self, connection_dict: Dict[str, str]):
-        self.addr = connection_dict['addr']
-        self.channel = connection_dict['channel']
-        DAQ.VerifyADDR(self.addr)
-        DAQ.VerifyAINchannel(self.channel)
-        log.info(f"Initialized to photodiode at addr {self.addr}, channel {self.channel}")
-
-    def __enter__(self):
-        """
-        No-op method to conform to context manager protocol.
-        
-        Returns self for use in 'with... as...' statements.
-        """
-        pass # no context management needed
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        """
-        No-op method to conform to context manager protocol.
-        
-        Returns ``False``, letting exceptions propogate.
-        """
-        pass    # no context management needed
-        return False
-
-    def read(self):
-        """
-        Read the voltage (once) of the photodiode from the Pi-Plate input.
-
-        Notes
-        -----
-        It is currently unclear whether the value returned is volts or
-        some other quantity. Additionally, it is not clear whether there
-        is just an unknown zero point and/or a non-linear relationship
-        between the input voltage and the returned ADC value, though the
-        relationship seems to be monotonic.
-        """
-        # getADC has several waits in it, we could prbably slim it down
-        power = DAQ.getADC(self.addr, self.channel)
-        # log.trace(f"Photodiode addr {self.addr} channel {self.channel} : " +
-        #             f"read power {sigfig.round(power, 6, warn=False)}")
-        return power
-
-    def integrate(self, Texp: Union[int, float], avg: bool = False):
-        """
-        Integrate the voltage of the photodiode over many readings.
-
-        Calls `read` `Texp` times and returns either the sum (default)
-        or the average of the readings.
-
-        Parameters
-        ----------
-        Texp : int, float
-            Number of times to call read the voltage input.
-        avg : bool, default=False
-            Whether to average the total integrated value over the number
-            of readings.
-
-        Notes
-        -----
-        Despite the parameter name `Texp`, the voltage will be read an
-        integer number of times. However, each function call of
-        ``piplates.DAQC2plate.getADC`` typically takes about 1 millisecond.
-        """
-        power = 0
-        Texp = int(Texp)
-        for i in range(Texp):
-            power += self.read()
-        if avg:
-            power /= Texp
-        log.trace(f"Photodiode addr {self.addr} channel {self.channel} : " +
-                f"integrated power {sigfig.rounf(power, 6)}{' averaged' if avg else ''} over {Texp} interations")
-        return power
-
-
 class Sensor:
     """
     Parent class for sensors.
@@ -356,17 +242,20 @@ class Sensor:
         Read the sensor once.
     integrate(Texp, avg=True)
         Read the sensor over `Texp` and return the sum or average (default).
+
+    Notes
+    -----
+    Provides no-op context management dunders ``__enter__`` and
+    ``__exit__`` for subclass that do not need context management.
     """
 
     def __init__(self, connection_dict: Dict[str, str],
-                    sensorType: Optional[enum.Enum] = SensorType.PHOTODIODE):
+                    sensorType: Optional[enum.Enum] = SensorType.PIPLATE):
         self._exit_stack = contextlib.ExitStack()
         self.connection_dict = connection_dict
         self.sensorType = sensorType
-        if sensorType == SensorType.SIPM:
-            self.sensor = Sipm(connection_dict)
-        elif sensorType == SensorType.PHOTODIODE:
-            self.sensor = Photodiode(connection_dict)
+        if sensorType == SensorType.PIPLATE:
+            self.sensor = Piplate(connection_dict)
         elif sensorType == SensorType.SOCKET:
             self.sensor = Socket(connection_dict)
         else:
@@ -374,21 +263,21 @@ class Sensor:
 
     def __enter__(self):
         """
-        Enter the context of the sensor.
+        No-op method for use with context management.
 
         Returns self for use in 'with... as...' statements.
         """
-        self._exit_stack.enter_context(self.sensor)
+        pass
         log.debug("Entered sensor context")
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         """
-        Exit the context of the sensor.
+        No-op method for use with context management.
 
         Returns ``False``, letting exceptions propogate.
         """
-        self._exit_stack.close()
+        pass
         log.debug("Exited context stack")
         return False
 

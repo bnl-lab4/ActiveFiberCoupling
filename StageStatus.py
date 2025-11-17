@@ -47,7 +47,7 @@ def run(stage: StageDevices, exposureTime: Union[int, float], which: Optional[st
         if sensortype == 'Socket':
             lines.append(f"Connection details:\n    host = {stage.sensor.sensor.host}")
             lines.append(f"    port = {stage.sensor.sensor.port}")
-        if sensortype == 'Sipm' or sensortype == 'Photodiode':
+        if sensortype == 'Piplate':
             lines.append(f"Connection details:\n    address = {stage.sensor.sensor.addr}")
             lines.append(f"    channel = {stage.sensor.sensor.channel}")
         if sensortype == 'SimulationSensor':
