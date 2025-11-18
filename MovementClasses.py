@@ -3,6 +3,10 @@
 #   parallelize stepper movement
 ####################
 
+"""
+Defines the `StageAxis` and `StageDevices` classes for controlling stages.
+"""
+
 import logging
 import time
 import serial
