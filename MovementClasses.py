@@ -27,20 +27,68 @@ with open('stepper_info.yaml', 'r') as stream:
 
 
 class MovementType(enum.Enum):
+    """
+    An enumeration of the possible modes of movement.
+
+    See `StageAxis` for more details.
+
+    Members
+    -------
+    STEPPER : str
+        Represents moving with only the stepper motors.
+    PIEZO : str
+        Represents moving only with the piezos.
+    GENERAL : str
+        Represents moving with both the steppers and piezos as needed.
+    """
+
     STEPPER = "stepper"
+    """Represents moving with only the stepper motors."""
     PIEZO = "piezo"
+    """Represents moving with only the piezos."""
     GENERAL = "general"
+    """Represents moving with both the steppers and piezos as needed."""
 
 
 class MoveResult:
+    """
+    Enables logging of movements that may have been affected by several
+    functions.
+
+    This class carries information about movements from methods in child
+    class `StageAxis` up to the parent class `StageDevices` for logging.
+
+    Parameters
+    ----------
+    distance : `Distance.Distance`
+        The distance by which the stepper or piezo was moved.
+    movementType : `MovementType`
+        Whether the movement was with the steppers or the piezos. The
+        `movementType` cannot be ``GENERAL`` because that is not specific.
+    centered_piezos : bool, default=False
+        Whether the piezos were centered during the move. This will only be
+        ``True`` if the initially requested movement type was ``GENERAL``
+        and the final position was outside of the piezo's travel range.
+
+    Attributes
+    ----------
+    text : str
+        The text that should be in the log message regarding the movement.
+    """
     def __init__(self, distance: Distance, movementType: MovementType, centered_piezos: bool = False):
         self.distance = distance
         self.movementType = movementType
         self.centered_piezos = centered_piezos
+
+        # Any general move is composed of a piezo move and possibly
+        #   a stepper move. It should be logged as such.
         assert self.movementType != MovementType.GENERAL, "movementType cannot be general"
 
     @property
     def text(self):
+        """
+        str : text for a log message regarding the movement.
+        """
         values = []
         values.append(f'{self.distance.microns} microns')
         if self.movementType == MovementType.PIEZO:
@@ -54,8 +102,116 @@ class MoveResult:
 
 
 class StageAxis:
+    """
+    Subclass for all movement devices on a single stage axis.
+
+    Each axis of the NanoMax flexure stages from ThorLabs
+    (<https://www.thorlabs.com/NewGroupPage9.cfm?ObjectGroup_ID=2386>)
+    can be moved by a ThorLabs DRV208 stepper motor actuator
+    (<https://www.thorlabs.com/thorproduct.cfm?partnumber=DRV208>)
+    used with a Pololu T834 controller
+    (<https://www.pololu.com/product/3132>) for coarse movement or by a
+    piezo stack for fine movement. This class provides controls for the
+    movement of a single stage axis, as a subclass of `StageDevices`.
+
+    Parameters
+    ----------
+    axis : {'x', 'y', 'z'}
+        Which axis this class instance will control.
+    piezo : `serial.Serial`
+        Serial object for the piezo controller.
+    stepper : `ticlib.TicUSB`
+        Serial object for the stepper controller.
+    stepper_SN : str
+        The serial number for the specific stepper control board.
+    autohome : bool, default=True
+        Whether to run the homing routine on upon establishing a
+        connection to the stepper control board.
+
+    Attributes
+    ----------
+    axis : {'x', 'y', 'z'}
+        Which axis of the stage is controlled by this class instance.
+    piezo : `serial.Serial`
+        Serial object for the piezo controller.
+    stepper : `ticlib.TicUSB`
+        Serial object for the stepper controller.
+    stepper_SN : str
+        The serial number for the specific stepper control board.
+    autohome : bool, default=True
+        Whether to run the homing routine on upon establishing a
+        connection to the stepper control board.
+    PIEZO_LIMITS : 2-tuple of `Distance.Distance`
+        Upper and lower limits of the piezo travel range.
+    PIEZO_CENTER : `Distance.Distance`
+        Center of the piezo travel range.
+    STEPPER_LIMITS : 2-tuple of `Distance.Distance`
+        Upper and lower limits of the stepper travel range.
+    STEPPER_CENTER : `Distance.Distance`
+        Center of the stepper travel range.
+    stepper_settings : dict
+        Dictionary of the stepper control board settings.
+
+    Methods
+    -------
+    energize()
+        Energize the stepper motor.
+    deenergize()
+        Deenergize the stepper motor.
+    home()
+        Home the stepper motor (using the built-in limit switch).
+    get_stepper_position()
+        Get the current stepper position.
+    get_piezo_position()
+        Get the current piezo position.
+    goto(position, which=None)
+        Move the stepper and/or piezo to the desired position. ``Which``
+        determines the movement type, which defaults to ``GENERAL``.
+    move(movement, which=None)
+        Move the stepper and/or piezo by the desired distance. ``Which``
+        determines the movement type, which defaults to ``GENERAL``.
+    """
 
     def __init__(self, axis: str, piezo, stepper, stepper_SN, autohome: bool = True):
+        """
+        Initializes `StageAxis` and checks stepper settings.
+
+        Given the piezo and stepper serial objects and the stepper
+        control board's serial number, the piezo and stepper travel range
+        limits are defined and the stepper settings are compared to those
+        in ``stepper_info.yaml``. 
+
+        Parameters
+        ----------
+        axis : {'x', 'y', 'z'}
+            Which axis this class instance will control.
+        piezo : `serial.Serial`
+            Serial object for the piezo controller.
+        stepper : `ticlib.TicUSB`
+            Serial object for the stepper controller.
+        stepper_SN : str
+            The serial number for the specific stepper control board.
+        autohome : bool, default=True
+            Whether to run the homing routine on upon establishing a
+            connection to the stepper control board.
+
+        Notes
+        -----
+        While the specs of the 3-axis NanoMax flexure translation stage
+        list the coarse movement travel range as 4 mm, several steppers
+        have been observed to have longer ranges, some exceeding 5 mm.
+        Additionally, the stepper motors travel range is 10mm, with the
+        stage's 4 mm range roughly in the center of the stage's range,
+        with some variation. For the steppers that have been measured, the
+        lower range listed in the file is the number of steps from the
+        limit switch until the actuator is engaged with stage, and the
+        upper limit is the number of steps from the limit switch until the
+        actuator pushes against the end of the stage's travel range. For
+        steppers lacking this information in ``stepper_info.yaml``,
+        conservative values are used. For ease of use, the stepper position
+        is set so that zero is at the lower stage limit.
+        """
+
         self.axis = axis
         self.piezo = piezo
         self.stepper = stepper
@@ -71,23 +227,23 @@ class StageAxis:
                 raise Exception(f"Stepper {self.stepper_SN} step mode is set to " +
                         str(self.stepper.get_step_mode()) +
                         " instead of the expected value of 5 (32 microsteps per step).")
-            self.step_mode_mult = 32    # currently going to enforce this
+            self._step_mode_mult = 32    # currently going to enforce this
 
             #   getting stage limits from yaml file, if possible
             if stepper_SN in stepper_info.keys():
-                self.TRUE_STEPPER_LIMITS = (Distance(stepper_info[stepper_SN][0], 'fullsteps'),
+                self._TRUE_STEPPER_LIMITS = (Distance(stepper_info[stepper_SN][0], 'fullsteps'),
                                        Distance(stepper_info[stepper_SN][1], 'fullsteps'))
             else:
                 #   should be safe values
-                self.TRUE_STEPPER_LIMITS = (Distance(1000, 'fullsteps'),
+                self._TRUE_STEPPER_LIMITS = (Distance(1000, 'fullsteps'),
                                        Distance(2800, 'fullsteps'))
                 warnings.warn(f"Stepper serial number {stepper} is not in stepper_info.yaml." +
                             "Stage range set to safe defaults.")
             log.debug(f"True stepper {self.stepper_SN} stage limits set to " +
-            f"({self.TRUE_STEPPER_LIMITS[0].prettyprint()}, {self.TRUE_STEPPER_LIMITS[1].prettyprint()})")
+            f"({self._TRUE_STEPPER_LIMITS[0].prettyprint()}, {self._TRUE_STEPPER_LIMITS[1].prettyprint()})")
 
             self.STEPPER_LIMITS = (Distance(0, 'fullsteps'),
-                self.TRUE_STEPPER_LIMITS[1] - self.TRUE_STEPPER_LIMITS[0])
+                self._TRUE_STEPPER_LIMITS[1] - self._TRUE_STEPPER_LIMITS[0])
 
             # stepper center is defined with lower limit = 0 steps
             self.STEPPER_CENTER = (self.STEPPER_LIMITS[1] - self.STEPPER_LIMITS[0]) / 2
@@ -132,6 +288,11 @@ class StageAxis:
                 log.debug(f"Stepper {stepper_SN} settings are as expected")
 
     def __enter__(self):
+        """
+        Energize and home (if enabled) the stepper upon entering context.
+
+        Returns ``self`` for use in 'with... as...' statements.
+        """
         if self.stepper is None:
             return self
         self.energize()
@@ -140,22 +301,74 @@ class StageAxis:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        #   gracefully stop and deenergize the stepper when done
+        """
+        Deenergize the stepper upon exiting context.
+
+        Returns ``False``, letting exceptions propogate.
+        """
         if self.stepper is None:
             return False
         self.deenergize()
         return False
 
     def _position_uncertain(self):
+        """
+        Get the ``position_uncertain`` flag from the stepper control board.
+
+        If the motor is uncertain of its position (``True``) then move
+        commands will be ignored. Successfully homing the stepper should
+        result in ``position_uncertain`` being set to ``False``.
+
+        Returns
+        -------
+        bool
+            ``position_uncertain`` flag.
+        """
         return (self.stepper.get_misc_flags()[0] >> 1) & 1
 
     def _energized(self):
+        """
+        Get the ``energized`` flag from the stepper control board.
+        
+        If the motor is not energized (``False``) then move commands
+        will be ignored.
+
+        Returns
+        -------
+        bool
+            ``energized`` flag.
+        """
         return (self.stepper.get_misc_flags()[0]) & 1
 
     def _homing_active(self):
+        """
+        Get the ``homing_active`` flag from the stepper control board.
+
+        This flag is only true when the stepper is actively homing.
+
+        Returns
+        -------
+        bool
+            ``homing_active`` flag.
+        """
         return (self.stepper.get_misc_flags()[0] >> 4) & 1
 
     def _goto_piezo(self, voltage: float) -> MoveResult:
+        """
+        Set the piezo to the desired position (voltage).
+
+        Parameters
+        ----------
+        voltage : float
+            The voltage to set the piezo to. If this is outside the
+            travel limits of the piezo, it will be moved to the nearest
+            limit.
+
+        Returns
+        -------
+        `MoveResult`
+            Info to be logged regarding the movement.
+        """
         clamped = max(self.PIEZO_LIMITS[0].volts,
                       min(self.PIEZO_LIMITS[1].volts, voltage)) #piezo voltage limits
         if clamped != voltage:
@@ -170,6 +383,21 @@ class StageAxis:
         return MoveResult(Distance(clamped, 'volts'), MovementType.PIEZO)
 
     def _goto_stepper(self, steps: int) -> MoveResult:
+        """
+        Set the stepper to the desired position (steps).
+
+        Parameters
+        ----------
+        steps : int
+            The position in steps to move the motor to. If this is outside
+            the travel limits of the stage, it will be moved to the
+            nearest limit.
+
+        Returns
+        -------
+        `MoveResult`
+            Info to be logged regarding the movement.
+        """
         if not self._energized():
             raise RuntimeError(f"Axis {self.axis} stepper {self.stepper_SN} not energized")
 
@@ -188,6 +416,12 @@ class StageAxis:
         return MoveResult(Distance(steps, 'steps'), MovementType.STEPPER)
 
     def energize(self):
+        """
+        Energize the stepper motor.
+
+        Set the stepper motor to be in an energized state. The control
+        board will ignore move commands if the stepper is not energized.
+        """
         if self._energized():
             log.info(f"Axis {self.axis} stepper {self.stepper_SN} is already energized")
             return
@@ -197,6 +431,11 @@ class StageAxis:
         log.info(f"Axis {self.axis} stepper {self.stepper_SN} energized")
 
     def deenergize(self):
+        """
+        Deenergize the stepper motor.
+        Set the motor to be in a deenergized state. The control board will
+        ignore move commands until the board is re-energized.
+        """
         if not self._energized():
             log.info(f"Axis {self.axis} stepper {self.stepper_SN} is already deenergized")
             return
@@ -206,6 +445,20 @@ class StageAxis:
         log.info(f"Axis {self.axis} stepper {self.stepper_SN} deenergized")
 
     def home(self):
+        """
+        Home the stepper.
+
+        Run the homing routine for the stepper, then move the stepper to
+        the lower stage limit and set that position to zero.
+
+        Notes
+        -----
+        The homing routine uses a limit switch installed in the stepper
+        to calibrate its position. First, it moves the motor towards the
+        limit switch until it is active. Then, it slowly moves the motor
+        away from the limit switch until it is no longer active. This
+        position is then set to be the zero point.
+        """
         if not self._energized():
             raise RuntimeError(f"Axis {self.axis} stepper {self.stepper_SN} not energized")
         self.stepper.go_home(0)
@@ -215,16 +468,33 @@ class StageAxis:
             time.sleep(0.1)
 
         #   set lower stage limit to 0
-        self._goto_stepper(self.TRUE_STEPPER_LIMITS[0].steps)
+        self._goto_stepper(self._TRUE_STEPPER_LIMITS[0].steps)
         self.stepper.halt_and_set_position(0)
         log.debug(f"Axis {self.axis} stepper {self.stepper_SN} homing complete, " +
-                    f"zeroed at lower stage limit {self.TRUE_STEPPER_LIMITS[0].prettyprint()}")
+                    f"zeroed at lower stage limit {self._TRUE_STEPPER_LIMITS[0].prettyprint()}")
 
     def get_stepper_position(self):
+        """
+        Get the position of the stepper motor.
+
+        Returns
+        -------
+        `Distance.Distance`
+            Position of the stepper relative to the zero point (lower stage
+            movement limit if stepper has been homed).
+        """
         position = self.stepper.get_current_position()
         return Distance(position, "steps")
 
     def get_piezo_position(self):
+        """
+        Get the position of the piezo.
+
+        Returns
+        -------
+        `Distance.Distance`
+            Position of the piezo relative to the zero point.
+        """
         self.piezo.read(8)          #seems to clear better than flushing?
         self.piezo.flush()
         self.piezo.flushInput()
@@ -235,6 +505,32 @@ class StageAxis:
         return Distance(float(position), 'volts')
 
     def goto(self, position: Distance, which: Optional[MovementType] = None) -> MoveResult:
+        """
+        Move stepper and/or piezo to the desired position.
+
+        If `which` is ``PIEZO``, the piezo will be set to `position`, taking
+        ``PIEZO_LIMITS[0]`` to be zero. If `which` is ``STEPPER``, the
+        stepper will be set to `position`, taking ``STEPPER_LIMITS[0]`` to
+        be zero. If `which` is ``GENERAL``, then ``STEPPER_LIMITS[0]`` is
+        taken to be zero. Then, if `position` is accessible with just the
+        piezo, then only the piezo will be used. If the piezo cannot reach
+        `position`, then the piezo is centered in its range and the
+        stepper moves so that the stage itself will have moved to `position`.
+
+        Parameters
+        ----------
+        position : `Distance.Distance`
+            Desired position to move to.
+        which : `MovementType`, optional
+            Which of the movement methods to use. ``None`` defaults
+            to ``GENERAL``.
+
+        Returns
+        -------
+        `MoveResult`
+            Info to be logged regarding the movement.
+        """
+            
         if which is None:
             which = MovementType.GENERAL
 
@@ -258,6 +554,24 @@ class StageAxis:
         raise ValueError("which must be a MovementType enum or None.")
 
     def move(self, movement: Distance, which: Optional[MovementType] = None) -> MoveResult:
+        """
+        Move the stepper and/or piezo by the desired distance.
+
+        If `which` is ``PIEZO``, the piezo will be moved by `movement`, taking ``PIEZO_LIMITS[0]`` to be zero. If `which` is ``STEPPER``, the stepper will be moved by `movement`, taking ``STEPPER_LIMITS[0]`` to be zero. If `which` is ``GENERAL`` and `movement` can be accomplished with just the piezo, then only the piezo will be moved. Otherwise, the piezo will be set to the center of its range and the stepper will move so that the stage itself will have moved by `movement`.
+        Parameters
+        ----------
+        movement : `Distance.Distance`
+            Desired distance to move.
+        which : `MovementType`, optional
+            Which of the movement methods to use. ``None`` defaults
+            to ``GENERAL``.
+
+        Returns
+        -------
+        `MoveResult`
+            Info to be logged regarding the movement.
+        """
+
         if which is None:
             which = MovementType.GENERAL
 
@@ -282,6 +596,78 @@ class StageAxis:
 
 
 class StageDevices:
+    """
+    Parent class of all devices associated with a single stage.
+
+    This class holds all of the subclasses for the devices associated with
+    a single 3-axis NanoMax translation flexure stage from ThorLabs
+    (<https://www.thorlabs.com/NewGroupPage9.cfm?ObjectGroup_ID=2386>).
+    The associated devices for a complete stage are a sensor (see
+    `SensorClasses.py`), a ThorLabs open-loop three-channel piezo
+    controller
+    (<https://www.thorlabs.com/newgrouppage9.cfm?objectgroup_id=1191>),
+    and three ThorLabs stepper motor actuators
+    (<https://www.thorlabs.com/thorproduct.cfm?partnumber=DRV208>)
+    controlled with three Pololu T834 controllers
+    (<https://www.pololu.com/product/3132>).
+
+    Parameters
+    ----------
+    name : str
+        Name of the stage.
+    piezo_port : str
+        File path for the piezo controller connection.
+    stepper_SNs : Dict[str, str]
+        Dictionary of strings mapping axis labels (x, y, z) to their
+        respective controller boards' serial numbers.
+    sensor : `SensorClasses.Sensor`
+        Sensor class to be used with the stage.
+    piezo_baud_rate : int
+        Baud rate of the piezo controller connection.
+    require_connection : bool, default=False
+        If ``True``, failure to connect to the piezo controller or the
+        stepper controllers will raise an exception. Otherwise, these
+        failures will be logged at the ``warning`` level.
+    autohome : bool, default=True
+        Whether to run the homing routine on upon establishing a
+        connection to the stepper control board.
+
+    Attributes
+    ----------
+    name : str
+        Name of the stage.
+    sensor : `SensorClasses.Sensor`
+        Sensor used with the stage.
+    axes : Dict[str, `StageAxis` or ``None``]
+        Dictionary of stage axes, with the axis names as keys and
+        `StageAxis` classes as values.
+    piezo_port : str
+        File path for the piezo controller connection.
+    piezo_baud_rate : int
+        Baud rate of the piezo controller connection.
+
+    Methods
+    -------
+    energize(axes=None)
+        Energize one or more stepper (default all).
+    deenergize(axes=None)
+        Deenergize one or more stepper (default all).
+    home(axes=None):
+        Home one or more stepper (default all).
+    move(axis, movement, which=None)
+        Move an axis by some amount using its stepper and/or piezo.
+    goto(axis, position, which=None)
+        Move an axis to a position using its stepper and/or piezo.
+    read()
+        Read the value of the sensor.
+    integrate(Texp, avg=True)
+        Read the sensor over `Texp` and return the sum or average (default).
+
+    Notes
+    -----
+    For simulated staged, see `SimulationClasses.py`. This class is only
+    for real, physical stages.
+    """
 
     def __init__(self, name: str, piezo_port: str, stepper_SNs: Dict[str, str],
                  sensor: Sensor = None, piezo_baud_rate: int = 115200,
@@ -322,23 +708,45 @@ class StageDevices:
             self.axes[axis] = StageAxis(axis, piezo, stepper, stepper_SN, autohome)
 
     def __enter__(self):
+        """
+        Enters the context management of each `StageAxis` in `axes`.
+
+        Returns ``self`` for use in 'with... as...' statements.
+        """
         for axis, stageAxis in self.axes.items():
             self._exit_stack.enter_context(stageAxis)
             log.debug(f"Axis {axis} context entered for stepper {stageAxis.stepper_SN}")
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        """
+        Exits all open contexts.
+
+        Returns ``False``, letting exceptions propogate.
+        """
         self._exit_stack.close()
         log.debug("Exited context stack")
         return False
 
     def __str__(self):
+        """Returns `name`."""
         return self.name
 
     def __repr__(self):
+        """Returns `name`."""
         return self.name
 
     def deenergize(self, axes: Optional[str] = None):
+        """
+        Deenergize the steppers of one or more axes.
+
+        Parameters
+        ----------
+        axes : str, optional
+            Which axes' steppers to deenergize, all listed in a single
+            string (e.g. ``'xz'``), or ``'all'`` for all axes. ``None``
+            defaults to ``'all'``.
+        """
         if axes is None or axes.lower() == 'all':
             axes = 'xyz'
         axes = list(axes)
@@ -346,6 +754,16 @@ class StageDevices:
             self.axes[axis].deenergize()
 
     def home(self, axes: Optional[str] = None):
+        """
+        Home the steppers of one or more axes.
+
+        Parameters
+        ----------
+        axes : str, optional
+            Which axes' steppers to home, all listed in a single
+            string (e.g. ``'xz'``), or ``'all'`` for all axes. ``None``
+            defaults to ``'all'``.
+        """
         if axes is None or axes.lower() == 'all':
             axes = 'xyz'
         axes = list(axes)
@@ -353,6 +771,16 @@ class StageDevices:
             self.axes[axis].home()
 
     def energize(self, axes: Optional[str] = None):
+        """
+        Energize the steppers of one or more axes.
+
+        Parameters
+        ----------
+        axes : str, optional
+            Which axes' steppers to energize, all listed in a single
+            string (e.g. ``'xz'``), or ``'all'`` for all axes. ``None``
+            defaults to ``'all'``.
+        """
         if axes is None or axes.lower() == 'all':
             axes = 'xyz'
         axes = list(axes)
@@ -360,22 +788,78 @@ class StageDevices:
             self.axes[axis].energize()
 
     def move(self, axis: str, movement: Distance, which: Optional[MovementType] = None):
+        """
+        Move `axis` by `movement` using its stepper and/or piezo.
+
+        Parameters
+        ----------
+        axis : {'x', 'y', 'z'}
+            Which axis to move.
+        movement : `Distance.Distance`
+            What distance to move the given axis.
+        which : `MovementType`, optional
+            Which movement type to use. See `StageAxis.move` for more
+            information on the behaviour of the movement types.
+
+        Returns
+        -------
+        `MovementResult`
+            Info to be logged regarding the movement.
+        """
         result = self.axes[axis].move(movement, which)
         log.trace(f"{self.name}, Axis {axis} :" + result.text)
         return result
 
     def goto(self, axis: str, position: Distance, which: Optional[MovementType] = None):
+        """
+        Move `axis` to `position` using its stepper and/or piezo.
+
+        Parameters
+        ----------
+        axis : {'x', 'y', 'z'}
+            Which axis to move.
+        position : `Distance.Distance`
+            What position to move the given axis to.
+        which : `MovementType`, optional
+            Which movement type to use. See `StageAxis.move` for more
+            information on the behaviour of the movement types.
+
+        Returns
+        -------
+        `MovementResult`
+            Info to be logged regarding the movement.
+        """
         result = self.axes[axis].goto(position, which)
         log.trace(f"{self.name} Axis {axis} : " + result.text)
         return result
 
     def read(self):
+        """
+        Read the value of the sensor.
+
+        See `SensorClasses.Socket` and `SensorClasses.Piplate`.
+
+        Returns
+        -------
+        float or int
+            Value read from the sensor.
+        """
         if self.sensor is None:
             log.warning("No sensor assigned to {self.name}")
             return None
         return self.sensor.read()
 
     def integrate(self, Texp: Union[int, float], avg: bool = True):
+        """
+        Integrate the value of the sensor of `Texp`.
+
+        See `SensorClasses.Socket` and `SensorClasses.Piplate`.
+
+        Returns
+        -------
+        float or int
+            Integrate value from the sensor.
+        """
         if self.sensor is None:
             log.warning("No sensor assigned to {self.name}")
             return None

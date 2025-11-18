@@ -80,6 +80,11 @@ class Piplate:
         """
         Read the voltage from the Pi-Plate input (once) .
 
+        Returns
+        -------
+        float
+            The value of the Pi-Plate input.
+
         Notes
         -----
         It is currently unclear whether the value returned is volts or
@@ -108,6 +113,11 @@ class Piplate:
         avg : bool, default=False
             Whether to average the total integrated value over the number
             of readings.
+
+        Returns
+        -------
+        float
+            The integrated value from the Pi-Plate.
 
         Notes
         -----
@@ -196,6 +206,11 @@ class Socket:
     def read(self):
         """
         Get a sensor reading over 1 ms from the server.
+
+        Returns
+        -------
+        int
+            Value returned from the socket server.
         """
         # getting a single reading does not make sense with the qutag
         # uses 1ms integration time to be similar to other sensors
@@ -217,10 +232,15 @@ class Socket:
             Whether the server should return the sum (default) or average
             reading over `Texp`. Currently ignored and reserved for
             future use.
+
+        Returns
+        -------
+        float
+            The integrated value from the socket server.
         """
         self.connection.sendall(str(Texp).encode('utf-8'))
         power = float(self.connection.recv(1024).decode('utf-8'))
-        power = int(power)
+        # power = int(power)
         log.trace(f"Socket at host {self.host} port {self.port} : " +
                 f"returned {sigfig.round(power, 6, warn=False)} {'averaged ' if avg else ''}over {Texp}ms")
         return power
@@ -265,7 +285,7 @@ class Sensor:
         """
         No-op method for use with context management.
 
-        Returns self for use in 'with... as...' statements.
+        Returns ``self`` for use in 'with... as...' statements.
         """
         pass
         log.debug("Entered sensor context")
@@ -285,7 +305,12 @@ class Sensor:
         """
         Read the value of the sensor.
 
-        Refer to the sensor subclasses for more details.
+        See `Piplate` and `Socket` for more details.
+
+        Returns
+        -------
+        float or int
+            Value read from the sensor.
         """
         return self.sensor.read()
 
@@ -293,7 +318,7 @@ class Sensor:
         """
         Returns the value of the sensor over `Texp`.
 
-        Refer to the sensor subclasses for more details.
+        See `Piplate` and `Socket` for more details.
 
         Parameters
         ----------
@@ -304,5 +329,10 @@ class Sensor:
         avg : bool, default=True
             Whether to average the sensor output over the integration
             time. Ignored by some sensors.
+
+        Returns
+        -------
+        float or int
+            Integrated value from the sensor.
         """
         return self.sensor.integrate(Texp, avg)
