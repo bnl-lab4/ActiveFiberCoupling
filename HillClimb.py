@@ -1,12 +1,16 @@
 ############### TODO
-# recursive hill climbing
 # climb in an arbitrary direction (vector input)
+# Enable general movement that switches from stepper to piezo appropriately
+# Recursion improvements:
+#   different (larger) step size for first iteration of recursion
+#   Backtracking not working (on outer recursion levels, at least)
+#   Confirm/handle if the recursed-upon (deeper) hill climbing is helping or hurting
+#   Different movement types for each axis (to be effected in main.py)
 ###############
 
 # for Aaron's Ubuntu WSL troubles
 import matplotlib
-matplotlib.use('Agg')
-
+# matplotlib.use('Agg')
 import math
 import logging
 import sigfig
@@ -104,10 +108,12 @@ def hill_climb(stage: StageDevices, axis: str, movementType: MovementType,
     last = deque(maxlen=Ndecrease)
     current = stage.integrate(exposureTime)
     results = [current, ]
+    # breakpoint()
     for n in range(max_steps):
         last.append(current + abs(current) * softening)
         _ = stage.move(axis, step_size, movementType)
         if len(recurse_args) > 0:
+            log.info(f"recursing onto axes {recurse_args[2]}")
             run(stage, *recurse_args, **recurse_kwargs)
         current = stage.integrate(exposureTime)
         results.append(current)

@@ -38,15 +38,15 @@ import ContinuousReadout
 
 # Device info constants
 SOCKET0 = dict(host = '192.168.1.10', port = 8000, sensortype = SensorType.SOCKET)
-SIPM0 = dict(addr = 0, channel = 1, sensortype = SensorType.SIPM)
-SIPM1 = dict(addr = 0, channel = 0, sensortype = SensorType.SIPM)
+SIPM0 = dict(addr = 0, channel = 0, sensortype = SensorType.SIPM)
+SIPM1 = dict(addr = 0, channel = 1, sensortype = SensorType.SIPM)
 PHOTODIODE0 = dict(addr = 0, channel = 1, sensortype = SensorType.PHOTODIODE)
 PHOTODIODE1 = dict(addr = 0, channel = 2, sensortype = SensorType.PHOTODIODE)
 SIMSENSOR_ASPH = dict(propagation_axis = 'y', focal_ratio = 4.0, angle_of_deviation = 3/180)
 SIMSENSOR_LABTELE = dict(propagation_axis = 'y', focal_ratio = 28.0, angle_of_deviation = 0)
 SIMSENSOR_SKYTELE = dict(propagation_axis = 'y', focal_ratio = 7.0, angle_of_deviation = 30/180)
 
-SENSOR0 = SIMSENSOR_SKYTELE
+SENSOR0 = SIPM0
 SENSOR1 = SIMSENSOR_ASPH
 
 PIEZO_PORT0 = '/dev/ttyACM0'

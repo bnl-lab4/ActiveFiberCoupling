@@ -1,3 +1,4 @@
+import time
 import logging
 import contextlib
 import math
@@ -135,6 +136,7 @@ class SimulationSensor:
         Simulated integration. Since time is not simulated, this just returns
         a single reading, ignoring Texp and avg.
         """
+        time.sleep(0.01)
         result = self.read()
         log.debug(f"{self.stage.name} simulation sensor power: {result:.6f}")
         return result
