@@ -377,9 +377,9 @@ class Distance:
         ----------
         which : Sequence[str], str, optional
             A single string or a sequence of strings, each of which must
-            be one of the following: ``'all'``, ``'microns'``, ``'volts'``,
-            ``'steps'``, ``'fullsteps'``. The default value of ``None``
-            is equivalent to ``'all'``.
+            be one of the following: 'all', 'microns', 'volts',
+            'steps', 'fullsteps'. The default value of ``None``
+            is equivalent to 'all'.
         stacked : bool=False
             If True, all of the requested values will be printed in a single
             line. If False (default), a newline character will be inserted

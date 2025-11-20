@@ -748,8 +748,8 @@ class StageDevices:
         ----------
         axes : str, optional
             Which axes' steppers to deenergize, all listed in a single
-            string (e.g. ``'xz'``), or ``'all'`` for all axes. ``None``
-            defaults to ``'all'``.
+            string (e.g. 'xz'), or 'all' for all axes. ``None``
+            defaults to 'all'.
         """
         if axes is None or axes.lower() == 'all':
             axes = 'xyz'
@@ -765,8 +765,8 @@ class StageDevices:
         ----------
         axes : str, optional
             Which axes' steppers to home, all listed in a single
-            string (e.g. ``'xz'``), or ``'all'`` for all axes. ``None``
-            defaults to ``'all'``.
+            string (e.g. 'xz'), or 'all' for all axes. ``None``
+            defaults to 'all'.
         """
         if axes is None or axes.lower() == 'all':
             axes = 'xyz'
@@ -782,8 +782,8 @@ class StageDevices:
         ----------
         axes : str, optional
             Which axes' steppers to energize, all listed in a single
-            string (e.g. ``'xz'``), or ``'all'`` for all axes. ``None``
-            defaults to ``'all'``.
+            string (e.g. 'xz'), or 'all' for all axes. ``None``
+            defaults to 'all'.
         """
         if axes is None or axes.lower() == 'all':
             axes = 'xyz'
