@@ -1,3 +1,7 @@
+"""
+Reports the status of a stage (`MovementClasses.StageDevices`).
+"""
+
 import math
 import sigfig
 from typing import Union, Optional
@@ -9,12 +13,40 @@ VALID_AXES = ['x', 'y', 'z']
 
 def run(stage: StageDevices, exposureTime: Union[int, float], which: Optional[str] = None,
         expose: bool = True, verbose: bool = True, log: bool = False):
-    if which is not None:
-        which = which.lower()
-    else:
-        which = 'all'
+        """
+        Print the status of all/some of steppers, piezos, and sensor.
 
-    assert which in ('all', 'general', 'stepper', 'piezo', 'sensor'), 'Invalid which input'
+        Parameters
+        ----------
+        stage : `MovementClasses.StageDevices`
+            Stage to report the status of.
+        exposureTime : int, float
+            Exposure time to use for reporting sensor reading.
+        which : {'all', 'general', 'stepper', 'piezo', 'sensor', None}, optional
+            Which parts of the stage to report the status of. 'all' and
+            ``None`` (default) report on the steppers, piezos, and sensor.
+            'general' reports on the steppers and piezos, but not the sensor.
+        expose : bool, default=True
+            Whether to take and report a reading from the sensor.
+        verbose : bool, default=True
+            Whether to report values stored as `Distance.Distance` objects
+            in all units (using ``prettyprint()``) or just in microns.
+        log : bool, default=False
+            Whether to log the report.
+
+        Returns
+        -------
+        str
+            Multiline report on stage status.
+        """
+
+    if which is None:
+        which = 'all'
+    else:
+        which = which.lower()
+
+    if which not in ('all', 'general', 'stepper', 'piezo', 'sensor'):
+        raise ValueError("Invalid input for which")
 
     if which == 'all':
         show_stepper = True
@@ -25,15 +57,12 @@ def run(stage: StageDevices, exposureTime: Union[int, float], which: Optional[st
         show_piezo = False
         show_sensor = False
 
-    if which == 'stepper':
+    if which == 'stepper' or which == 'general':
         show_stepper = True
-    if which == 'piezo':
+    if which == 'piezo' or which == 'general':
         show_piezo = True
     if which == 'sensor':
         show_sensor = True
-    if which == 'general':
-        show_piezo = True
-        show_stepper = True
 
     lines = []
     lines.append(f"---------- {stage.name} status ----------\n")
