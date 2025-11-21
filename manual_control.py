@@ -1,3 +1,7 @@
+"""
+Input context for manual control of a stage.
+"""
+
 import time
 
 from StageStatus import run as status
@@ -6,8 +10,37 @@ from Distance import Distance
 
 
 def run(stage, ExposureTime):
+    """
+    Allows for manual control of a stage via text commands.
+
+    Commands should consist of 3 or 4 space-separated arguments
+    (case-insensitive): [axis] [device] [value] [unit, optional]. [axis]
+    should be 'x', 'y', or 'z'. Acceptable values of [device] map to the
+    values of `MovementClasses.MovementType`, with first-letter
+    abbreviations accepted. [value] is assumed to be in microns unless
+    [unit] is specified as either 'microns', 'volts', 'steps', or
+    'fullsteps', or first-letter abbreviations thereof. If in 'move>>'
+    mode, [device] is move by [value]. If in 'goto>>' mode, [device] is
+    moved to [value].  Besides an int or float, [value] can also be 'zero',
+    'center', or 'max' to move the [device] to the lower limit, center, or
+    upper limit of its travel, respectively. Change between 'move>>' and
+    'goto>>' modes with keywords 'move' and 'goto'. To change the exposure
+    time, enter 'texp [int]', where [int] is the desired exposure time in
+    ~milliseconds (approximately, see `SensorClasses.Sensor.integrate`). An
+    empty input string results in the integrated sensor value being
+    printed. 'status' results in the stage status being printed. If in
+    status mode ('status on', 'status off'), the position of the device
+    that was moved will be printed after each move. 'q' exits the manual
+    control context.
+
+    Parameters
+    ----------
+    ExposureTime : int, float
+        Exposure time to use when integrating the sensor value.
+    """
+
     print("""
-'q' returns to menu, 'ENTER' returns integrated signal. 'texp' [int] changes exposure time.
+'q' returns to menu, Enter key (empty input) returns integrated signal. 'texp' [int] changes exposure time.
 Enter command as [axis] [device] [value], with an optional [unit] argument.
 Arguments must be space separated. [device] can be 'piezo', 'stage', 'general, 'p', 's', or 'g'.
 Units can be 'microns', 'volts', 'steps', 'fullsteps' (or 'u', 'v', 's', 'fs').
@@ -18,10 +51,9 @@ Switch between goto and move (default) modes with 'goto' and 'move'.
 """)
     goto = False
     status_mode = False
-    WHICH_DICT = dict(p=(MovementType.PIEZO, 'volts'), piezo=(MovementType.PIEZO, 'volts'),
-                      s=(MovementType.STEPPER, 'microns'), stepper=(MovementType.STEPPER, 'microns'),
-                      g=(MovementType.GENERAL, 'microns'), general=(MovementType.GENERAL, 'microns'))
-    # string in tuples in WHICH_DICT are default units for that devic
+    WHICH_DICT = dict(p=MovementType.PIEZO, piezo=MovementType.PIEZO,
+                      s=MovementType.STEPPER, stepper=MovementType.STEPPER,
+                      g=MovementType.GENERAL, general=MovementType.GENERAL)
     AXES = ('x', 'y', 'z')
     UNITS = ('microns', 'volts', 'steps', 'fullsteps')
     UNITS_ABRV = dict(u=UNITS[0], m=UNITS[0], v=UNITS[1],
@@ -81,7 +113,7 @@ Switch between goto and move (default) modes with 'goto' and 'move'.
             continue
 
         if len(user_input) == 3:
-            user_input.append(None)
+            user_input.append('microns')
 
         axis, device, value, unit = user_input
         if axis.lower() not in AXES:
@@ -91,18 +123,15 @@ Switch between goto and move (default) modes with 'goto' and 'move'.
             print('Invalid input: Device must be s, p, stepper, or piezo')
             continue
 
-        if unit is not None:
-            if unit in UNITS:
-                pass
-            elif unit in UNITS_ABRV.keys():
-                unit = UNITS_ABRV[unit]
-            else:
-                print('Invalid input: Unit must be u, v, s, fs')
-                continue
+        if unit in UNITS:
+            pass
+        elif unit in UNITS_ABRV.keys():
+            unit = UNITS_ABRV[unit]
         else:
-            unit = WHICH_DICT[device][1]
+            print('Invalid input: Unit must be u, v, s, fs')
+            continue
 
-        movetype = WHICH_DICT[device][0]
+        movetype = WHICH_DICT[device]
 
         special = False
         if value.lower() == 'zero':
