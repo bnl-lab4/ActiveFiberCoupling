@@ -135,7 +135,7 @@ class StageAxis:
     Attributes
     ----------
     axis : {'x', 'y', 'z'}
-        Which axis of the stage is controlled by this class instance.
+        Which axis of the stage is controlled.
     piezo : `serial.Serial`
         Serial object for the piezo controller.
     stepper : `ticlib.TicUSB`
@@ -359,13 +359,13 @@ class StageAxis:
 
     def _goto_piezo(self, voltage: float) -> MoveResult:
         """
-        Set the piezo to the desired position (voltage).
+        Set the piezo to the desired position (voltage), if able.
 
         Parameters
         ----------
         voltage : float
             The voltage to set the piezo to. If this is outside the
-            travel limits of the piezo, it will be moved to the nearest
+            travel limits of the piezo, it will be set to the nearest
             limit.
 
         Returns
@@ -373,6 +373,7 @@ class StageAxis:
         `MoveResult`
             Info to be logged regarding the movement.
         """
+
         clamped = max(self.PIEZO_LIMITS[0].volts,
                       min(self.PIEZO_LIMITS[1].volts, voltage)) #piezo voltage limits
         if clamped != voltage:
@@ -402,6 +403,7 @@ class StageAxis:
         `MoveResult`
             Info to be logged regarding the movement.
         """
+
         if not self._energized():
             raise RuntimeError(f"Axis {self.axis} stepper {self.stepper_SN} not energized")
 
@@ -409,7 +411,7 @@ class StageAxis:
             raise RuntimeError(f"Axis {self.axis} stepper {self.stepper_SN} position is uncertain and needs homing")
 
         clamped = max(self.STEPPER_LIMITS[0].steps,
-                      min(self.STEPPER_LIMITS[1].steps, steps)) #piezo steps limits
+                      min(self.STEPPER_LIMITS[1].steps, steps)) #stepper steps limits
         if clamped != steps:
             log.warning(f"Cannot move {self.axis} stepper {self.stepper_SN} to {steps} because it is" +
             "outside the stepper's stage limits of" +
@@ -515,7 +517,9 @@ class StageAxis:
         If `which` is ``PIEZO``, the piezo will be set to `position`, taking
         ``PIEZO_LIMITS[0]`` to be zero. If `which` is ``STEPPER``, the
         stepper will be set to `position`, taking ``STEPPER_LIMITS[0]`` to
-        be zero. If `which` is ``GENERAL``, then ``STEPPER_LIMITS[0]`` is
+        be zero.
+
+        If `which` is ``GENERAL``, then ``STEPPER_LIMITS[0]`` is
         taken to be zero. Then, if `position` is accessible with just the
         piezo, then only the piezo will be used. If the piezo cannot reach
         `position`, then the piezo is centered in its range and the
@@ -561,7 +565,13 @@ class StageAxis:
         """
         Move the stepper and/or piezo by the desired distance.
 
-        If `which` is ``PIEZO``, the piezo will be moved by `movement`, taking ``PIEZO_LIMITS[0]`` to be zero. If `which` is ``STEPPER``, the stepper will be moved by `movement`, taking ``STEPPER_LIMITS[0]`` to be zero. If `which` is ``GENERAL`` and `movement` can be accomplished with just the piezo, then only the piezo will be moved. Otherwise, the piezo will be set to the center of its range and the stepper will move so that the stage itself will have moved by `movement`.
+        If `which` is ``PIEZO``, the piezo will be moved by `movement`.
+        If `which` is ``STEPPER``, the stepper will be moved by `movement`.
+        If `which` is ``GENERAL`` and `movement` can be accomplished with
+        just the piezo, then only the piezo will be moved. Otherwise, the
+        piezo will be set to the center of its range and the stepper will
+        move so that the stage itself will have moved by `movement`.
+
         Parameters
         ----------
         movement : `Distance.Distance`
@@ -669,7 +679,7 @@ class StageDevices:
 
     Notes
     -----
-    For simulated staged, see `SimulationClasses.py`. This class is only
+    For simulated stages, see `SimulationClasses.py`. This class is only
     for real, physical stages.
     """
 
