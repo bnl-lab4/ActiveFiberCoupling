@@ -1,11 +1,15 @@
+"""
+Control logging configuration of ActiveFiberCoupling.
+"""
+
 import warnings
 import os
 import logging
 from typing import Optional, Union
 
-SAFE_MODULES = ['MovementClasses', 'MovementUtils', 'StringUtils', 'SensorClasses',
+SAFE_MODULES = {'MovementClasses', 'MovementUtils', 'StringUtils', 'SensorClasses',
                 'SimulationClasses', 'HillClimb', 'grid_search', 'Distance',
-                'manual_control', 'StageStatus', 'LoggingUtils']
+                'manual_control', 'StageStatus', 'LoggingUtils'}
 
 # Initial logging setup
 log = logging.getLogger(__name__)
@@ -18,6 +22,7 @@ logging.addLevelName(TRACE_LEVEL_NUM, 'TRACE')
 
 
 def trace(self, message, *args, **kwargs):
+    """Custim logging level (5) below `logging.debug`."""
     if self.isEnabledFor(TRACE_LEVEL_NUM):
         self._log(TRACE_LEVEL_NUM, message, args, **kwargs) # unexpanded args is correct
 
@@ -31,46 +36,99 @@ logging.trace = lambda msg, *args, **kwargs: logging.log(TRACE_LEVEL_NUM, msg, *
 
 class OnlyAFCDebugs(logging.Filter):
     """
-    A filter that blocks DEBUG messages from any logger not in the safe list.
+    A filter that blocks DEBUG and below messages from any logger not in the safe list.
+
+    Parameters
+    ----------
+    name : str, default=''
+        Name of filter instance.
+    safe_modules : sequence[str], optional
+        Sequence containing names of loggers whose messages of level DEBUG
+        or lower are allowed through the filter.
+
+    Attributes
+    ----------
+    safe_modules : set[str]
+        Set containing names of loggers whose messages of level DEBUG or
+        lower are allowed through the filter.
+
+    Methods
+    -------
+    filter(record)
+        Determines whether a log record should be allowed through.
     """
+
     def __init__(self, name='', safe_modules=None):
         super().__init__(name)
         # Convert to a set for fast lookup
         self.safe_modules = set(safe_modules) if safe_modules else set()
 
     def filter(self, record):
-        # 1. Allow all messages that are NOT DEBUG (i.e., INFO, WARNING, etc.)
+        """
+        Determine whether a log record should be allowed through.
+
+        Log records with log levels 10 (DEBUG) and below (e.g. TRACE) are allowed through only if they come from a module on the `safe_modules` list.
+
+        Parameters
+        ----------
+        record : `logging.LogRecord`
+            Log record to be evaluated by the filter.
+
+        Returns
+        -------
+        bool
+            Whether the log record should be allowed to proceed (``True``)
+            or not (``False``).
+        """
+
         if record.levelno > logging.DEBUG:
             return True
 
-        # 2. For DEBUG messages, only allow them if the logger name is in the safe list
-        if record.levelno == logging.DEBUG:
-            # record.name is the name of the logger that originated the message
+        if record.levelno <= logging.DEBUG:
             if record.name in self.safe_modules:
-                return True # Pass DEBUG from a safe module
+                return True
             else:
-                return False # Block DEBUG from an unsafe module
-
-        return True # Catch-all for any other levels (like custom TRACE)
+                return False
 
 
 def verify_logfile(filepath):
+    """
+    Check that the filepath is valid to be a log file.
+
+    Checks if the filepath is valid, and creates the file if it does not
+    already exist.
+
+    Parameters
+    ----------
+    filepath : str
+        Path of the proposed log file.
+    
+    Returns
+    -------
+    bool
+        Whether `filepath` is valid (``True``) or not (``False``).
+
+    Notes
+    -----
+    Care is taken to handle potential race conditions, such as another
+    process creating the file in between determining the file does not
+    exist and creating it. Other ``OSError``s are caught and raised
+    as warnings.
+    """
+
     try:
-        # Check if the file exists
         if not os.path.exists(filepath):
-            # If the file does not exist, create it
-            # The 'x' mode is used for exclusive creation, failing if the file already exists.
-            # This is a safe way to create a new file and handle potential race conditions.
+            # 'x' mode for exclusive creation, helps with race conditions
             with open(filepath, 'x'):
-                pass  # Do nothing, just create the file
+                pass
             print(f"Log file created successfully at: {filepath}")
             return True
         else:
             print(f"Log file already exists at: {filepath}")
             return True
     except FileExistsError:
-        # This is a good practice to handle a rare race condition where a file
-        # is created by another process between the 'os.path.exists' check and 'open' call.
+        # Handles race condition where file is created by another process
+        # between the 'os.path.exists' check and 'open' call.
         print(f"Log file already exists at: {filepath}")
         return True
     except OSError as e:
@@ -80,8 +138,36 @@ def verify_logfile(filepath):
 
 
 def setup_logging(log_to_console: Optional[bool] = None, log_to_file: Optional[bool] = None,
-                  filename: Optional[str] = None, console_log_level: Union[str, int, None] = None,
-                              log_level: Union[str, int, None] = None):
+                  filename: Optional[str] = None, log_level: Union[str, int, None] = None,
+                        console_log_level: Union[str, int, None] = None):
+    """
+    Configure the logger, handlers, and filters.
+
+    Defines individual handlers for logging to the console and a log file,
+    each with their own log level. Separate handlers are created from
+    catching warnings and logging them to the console and the log file. 
+
+    Parameters
+    ----------
+    log_to_console : bool, optional
+        Whether to print log messages to the console (``True``) or
+        not (``False``)). Defaults to ``True``.
+    log_to_file : bool, optional
+        Whether to print log messages to the log file (``True``) or
+        not (``False``)). Defaults to ``True``.
+    filename : str, optional
+        Path for the file to log messages to. Defaults
+        to ``./log_output.txt``.
+    log_level : str, int, optional
+        The log level for the root logger. Can be the name of a log level
+        (e.g. INFO) or an int of the log level (20). Defaults
+        to `logging.debug`.
+    console_log_level : str, int, optional
+        The log level of the console logging handler. Only has an effect
+        if it is higher than `log_level`. Can be the name of a log level
+        (e.g. INFO) or an int of the log level (20). Defaults
+        to `logging.INFO`.
+    """
     # Logging Defaults
     if log_to_console is None:
         log_to_console = True
@@ -101,7 +187,7 @@ def setup_logging(log_to_console: Optional[bool] = None, log_to_file: Optional[b
         raise ValueError(f"log_level {log_level} is not in an acceptable form")
 
     if console_log_level is None or not log_to_console:
-        console_level = logging.INFO    # INFO for now, WARNING during science use
+        console_level = logging.INFO
     elif isinstance(console_log_level, str):
         # Map string to logging level
         console_level = getattr(logging, console_log_level.upper(), logging.INFO)
@@ -173,6 +259,14 @@ def setup_logging(log_to_console: Optional[bool] = None, log_to_file: Optional[b
 
 
 def Update_Logging():
+    """
+    Series of questions allowing user to update logging configuration.
+
+    Allows the user to change the logging configuration without exiting
+    `main.py`. For each of the inputs to `setup_logging`, entering ``s``
+    or ``skip`` will retain the current setting. Calls `setup_logging` at
+    the end, which will instantiate a new logger and handlers.
+    """
     SettingNames = ["Log to console", 'Log to file', 'Log filename', 'Console log level', 'Log level']
     LoggingSettings = {name : None for name in SettingNames}
 
