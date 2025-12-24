@@ -1,13 +1,14 @@
 """
 Defines the `Distance` class as a general quantity with several equivalent units.
 """
+
 import sigfig
 from typing import Union, Sequence
-from collections.abc import Sequence as sequence # sorry
+from collections.abc import Sequence as sequence  # sorry
 from numbers import Real
 
 
-def _sfround(number, sigfigs = 3, decimals = 1):
+def _sfround(number, sigfigs=3, decimals=1):
     """
     Convinience wrapper on sigfig.round for `Distance.prettyprint`.
 
@@ -87,6 +88,7 @@ class Distance:
     --------
 
     """
+
     _MICRONS_PER_VOLT = 20 / 75
     _MICRONS_PER_FULL_STEP = 2.5
     _MICRONS_PER_STEP = _MICRONS_PER_FULL_STEP / 32
@@ -99,13 +101,15 @@ class Distance:
             self._microns = float(value) * self._MICRONS_PER_VOLT
         elif unit == "steps":
             self._microns = float(value) * self._MICRONS_PER_STEP
-        elif unit == 'fullsteps':
+        elif unit == "fullsteps":
             self._microns = float(value) * self._MICRONS_PER_FULL_STEP
         else:
-            raise ValueError(f"Unsupported unit '{unit}':" +
-                "unit must be 'microns', 'volts', 'steps', or 'fullsteps'")
+            raise ValueError(
+                f"Unsupported unit '{unit}':"
+                + "unit must be 'microns', 'volts', 'steps', or 'fullsteps'"
+            )
 
-############# Operations
+    ############# Operations
 
     def __neg__(self):
         """
@@ -116,7 +120,7 @@ class Distance:
         `Distance`
             A new instance of the `Distance` class with an oppositely-signed value.
         """
-        return Distance(-self.microns, 'microns')
+        return Distance(-self.microns, "microns")
 
     def __abs__(self):
         """
@@ -127,7 +131,7 @@ class Distance:
         `Distance`
             A new instance of the `Distance` class with a positively-signed value.
         """
-        return Distance(abs(self.microns), 'microns')
+        return Distance(abs(self.microns), "microns")
 
     def __add__(self, other):
         """
@@ -145,7 +149,7 @@ class Distance:
         """
         if isinstance(other, Distance):
             new_microns = self.microns + other.microns
-            return Distance(new_microns, 'microns')
+            return Distance(new_microns, "microns")
 
         raise TypeError("Addition is only supported with other Distance objects")
 
@@ -171,7 +175,7 @@ class Distance:
         """
         if isinstance(other, Distance):
             new_microns = self.microns - other.microns
-            return Distance(new_microns, 'microns')
+            return Distance(new_microns, "microns")
 
         raise TypeError("Subtraction is only supported with other Distance objects")
 
@@ -197,7 +201,7 @@ class Distance:
         """
         if isinstance(other, Real):
             new_microns = self.microns * other
-            return Distance(new_microns, 'microns')
+            return Distance(new_microns, "microns")
 
         raise TypeError("Multiplication is only supported with scalars")
 
@@ -223,7 +227,7 @@ class Distance:
         """
         if isinstance(other, Real):
             new_microns = self.microns / other
-            return Distance(new_microns, 'microns')
+            return Distance(new_microns, "microns")
 
         raise TypeError("Division is only supported with scalars")
 
@@ -310,7 +314,7 @@ class Distance:
 
         raise TypeError("Comparison only supported between Distance objects")
 
-################# Properties
+    ################# Properties
 
     @property
     def microns(self):
@@ -362,10 +366,11 @@ class Distance:
     def fullsteps(self, value):
         self._microns = float(value) * self._MICRONS_PER_FULL_STEP
 
-######### Functions
+    ######### Functions
 
-    def prettyprint(self, which: Union[Sequence[str], str, None] = None,
-                    stacked: bool = False):
+    def prettyprint(
+        self, which: Union[Sequence[str], str, None] = None, stacked: bool = False
+    ):
         """
         Print the value nicely formatted and rounded.
 
@@ -392,26 +397,26 @@ class Distance:
         """
         if isinstance(which, sequence):
             which = [s.lower() for s in which]
-            if 'all' in which:
-                which = 'all'
-        if which is None or which.lower() == 'all':
-            which = ('microns', 'volts', 'steps', 'fullsteps')
+            if "all" in which:
+                which = "all"
+        if which is None or which == "all":
+            which = ("microns", "volts", "steps", "fullsteps")
         if isinstance(which, str):
             which = (which,)
 
         output = []
-        if 'microns' in which:
-            output.append(f'{_sfround(self.microns)} microns')
-        if 'volts' in which:
-            output.append(f'{_sfround(self.volts)} volts')
-        if 'steps' in which:
-            output.append(f'{_sfround(self.steps)} steps')
-        if 'fullsteps' in which:
-            output.append(f'{_sfround(self.fullsteps)} full steps')
+        if "microns" in which:
+            output.append(f"{_sfround(self.microns)} microns")
+        if "volts" in which:
+            output.append(f"{_sfround(self.volts)} volts")
+        if "steps" in which:
+            output.append(f"{_sfround(self.steps)} steps")
+        if "fullsteps" in which:
+            output.append(f"{_sfround(self.fullsteps)} full steps")
 
-        output = 'Distance(' + ', '.join(output) + ')'
+        output = "Distance(" + ", ".join(output) + ")"
 
         if stacked:
-            output = output.replace(', ', ',\n' + ' ' * 9)
+            output = output.replace(", ", ",\n" + " " * 9)
 
         return output
