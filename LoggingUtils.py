@@ -7,9 +7,19 @@ import os
 import logging
 from typing import Optional, Union
 
-SAFE_MODULES = {'MovementClasses', 'MovementUtils', 'StringUtils', 'SensorClasses',
-                'SimulationClasses', 'HillClimb', 'grid_search', 'Distance',
-                'manual_control', 'StageStatus', 'LoggingUtils'}
+SAFE_MODULES = {
+    "MovementClasses",
+    "MovementUtils",
+    "StringUtils",
+    "SensorClasses",
+    "SimulationClasses",
+    "HillClimb",
+    "grid_search",
+    "Distance",
+    "manual_control",
+    "StageStatus",
+    "LoggingUtils",
+}
 
 # Initial logging setup
 log = logging.getLogger(__name__)
@@ -18,20 +28,24 @@ log = logging.getLogger(__name__)
 # Add Trace level to logging
 TRACE_LEVEL_NUM = 5
 logging.TRACE = TRACE_LEVEL_NUM
-logging.addLevelName(TRACE_LEVEL_NUM, 'TRACE')
+logging.addLevelName(TRACE_LEVEL_NUM, "TRACE")
 
 
 def trace(self, message, *args, **kwargs):
     """Custim logging level (5) below `logging.debug`."""
     if self.isEnabledFor(TRACE_LEVEL_NUM):
-        self._log(TRACE_LEVEL_NUM, message, args, **kwargs) # unexpanded args is correct
+        self._log(
+            TRACE_LEVEL_NUM, message, args, **kwargs
+        )  # unexpanded args is correct
 
 
-# Attache to Logger class
+# Attach to Logger class
 logging.Logger.trace = trace
 
 # Make trace available globally
-logging.trace = lambda msg, *args, **kwargs: logging.log(TRACE_LEVEL_NUM, msg, *args, **kwargs)
+logging.trace = lambda msg, *args, **kwargs: logging.log(
+    TRACE_LEVEL_NUM, msg, *args, **kwargs
+)
 
 
 class OnlyAFCDebugs(logging.Filter):
@@ -58,7 +72,7 @@ class OnlyAFCDebugs(logging.Filter):
         Determines whether a log record should be allowed through.
     """
 
-    def __init__(self, name='', safe_modules=None):
+    def __init__(self, name="", safe_modules=None):
         super().__init__(name)
         # Convert to a set for fast lookup
         self.safe_modules = set(safe_modules) if safe_modules else set()
@@ -102,7 +116,7 @@ def verify_logfile(filepath):
     ----------
     filepath : str
         Path of the proposed log file.
-    
+
     Returns
     -------
     bool
@@ -119,7 +133,7 @@ def verify_logfile(filepath):
     try:
         if not os.path.exists(filepath):
             # 'x' mode for exclusive creation, helps with race conditions
-            with open(filepath, 'x'):
+            with open(filepath, "x"):
                 pass
             print(f"Log file created successfully at: {filepath}")
             return True
@@ -133,19 +147,25 @@ def verify_logfile(filepath):
         return True
     except OSError as e:
         # Catch other OS-related errors, such as an invalid file path or permissions issues
-        warnings.warn(f"Error: Invalid file path or other OS error: {e}\nUsing default log file")
+        warnings.warn(
+            f"Error: Invalid file path or other OS error: {e}\nUsing default log file"
+        )
         return False
 
 
-def setup_logging(log_to_console: Optional[bool] = None, log_to_file: Optional[bool] = None,
-                  filename: Optional[str] = None, log_level: Union[str, int, None] = None,
-                        console_log_level: Union[str, int, None] = None):
+def setup_logging(
+    log_to_console: Optional[bool] = None,
+    log_to_file: Optional[bool] = None,
+    filename: Optional[str] = None,
+    log_level: Union[str, int, None] = None,
+    console_log_level: Union[str, int, None] = None,
+):
     """
     Configure the logger, handlers, and filters.
 
     Defines individual handlers for logging to the console and a log file,
     each with their own log level. Separate handlers are created from
-    catching warnings and logging them to the console and the log file. 
+    catching warnings and logging them to the console and the log file.
 
     Parameters
     ----------
@@ -174,7 +194,7 @@ def setup_logging(log_to_console: Optional[bool] = None, log_to_file: Optional[b
     if log_to_file is None:
         log_to_file = True
     if filename is None:
-        filename = './log_output.txt'
+        filename = "./log_output.txt"
 
     if log_level is None:
         level = logging.DEBUG
@@ -194,18 +214,24 @@ def setup_logging(log_to_console: Optional[bool] = None, log_to_file: Optional[b
     elif console_log_level in (TRACE_LEVEL_NUM, 10, 20, 30, 40, 50):
         console_level = console_log_level
     else:
-        raise ValueError(f"console_log_level {console_log_level} is not in an acceptable form")
+        raise ValueError(
+            f"console_log_level {console_log_level} is not in an acceptable form"
+        )
 
-    standard_format = logging.Formatter("%(asctime)s-%(levelname)s-" +
-                "%(module)s-line%(lineno)d-%(funcName)s :: %(message)s")
+    standard_format = logging.Formatter(
+        "%(asctime)s-%(levelname)s-"
+        + "%(module)s-line%(lineno)d-%(funcName)s :: %(message)s"
+    )
     caught_warning_format = logging.Formatter("%(asctime)s-WARNING(CAUGHT)-%(message)s")
     debug_filter = OnlyAFCDebugs(safe_modules=SAFE_MODULES)
 
     root_logger = logging.getLogger()
     root_logger.setLevel(level)
-    warnings_logger = logging.getLogger('py.warnings')
+    warnings_logger = logging.getLogger("py.warnings")
     warnings_logger.setLevel(logging.WARNING)
-    warnings_logger.propagate = False    # so root_logger does not get already caught warning logs
+    warnings_logger.propagate = (
+        False  # so root_logger does not get already caught warning logs
+    )
 
     # clears existing handlers to avoid duplicates
     if root_logger.hasHandlers():
@@ -246,7 +272,7 @@ def setup_logging(log_to_console: Optional[bool] = None, log_to_file: Optional[b
     log_locations = []
     log_levels = []
 
-    log_locations.append('console')
+    log_locations.append("console")
     log_levels.append(logging.getLevelName(console_level))
     if log_to_file:
         log_locations.append(filename)
@@ -267,62 +293,76 @@ def Update_Logging():
     or ``skip`` will retain the current setting. Calls `setup_logging` at
     the end, which will instantiate a new logger and handlers.
     """
-    SettingNames = ["Log to console", 'Log to file', 'Log filename', 'Console log level', 'Log level']
-    LoggingSettings = {name : None for name in SettingNames}
+    SettingNames = [
+        "Log to console",
+        "Log to file",
+        "Log filename",
+        "Console log level",
+        "Log level",
+    ]
+    LoggingSettings = {name: None for name in SettingNames}
 
-    while True: # Log to console?
+    while True:  # Log to console?
         user_input = input("Log to console? [y/n/s]: ").strip().lower()
-        if user_input == 's':
+        if user_input == "s":
             break
-        if user_input == 'y':
-            LoggingSettings['Log to console'] = True
+        if user_input == "y":
+            LoggingSettings["Log to console"] = True
             break
-        if user_input == 'n':
-            LoggingSettings['Log to console'] = False
+        if user_input == "n":
+            LoggingSettings["Log to console"] = False
             break
         print(f"Could not interpret {user_input}")
 
-    while True: # log to file?
+    while True:  # log to file?
         user_input = input("Log to file? [y/n/s]: ").strip().lower()
-        if user_input == 's':
+        if user_input == "s":
             break
-        if user_input == 'y':
-            LoggingSettings['Log to file'] = True
+        if user_input == "y":
+            LoggingSettings["Log to file"] = True
             break
-        if user_input == 'n':
-            LoggingSettings['Log to file'] = False
+        if user_input == "n":
+            LoggingSettings["Log to file"] = False
             break
         print(f"Could not interpret {user_input}")
 
-    while LoggingSettings['Log to file']: # log file?
+    while LoggingSettings["Log to file"]:  # log file?
         user_input = input("Log filename? [s]: ").strip()
-        if user_input == 's':
+        if user_input == "s":
             break
         try:
             if verify_logfile(user_input):
-                LoggingSettings['Log filename'] = user_input
+                LoggingSettings["Log filename"] = user_input
                 break
         except Exception as e:
             print(f"Error while verifying input filename: {e}")
         print(f"Could not update log file to {user_input}")
 
-    while LoggingSettings['Log to console']: # console log level?
-        user_input = input("Console log level? [trace/debug/info/warning/error/critical/skip]: ").strip().lower()
-        if user_input == 's' or user_input == 'skip':
+    while LoggingSettings["Log to console"]:  # console log level?
+        user_input = (
+            input("Console log level? [trace/debug/info/warning/error/critical/skip]: ")
+            .strip()
+            .lower()
+        )
+        if user_input == "s" or user_input == "skip":
             break
         try:
-            LoggingSettings['Console log level'] = getattr(logging, user_input.upper())
+            LoggingSettings["Console log level"] = getattr(logging, user_input.upper())
             break
         except AttributeError:
             print(f"Could not find log level matching {user_input}")
         print(f"Could not update log level to {user_input}")
 
-    while True: # log level?
-        user_input = input("Log level? [trace/debug/info/warning/error/critical/skip]: ").strip().lower()
-        if user_input == 's' or user_input == 'skip':
+    while True:  # log level?
+        user_input = (
+            input("Log level? [trace/debug/info/warning/error/critical/skip]: ")
+            .strip()
+            .lower()
+        )
+        if user_input == "s" or user_input == "skip":
             break
         try:
-            LoggingSettings['Log level'] = getattr(logging, user_input.upper())
+            LoggingSettings["Log level"] = getattr(logging, user_input.upper())
             break
         except AttributeError:
             print(f"Could not find log level matching {user_input}")
