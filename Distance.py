@@ -2,10 +2,10 @@
 Defines the `Distance` class as a general quantity with several equivalent units.
 """
 
+from __future__ import annotations
 import sigfig
 from typing import Union, Sequence
 from collections.abc import Sequence as sequence  # sorry
-from numbers import Real
 
 from LoggingUtils import get_logger
 
@@ -13,7 +13,7 @@ from LoggingUtils import get_logger
 logger = get_logger(__name__)
 
 
-def _sfround(number, sigfigs=3, decimals=1):
+def _sfround(number, sigfigs: int = 3, decimals: int = 1):
     """
     Convinience wrapper on sigfig.round for `Distance.prettyprint`.
 
@@ -95,7 +95,7 @@ class Distance:
     _MICRONS_PER_STEP = _MICRONS_PER_FULL_STEP / 32
     # enforcing 32 microsteps per full step in StageAxis __init__
 
-    def __init__(self, value: Union[int, float], unit: str = "microns"):
+    def __init__(self, value: float, unit: str = "microns"):
         if unit == "microns":
             self._microns = float(value)
         elif unit == "volts":
@@ -134,7 +134,7 @@ class Distance:
         """
         return Distance(abs(self.microns), "microns")
 
-    def __add__(self, other):
+    def __add__(self, other: Distance) -> Distance:
         """
         Add with another `Distance`.
 
@@ -152,15 +152,15 @@ class Distance:
             new_microns = self.microns + other.microns
             return Distance(new_microns, "microns")
 
-        raise TypeError("Addition is only supported with other Distance objects")
+        return NotImplemented
 
-    def __radd__(self, other):
+    def __radd__(self, other: Distance) -> Distance:
         """
         See `__add__`.
         """
         return self.__add__(other)
 
-    def __sub__(self, other):
+    def __sub__(self, other: Distance) -> Distance:
         """
         Subtract another `Distance` from this.
 
@@ -178,15 +178,15 @@ class Distance:
             new_microns = self.microns - other.microns
             return Distance(new_microns, "microns")
 
-        raise TypeError("Subtraction is only supported with other Distance objects")
+        return NotImplemented
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: Distance) -> Distance:
         """
         See `__sub__`.
         """
         return self.__sub__(other)
 
-    def __mul__(self, other):
+    def __mul__(self, other: float) -> Distance:
         """
         Multiply this object with a scalar.
 
@@ -200,19 +200,19 @@ class Distance:
         `Distance`
             A new instance of the `Distance` class whose value is the product.
         """
-        if isinstance(other, Real):
-            new_microns: Real = self.microns * other
+        if isinstance(other, int | float):
+            new_microns = self.microns * other
             return Distance(new_microns, "microns")
 
-        raise TypeError("Multiplication is only supported with scalars")
+        return NotImplemented
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: float) -> Distance:
         """
         See `__mul__`.
         """
         return self.__mul__(other)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: float) -> Distance:
         """
         Divide this object by a scalar.
 
@@ -226,19 +226,19 @@ class Distance:
         `Distance`
             A new instance of the `Distance` class whose value is the quotient.
         """
-        if isinstance(other, Real):
+        if isinstance(other, int | float):
             new_microns = self.microns / other
             return Distance(new_microns, "microns")
 
-        raise TypeError("Division is only supported with scalars")
+        return NotImplemented
 
-    def __rtruediv__(self, other):
+    def __rtruediv__(self, other: float) -> Distance:
         """
         See `__truediv__`.
         """
         return self.__truediv__(other)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Compares this object to another `Distance` for equality.
 
@@ -255,18 +255,18 @@ class Distance:
         if isinstance(other, Distance):
             return self.microns == other.microns
 
-        raise TypeError("Comparison only supported between Distance objects")
+        return False
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         """
         Compares this object to another `Distance` for inequality. See `__eq__`.
         """
         if isinstance(other, Distance):
             return self.microns != other.microns
 
-        raise TypeError("Comparison only supported between Distance objects")
+        return False
 
-    def __lt__(self, other):
+    def __lt__(self, other: Distance) -> bool:
         """
         Checks whether this object is less than another `Distance`.
 
@@ -283,9 +283,9 @@ class Distance:
         if isinstance(other, Distance):
             return self.microns < other.microns
 
-        raise TypeError("Comparison only supported between Distance objects")
+        return NotImplemented
 
-    def __gt__(self, other):
+    def __gt__(self, other: Distance) -> bool:
         """
         Checks whether this object is greater than another `Distance`.
         See `__lt__`.
@@ -293,9 +293,9 @@ class Distance:
         if isinstance(other, Distance):
             return self.microns > other.microns
 
-        raise TypeError("Comparison only supported between Distance objects")
+        return NotImplemented
 
-    def __le__(self, other):
+    def __le__(self, other: Distance) -> bool:
         """
         Checks whether this object is less than or equal to another `Distance`.
         See `__lt__` and `__eq__`.
@@ -303,9 +303,9 @@ class Distance:
         if isinstance(other, Distance):
             return self.microns <= other.microns
 
-        raise TypeError("Comparison only supported between Distance objects")
+        return NotImplemented
 
-    def __ge__(self, other):
+    def __ge__(self, other: Distance) -> bool:
         """
         Checks whether this object is greater than or equal to another `Distance`.
         See `__gt__` and `__eq__`.
@@ -313,7 +313,7 @@ class Distance:
         if isinstance(other, Distance):
             return self.microns >= other.microns
 
-        raise TypeError("Comparison only supported between Distance objects")
+        return NotImplemented
 
     ################# Properties
 
@@ -327,7 +327,7 @@ class Distance:
         return self._microns
 
     @microns.setter
-    def microns(self, value: Real) -> Real:
+    def microns(self, value: float):
         self._microns = float(value)
         return
 
@@ -339,7 +339,7 @@ class Distance:
         return self._microns / self._MICRONS_PER_VOLT
 
     @volts.setter
-    def volts(self, value):
+    def volts(self, value: float):
         self._microns = float(value) * self._MICRONS_PER_VOLT
         return
 
@@ -353,7 +353,7 @@ class Distance:
         return self._microns / self._MICRONS_PER_STEP
 
     @steps.setter
-    def steps(self, value):
+    def steps(self, value: float):
         self._microns = float(value) * self._MICRONS_PER_STEP
 
     @property
@@ -364,7 +364,7 @@ class Distance:
         return self._microns / self._MICRONS_PER_FULL_STEP
 
     @fullsteps.setter
-    def fullsteps(self, value):
+    def fullsteps(self, value: float):
         self._microns = float(value) * self._MICRONS_PER_FULL_STEP
 
     ######### Functions

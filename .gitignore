@@ -8,3 +8,4 @@ log_output.txt
 .flake8
 __pycache__/
 log_plots/
+pyright_report.txt
