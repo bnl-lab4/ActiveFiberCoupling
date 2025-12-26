@@ -5,7 +5,7 @@ Control logging configuration of ActiveFiberCoupling.
 import warnings
 import os
 import logging
-from typing import Optional, Union
+from typing import Optional, Union, cast
 
 SAFE_MODULES = {
     "MovementClasses",
@@ -21,31 +21,28 @@ SAFE_MODULES = {
     "LoggingUtils",
 }
 
-# Initial logging setup
-log = logging.getLogger(__name__)
-
 
 # Add Trace level to logging
 TRACE_LEVEL_NUM = 5
-logging.TRACE = TRACE_LEVEL_NUM
-logging.addLevelName(TRACE_LEVEL_NUM, "TRACE")
 
 
-def trace(self, message, *args, **kwargs):
-    """Custim logging level (5) below `logging.debug`."""
-    if self.isEnabledFor(TRACE_LEVEL_NUM):
-        self._log(
-            TRACE_LEVEL_NUM, message, args, **kwargs
-        )  # unexpanded args is correct
+class CustomLogger(logging.Logger):
+    def trace(self, message, *args, **kwargs):
+        """Custim logging level (5) below `logging.debug`."""
+        if self.isEnabledFor(TRACE_LEVEL_NUM):
+            self._log(
+                TRACE_LEVEL_NUM, message, args, **kwargs
+            )  # unexpanded args is correct
 
 
-# Attach to Logger class
-logging.Logger.trace = trace
+logging.setLoggerClass(CustomLogger)
 
-# Make trace available globally
-logging.trace = lambda msg, *args, **kwargs: logging.log(
-    TRACE_LEVEL_NUM, msg, *args, **kwargs
-)
+
+def get_logger(name: str) -> CustomLogger:
+    return cast(CustomLogger, logging.getLogger(name))
+
+
+logger = get_logger(__name__)
 
 
 class OnlyAFCDebugs(logging.Filter):
@@ -77,7 +74,7 @@ class OnlyAFCDebugs(logging.Filter):
         # Convert to a set for fast lookup
         self.safe_modules = set(safe_modules) if safe_modules else set()
 
-    def filter(self, record):
+    def filter(self, record: logging.LogRecord):
         """
         Determine whether a log record should be allowed through.
 
@@ -94,15 +91,7 @@ class OnlyAFCDebugs(logging.Filter):
             Whether the log record should be allowed to proceed (``True``)
             or not (``False``).
         """
-
-        if record.levelno > logging.DEBUG:
-            return True
-
-        if record.levelno <= logging.DEBUG:
-            if record.name in self.safe_modules:
-                return True
-            else:
-                return False
+        return (record.levelno > logging.DEBUG) or (record.name in self.safe_modules)
 
 
 def verify_logfile(filepath):
@@ -278,10 +267,10 @@ def setup_logging(
         log_locations.append(filename)
         log_levels.append(logging.getLevelName(level))
     if len(log_locations) == 0:
-        log.info("Logging to nowhere")
+        logger.info("Logging to nowhere")
     else:
         for loc, level in zip(log_locations, log_levels):
-            log.info(f"Logging to {loc} with level {level}")
+            logger.info(f"Logging to {loc} with level {level}")
 
 
 def Update_Logging():
@@ -293,14 +282,7 @@ def Update_Logging():
     or ``skip`` will retain the current setting. Calls `setup_logging` at
     the end, which will instantiate a new logger and handlers.
     """
-    SettingNames = [
-        "Log to console",
-        "Log to file",
-        "Log filename",
-        "Console log level",
-        "Log level",
-    ]
-    LoggingSettings = {name: None for name in SettingNames}
+    LoggingSettings = dict()
 
     while True:  # Log to console?
         user_input = input("Log to console? [y/n/s]: ").strip().lower()

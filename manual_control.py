@@ -7,6 +7,10 @@ import time
 from StageStatus import run as status
 from MovementClasses import MovementType
 from Distance import Distance
+from LoggingUtils import get_logger
+
+# unique logger name for this module
+logger = get_logger(__name__)
 
 
 def run(stage, ExposureTime):
@@ -51,76 +55,88 @@ Switch between goto and move (default) modes with 'goto' and 'move'.
 """)
     goto = False
     status_mode = False
-    WHICH_DICT = dict(p=MovementType.PIEZO, piezo=MovementType.PIEZO,
-                      s=MovementType.STEPPER, stepper=MovementType.STEPPER,
-                      g=MovementType.GENERAL, general=MovementType.GENERAL)
-    AXES = ('x', 'y', 'z')
-    UNITS = ('microns', 'volts', 'steps', 'fullsteps')
-    UNITS_ABRV = dict(u=UNITS[0], m=UNITS[0], v=UNITS[1],
-                      s=UNITS[2], st=UNITS[2], f=UNITS[3], fs=UNITS[3])
+    WHICH_DICT = dict(
+        p=MovementType.PIEZO,
+        piezo=MovementType.PIEZO,
+        s=MovementType.STEPPER,
+        stepper=MovementType.STEPPER,
+        g=MovementType.GENERAL,
+        general=MovementType.GENERAL,
+    )
+    AXES = ("x", "y", "z")
+    UNITS = ("microns", "volts", "steps", "fullsteps")
+    UNITS_ABRV = dict(
+        u=UNITS[0],
+        m=UNITS[0],
+        v=UNITS[1],
+        s=UNITS[2],
+        st=UNITS[2],
+        f=UNITS[3],
+        fs=UNITS[3],
+    )
     Texp = ExposureTime
 
     while True:
-        input_msg = 'goto >> ' if goto else 'move >> '
+        input_msg = "goto >> " if goto else "move >> "
         user_input = input(input_msg).strip().lower()
-        if user_input == 'q':
+        if user_input == "q":
             break
-        if user_input == '':
+        if user_input == "":
             power = stage.sensor.integrate(Texp)
             power_str = str(f"{power:.6f}") if isinstance(power, float) else str(power)
             print(f"Power: {power_str}\nIntegrated for {Texp}")
             continue
-        if user_input == 'move':
+        if user_input == "move":
             if goto:
-                print('Switched to move mode.')
+                print("Switched to move mode.")
             else:
-                print('Already in move mode.')
+                print("Already in move mode.")
             goto = False
             continue
-        if user_input == 'goto':
+        if user_input == "goto":
             if goto:
-                print('Already in goto mode.')
+                print("Already in goto mode.")
             else:
-                print('Switched to goto mode.')
+                print("Switched to goto mode.")
             goto = True
             continue
 
-        if user_input == 'status':
-            status(stage, Texp, 'all')
+        if user_input == "status":
+            status(stage, Texp, "all")
             continue
-        if user_input == 'status on':
+        if user_input == "status on":
             if status_mode:
-                print('Status mode already on')
+                print("Status mode already on")
             else:
-                print('Status mode turned on')
+                print("Status mode turned on")
             status_mode = True
             continue
-        if user_input == 'status off':
+        if user_input == "status off":
             if status_mode:
-                print('Status mode turned off')
+                print("Status mode turned off")
             else:
-                print('Status mode already off')
+                print("Status mode already off")
             status_mode = False
             continue
 
         user_input = user_input.split()
-        if len(user_input) == 2 and set(user_input[0].lower()) == set('texp'):
+        if len(user_input) == 2 and set(user_input[0].lower()) == set("texp"):
             Texp = int(user_input[1])
             print(f'Exposure "time" set to {Texp}')
             continue
         if len(user_input) != 3 and len(user_input) != 4:
-            print('Invalid input: Enter command as [axis] [device] [value] ([unit]).')
+            print("Invalid input: Enter command as [axis] [device] [value] ([unit]).")
             continue
 
         if len(user_input) == 3:
-            user_input.append('microns')
+            user_input.append("microns")
 
         axis, device, value, unit = user_input
         if axis.lower() not in AXES:
-            print('Invalid input: Axis must be x or y or z')
+            print("Invalid input: Axis must be x or y or z")
             continue
         if device.lower() not in WHICH_DICT.keys():
-            print('Invalid input: Device must be s, p, stepper, or piezo')
+            print("Invalid input: Device must be s, p, stepper, or piezo")
             continue
 
         if unit in UNITS:
@@ -128,27 +144,27 @@ Switch between goto and move (default) modes with 'goto' and 'move'.
         elif unit in UNITS_ABRV.keys():
             unit = UNITS_ABRV[unit]
         else:
-            print('Invalid input: Unit must be u, v, s, fs')
+            print("Invalid input: Unit must be u, v, s, fs")
             continue
 
         movetype = WHICH_DICT[device]
 
         special = False
-        if value.lower() == 'zero':
+        if value.lower() == "zero":
             special = True
             if movetype == MovementType.PIEZO:
                 value = getattr(stage.axes[axis].PIEZO_LIMITS[0], unit)
             else:
                 value = getattr(stage.axes[axis].STEPPER_LIMITS[0], unit)
 
-        elif value.lower() == 'max':
+        elif value.lower() == "max":
             special = True
             if movetype == MovementType.PIEZO:
                 value = getattr(stage.axes[axis].PIEZO_LIMITS[1], unit)
             else:
                 value = getattr(stage.axes[axis].STEPPER_LIMITS[1], unit)
 
-        elif value.lower() == 'center':
+        elif value.lower() == "center":
             special = True
             if movetype == MovementType.PIEZO:
                 value = getattr(stage.axes[axis].PIEZO_CENTER, unit)
@@ -158,17 +174,19 @@ Switch between goto and move (default) modes with 'goto' and 'move'.
         try:
             value = float(value)
         except Exception:
-            print("Invalid input: Value must be a real number or one of 'zero', 'center', 'max'")
+            print(
+                "Invalid input: Value must be a real number or one of 'zero', 'center', 'max'"
+            )
             continue
 
         if goto and value < 0:
             breakflag = False
             while True:
                 print("Entered negative position while in goto mode, are you sure?")
-                user_input = input('(y/n): ').strip().lower()
-                if user_input == 'y':
+                user_input = input("(y/n): ").strip().lower()
+                if user_input == "y":
                     break
-                if user_input == 'n':
+                if user_input == "n":
                     breakflag = True
                     break
                 print("Could not interpret input")

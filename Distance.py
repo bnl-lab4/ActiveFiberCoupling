@@ -7,6 +7,11 @@ from typing import Union, Sequence
 from collections.abc import Sequence as sequence  # sorry
 from numbers import Real
 
+from LoggingUtils import get_logger
+
+# unique logger name for this module
+logger = get_logger(__name__)
+
 
 def _sfround(number, sigfigs=3, decimals=1):
     """
@@ -83,10 +88,6 @@ class Distance:
     -----
     `Distances` can be added, subtracted, multiplied, and divided just like
     floats. Comparisons, such as ``>``, are also defined.
-
-    Examples
-    --------
-
     """
 
     _MICRONS_PER_VOLT = 20 / 75
@@ -200,7 +201,7 @@ class Distance:
             A new instance of the `Distance` class whose value is the product.
         """
         if isinstance(other, Real):
-            new_microns = self.microns * other
+            new_microns: Real = self.microns * other
             return Distance(new_microns, "microns")
 
         raise TypeError("Multiplication is only supported with scalars")
@@ -326,7 +327,7 @@ class Distance:
         return self._microns
 
     @microns.setter
-    def microns(self, value):
+    def microns(self, value: Real) -> Real:
         self._microns = float(value)
         return
 

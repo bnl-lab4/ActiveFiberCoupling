@@ -5,15 +5,15 @@ help function for the main menu in `main.py`.
 
 import inspect
 import warnings
-import logging
 from collections.abc import Callable
-from typing import List, Sequence, Optional
+from typing import List, Sequence, Optional, Union
 
 from MovementClasses import Distance, StageDevices
+from LoggingUtils import get_logger
 
 
 # Initial logging
-log = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def parse_str_values(value):
@@ -140,7 +140,7 @@ def str_to_dict(tokens: List[str]):
     return kwargs_dict
 
 
-def sequence_to_str(sequence, joined=True):
+def sequence_to_str(sequence, joined=True) -> Union[str, List[str]]:
     """
     Turns a sequence into formatted a string for printing. See `dict_to_str`.
     """
@@ -189,7 +189,7 @@ def sequence_to_str(sequence, joined=True):
     return sequence_print
 
 
-def dict_to_str(mydict, joined=True):
+def dict_to_str(mydict, joined=True) -> Union[str, List[str]]:
     """
     Turns a dict into a formatted string for printing.
 

@@ -2,12 +2,12 @@
 Continuously print the sensor reading until interrupted.
 """
 
-import logging
 from typing import Union
 from MovementClasses import StageDevices
+from LoggingUtils import get_logger
 
 # unique logger name for this module
-log = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def run(stage: StageDevices, exposureTime: Union[int, float], avg: bool = True):
@@ -23,7 +23,7 @@ def run(stage: StageDevices, exposureTime: Union[int, float], avg: bool = True):
     avg : bool, default=True
         Whether to average the sensor readout over the integration time.
     """
-    log.info(
+    logger.info(
         f"Initiating continuous readout of {stage.name} sensor with"
         + f" exposure time {exposureTime} and avg = {avg}"
     )

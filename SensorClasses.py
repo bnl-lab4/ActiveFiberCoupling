@@ -7,16 +7,18 @@
 """
 Defines the `Sensor` class and sensor-type subclasses.
 """
+
 import enum
 import sigfig
-import logging
 import socket
 import contextlib
 import piplates.DAQC2plate as DAQ
 from typing import Dict, Optional, Union
 
+from LoggingUtils import get_logger
+
 # unique logger name for this module
-log = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class SensorType(enum.Enum):
@@ -70,11 +72,13 @@ class Piplate:
     """
 
     def __init__(self, connection_dict: Dict[str, str]):
-        self.addr = connection_dict['addr']
-        self.channel = connection_dict['channel']
+        self.addr = connection_dict["addr"]
+        self.channel = connection_dict["channel"]
         DAQ.VerifyADDR(self.addr)
         DAQ.VerifyAINchannel(self.channel)
-        log.info(f"Initialized to Pi-Plate at addr {self.addr}, channel {self.channel}")
+        logger.info(
+            f"Initialized to Pi-Plate at addr {self.addr}, channel {self.channel}"
+        )
 
     def read(self):
         """
@@ -95,7 +99,7 @@ class Piplate:
         """
         # getADC has several waits in it, we could prbably slim it down
         power = DAQ.getADC(self.addr, self.channel)
-        # log.trace(f"Pi-Plate addr {self.addr} channel {self.channel} : " +
+        # logger.trace(f"Pi-Plate addr {self.addr} channel {self.channel} : " +
         #             f"read power {sigfig.round(power, 6, warn=False)}")
         return power
 
@@ -103,7 +107,7 @@ class Piplate:
         """
         Integrate the voltage of the Pi-plate  over many readings.
 
-        Calls `read` `Texp` times and returns either the sum 
+        Calls `read` `Texp` times and returns either the sum
         or the average (default) of the readings.
 
         Parameters
@@ -128,12 +132,14 @@ class Piplate:
         # this would be much better if it integrated over time
         power = 0
         Texp = int(Texp)
-        for i in range(Texp):
+        for _ in range(Texp):
             power += self.read()
         if avg:
             power /= Texp
-        log.trace(f"Piplate addr {self.addr} channel {self.channel} : " +
-                f"integrated power {sigfig.round(power, 6, warn=False)}{' averaged' if avg else ''} over {Texp} iterations")
+        logger.trace(
+            f"Piplate addr {self.addr} channel {self.channel} : "
+            + f"integrated power {sigfig.round(power, 6, warn=False)}{' averaged' if avg else ''} over {Texp} iterations"
+        )
         return power
 
 
@@ -172,15 +178,17 @@ class Socket:
     """
 
     def __init__(self, connection_dict: Dict[str, str]):
-        self.host = connection_dict['host']
-        self.port = connection_dict['port']
+        self.host = connection_dict["host"]
+        self.port = connection_dict["port"]
         self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.connection.settimeout(20)
             self.connection.connect((self.host, self.port))
-            log.info(f"Connected to socket host {self.host} at port {self.port}")
+            logger.info(f"Connected to socket host {self.host} at port {self.port}")
         except TimeoutError:
-            log.warn(f"Timed out attempting to connect to host {self.host} at port {self.port}")
+            logger.warning(
+                f"Timed out attempting to connect to host {self.host} at port {self.port}"
+            )
         self.exit_stack = contextlib.ExitStack()
 
     def __enter__(self):
@@ -190,7 +198,7 @@ class Socket:
         Returns self for use in 'with... as...' statements.
         """
         self.exit_stack.enter_context(self.connection)
-        log.debug(f"Entered context of socket host {self.host} at port {self.port}")
+        logger.debug(f"Entered context of socket host {self.host} at port {self.port}")
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -200,8 +208,8 @@ class Socket:
         Returns ``False``, letting exceptions propogate.
         """
         self.exit_stack.close()
-        log.info(f"Socket connection to host {self.host} at port {self.port} closed")
-        log.debug(f"Exited context of socket host {self.host} at port {self.port}")
+        logger.info(f"Socket connection to host {self.host} at port {self.port} closed")
+        logger.debug(f"Exited context of socket host {self.host} at port {self.port}")
 
     def read(self):
         """
@@ -214,9 +222,9 @@ class Socket:
         """
         # getting a single reading does not make sense with the qutag
         # uses 1ms integration time to be similar to other sensors
-        self.connection.sendall(str(1).encode('utf-8'))
-        power = int(self.connection.recv(1024).decode('utf-8'))
-        # log.trace(f"Socket at host {self.host} port {self.port} : " +
+        self.connection.sendall(str(1).encode("utf-8"))
+        power = int(self.connection.recv(1024).decode("utf-8"))
+        # logger.trace(f"Socket at host {self.host} port {self.port} : " +
         #         f"returned {sigfig.round(power, 6, warn=False)} averaged over 100ms")
         return power
 
@@ -238,11 +246,13 @@ class Socket:
         float
             The integrated value from the socket server.
         """
-        self.connection.sendall(str(Texp).encode('utf-8'))
-        power = float(self.connection.recv(1024).decode('utf-8'))
+        self.connection.sendall(str(Texp).encode("utf-8"))
+        power = float(self.connection.recv(1024).decode("utf-8"))
         # power = int(power)
-        log.trace(f"Socket at host {self.host} port {self.port} : " +
-                f"returned {sigfig.round(power, 6, warn=False)} {'averaged ' if avg else ''}over {Texp}ms")
+        logger.trace(
+            f"Socket at host {self.host} port {self.port} : "
+            + f"returned {sigfig.round(power, 6, warn=False)} {'averaged ' if avg else ''}over {Texp}ms"
+        )
         return power
 
 
@@ -269,8 +279,11 @@ class Sensor:
     ``__exit__`` for subclass that do not need context management.
     """
 
-    def __init__(self, connection_dict: Dict[str, str],
-                    sensorType: Optional[enum.Enum] = SensorType.PIPLATE):
+    def __init__(
+        self,
+        connection_dict: Dict[str, str],
+        sensorType: Optional[enum.Enum] = SensorType.PIPLATE,
+    ):
         self._exit_stack = contextlib.ExitStack()
         self.connection_dict = connection_dict
         self.sensorType = sensorType
@@ -288,7 +301,7 @@ class Sensor:
         Returns ``self`` for use in 'with... as...' statements.
         """
         pass
-        log.debug("Entered sensor context")
+        logger.debug("Entered sensor context")
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -298,7 +311,7 @@ class Sensor:
         Returns ``False``, letting exceptions propogate.
         """
         pass
-        log.debug("Exited context stack")
+        logger.debug("Exited context stack")
         return False
 
     def read(self):
@@ -314,7 +327,7 @@ class Sensor:
         """
         return self.sensor.read()
 
-    def integrate(self, Texp: Union[int, float], avg: Optional[bool] = True):
+    def integrate(self, Texp: Union[int, float], avg: bool = True):
         """
         Returns the value of the sensor over `Texp`.
 

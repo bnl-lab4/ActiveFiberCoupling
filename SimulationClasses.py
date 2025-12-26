@@ -2,20 +2,20 @@
 Simulated stage with virtual piezos, steppers, and sensor.
 """
 
-import logging
 import contextlib
 import math
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Union, List
 
 from MovementClasses import MovementType, MoveResult
 from Distance import Distance
+from LoggingUtils import get_logger
 
 # unique logger name for this module
-log = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 ##### Constants
 
-WAVELENGTH = 0.65 # microns
+WAVELENGTH = 0.65  # microns
 
 # ##############################################################################
 # ### Vector Math Helper Functions
@@ -70,7 +70,8 @@ def _vect_mag_sq(v: Tuple) -> float:
     float
         Squared magnitude of `v`.
     """
-    return v[0]**2 + v[1]**2 + v[2]**2
+    return v[0] ** 2 + v[1] ** 2 + v[2] ** 2
+
 
 # ##############################################################################
 # ### Simulation Sensor Class
@@ -78,7 +79,7 @@ def _vect_mag_sq(v: Tuple) -> float:
 
 
 class SimulationSensor:
-    """
+    r"""
     Simulates a sensor reading the intensity of a Gaussian beam.
 
     The intensity calculation depends on the position of the stage, which is
@@ -162,18 +163,19 @@ class SimulationSensor:
     $P = \frac{1}{2} \pi w_0^2 I_0$.
     """
 
-    def __init__(self,
-                 propagation_axis: str,
-                 focal_ratio: float = 4.0,
-                 beam_waist_position: Tuple[float, float, float] = (2000.0,) * 3, # microns
-                 angle_of_deviation: float = 0.0,
-                 peak_intensity: float = 1.0):
-
+    def __init__(
+        self,
+        propagation_axis: str,
+        focal_ratio: float = 4.0,
+        beam_waist_position: Tuple[float, float, float] = (2000.0,) * 3,  # microns
+        angle_of_deviation: float = 0.0,
+        peak_intensity: float = 1.0,
+    ):
         self.propagation_axis = propagation_axis.lower()
         self.waist_pos = beam_waist_position
         self.angle = angle_of_deviation
         self.I0 = peak_intensity
-        self.stage = None # This will be set by the SimulationStageDevices instance
+        self.stage = None  # This will be set by the SimulationStageDevices instance
 
         NA = math.sin(math.atan(1 / (2 * focal_ratio)))
         self.w0 = math.pi * WAVELENGTH / NA
@@ -182,10 +184,10 @@ class SimulationSensor:
         self.z_R = (math.pi * self.w0**2) / WAVELENGTH
 
         # Determine beam propagation vector based on axis and deviation
-        if self.propagation_axis == 'x':
+        if self.propagation_axis == "x":
             primary_axis = (1, 0, 0)
             deviation_dir = (0, 1, 1)
-        elif self.propagation_axis == 'z':
+        elif self.propagation_axis == "z":
             primary_axis = (0, 0, 1)
             deviation_dir = (1, 1, 0)
         else:
@@ -197,12 +199,12 @@ class SimulationSensor:
         unnorm_dir = (
             primary_axis[0] + tan_angle * deviation_dir[0],
             primary_axis[1] + tan_angle * deviation_dir[1],
-            primary_axis[2] + tan_angle * deviation_dir[2]
+            primary_axis[2] + tan_angle * deviation_dir[2],
         )
 
         # Normalize the direction vector
         mag = math.sqrt(_vect_mag_sq(unnorm_dir))
-        self.k_beam = (unnorm_dir[0]/mag, unnorm_dir[1]/mag, unnorm_dir[2]/mag)
+        self.k_beam = (unnorm_dir[0] / mag, unnorm_dir[1] / mag, unnorm_dir[2] / mag)
 
     def _connect_to_stage(self, stage):
         """Links the sensor to a stage to get position information."""
@@ -213,7 +215,7 @@ class SimulationSensor:
         Calculates and returns the beam intensity at the current stage position.
 
         The intensity is calculated for a single point, not over the area
-        of a fiber. 
+        of a fiber.
 
         Returns
         -------
@@ -225,7 +227,11 @@ class SimulationSensor:
 
         # Get current position from the stage in microns
         pos_dict = self.stage.get_current_position()
-        sensor_pos = (pos_dict['x'].microns, pos_dict['y'].microns, pos_dict['z'].microns)
+        sensor_pos = (
+            pos_dict["x"].microns,
+            pos_dict["y"].microns,
+            pos_dict["z"].microns,
+        )
         # Do calculation in microns, not Distance objects
 
         # 1. Transform coordinates to the beam's frame
@@ -240,10 +246,10 @@ class SimulationSensor:
 
         # 2. Calculate beam parameters at position z
         # w(z): beam radius at z
-        w_z = self.w0 * math.sqrt(1 + (z / self.z_R)**2)
+        w_z = self.w0 * math.sqrt(1 + (z / self.z_R) ** 2)
 
         # 3. Calculate intensity I(r, z)
-        intensity = self.I0 * (self.w0 / w_z)**2 * math.exp(-2 * r_sq / w_z**2)
+        intensity = self.I0 * (self.w0 / w_z) ** 2 * math.exp(-2 * r_sq / w_z**2)
 
         return intensity
 
@@ -268,7 +274,7 @@ class SimulationSensor:
             Intensity at the current stage position.
         """
         result = self.read()
-        log.debug(f"{self.stage.name} simulation sensor power: {result:.6f}")
+        logger.debug(f"{self.stage.name} simulation sensor power: {result:.6f}")
         return result
 
     def __enter__(self):
@@ -288,6 +294,7 @@ class SimulationSensor:
         """
         pass
         return False
+
 
 # ##############################################################################
 # ### Simulation Axis and Stage Classes
@@ -349,16 +356,20 @@ class SimulationStageAxis:
     deenergize()
         No-op dummy method.
     """
+
     def __init__(self, axis: str, stepper_SN: str):
         self.axis = axis
         self.stepper_SN = stepper_SN
-        self.stepper_position = Distance(0, 'microns')
-        self.piezo_position = Distance(0, 'microns')
+        self.stepper_position = Distance(0, "microns")
+        self.piezo_position = Distance(0, "microns")
 
         # Define simulated hardware limits
-        self.PIEZO_LIMITS = (Distance(0, 'volts'), Distance(75, 'volts')) # 0-20 um range
+        self.PIEZO_LIMITS = (
+            Distance(0, "volts"),
+            Distance(75, "volts"),
+        )  # 0-20 um range
         self.PIEZO_CENTER = self.PIEZO_LIMITS[1] / 2
-        self.STEPPER_LIMITS = (Distance(0, 'microns'), Distance(4000, 'microns'))
+        self.STEPPER_LIMITS = (Distance(0, "microns"), Distance(4000, "microns"))
         self.STEPPER_CENTER = self.STEPPER_LIMITS[1] / 2
 
     def get_stepper_position(self):
@@ -389,13 +400,16 @@ class SimulationStageAxis:
         `MoveResult`
             Info to be logged regarding the movement.
         """
-        clamped = max(self.PIEZO_LIMITS[0].volts,
-                              min(self.PIEZO_LIMITS[1].volts, position.volts))
+        clamped = max(
+            self.PIEZO_LIMITS[0].volts, min(self.PIEZO_LIMITS[1].volts, position.volts)
+        )
         if clamped != position.volts:
-            log.warning(f"Cannot move {self.axis.upper()} to {clamped} because it is" +
-            "outside the piezo's limits of" +
-            f"({self.PIEZO_LIMITS[0].volts}, {self.PIEZO_LIMITS[1].volts}) volts")
-        self.piezo_position = Distance(clamped, 'volts')
+            logger.warning(
+                f"Cannot move {self.axis.upper()} to {clamped} because it is"
+                + "outside the piezo's limits of"
+                + f"({self.PIEZO_LIMITS[0].volts}, {self.PIEZO_LIMITS[1].volts}) volts"
+            )
+        self.piezo_position = Distance(clamped, "volts")
         return MoveResult(self.piezo_position, MovementType.PIEZO)
 
     def _goto_stepper(self, position: Distance) -> MoveResult:
@@ -415,16 +429,22 @@ class SimulationStageAxis:
             Info to be logged regarding the movement.
         """
 
-        clamped = max(self.STEPPER_LIMITS[0].steps,
-                            min(self.STEPPER_LIMITS[1].steps, position.steps))
+        clamped = max(
+            self.STEPPER_LIMITS[0].steps,
+            min(self.STEPPER_LIMITS[1].steps, position.steps),
+        )
         if clamped != position.steps:
-            log.warning(f"Cannot move {self.axis.upper()} to {clamped} because it is " +
-            "outside the stepper's stage limits of" +
-            f"({self.PIEZO_LIMITS[0].steps}, {self.PIEZO_LIMITS[1].steps}) steps")
-        self.stepper_position = Distance(clamped, 'steps')
+            logger.warning(
+                f"Cannot move {self.axis.upper()} to {clamped} because it is "
+                + "outside the stepper's stage limits of"
+                + f"({self.PIEZO_LIMITS[0].steps}, {self.PIEZO_LIMITS[1].steps}) steps"
+            )
+        self.stepper_position = Distance(clamped, "steps")
         return MoveResult(self.stepper_position, MovementType.STEPPER)
 
-    def goto(self, position: Distance, which: Optional[MovementType] = None) -> MoveResult:
+    def goto(
+        self, position: Distance, which: Optional[MovementType] = None
+    ) -> MoveResult:
         """
         Move stepper and/or piezo to the desired position.
 
@@ -464,7 +484,11 @@ class SimulationStageAxis:
             stepper_position = self.get_stepper_position()
 
             # decide whether the position can be reached with only the piezos
-            if self.PIEZO_LIMITS[0] < position - stepper_position < self.PIEZO_LIMITS[1]:
+            if (
+                self.PIEZO_LIMITS[0]
+                < position - stepper_position
+                < self.PIEZO_LIMITS[1]
+            ):
                 return self._goto_piezo(position - stepper_position)
             self._goto_piezo(self.PIEZO_CENTER)
             stepper_target = position - self.PIEZO_CENTER
@@ -474,7 +498,9 @@ class SimulationStageAxis:
 
         raise ValueError("which must be a MovementType enum or None.")
 
-    def move(self, movement: Distance, which: Optional[MovementType] = None) -> MoveResult:
+    def move(
+        self, movement: Distance, which: Optional[MovementType] = None
+    ) -> MoveResult:
         """
         Move the stepper and/or piezo by the desired distance.
 
@@ -513,8 +539,9 @@ class SimulationStageAxis:
             if self.PIEZO_LIMITS[0] < piezo_position + movement < self.PIEZO_LIMITS[1]:
                 return self._goto_piezo(piezo_position + movement)
             self._goto_piezo(self.PIEZO_CENTER)
-            stepper_target = stepper_position + movement +\
-                        (piezo_position - self.PIEZO_CENTER)
+            stepper_target = (
+                stepper_position + movement + (piezo_position - self.PIEZO_CENTER)
+            )
             result = self._goto_stepper(stepper_target)
             result.centered_piezos = True
             return result
@@ -522,19 +549,21 @@ class SimulationStageAxis:
     # --- Dummy methods to match the real hardware class interface ---
     def energize(self):
         """No-op dummy method."""
-        log.info(f"Axis {self.axis} stepper {self.stepper_SN} energized")
+        logger.info(f"Axis {self.axis} stepper {self.stepper_SN} energized")
         pass
 
     def deenergize(self):
         """No-op dummy method."""
-        log.info(f"Stepper {self.stepper_SN} deenergized")
+        logger.info(f"Stepper {self.stepper_SN} deenergized")
         pass
 
     def home(self):
         """Set the stepper position to 0 (microns)."""
-        self.stepper_position = Distance(0, 'microns')
-        log.info(f"Stepper {self.stepper_SN} homing complete, " +
-                    f"zeroed at lower stage limit {self.TRUE_STEPPER_LIMITS[0].prettyprint()}")
+        self.stepper_position = Distance(0, "microns")
+        logger.info(
+            f"Stepper {self.stepper_SN} homing complete, "
+            + f"zeroed at lower stage limit {self.TRUE_STEPPER_LIMITS[0].prettyprint()}"
+        )
 
     def __enter__(self):
         """
@@ -608,34 +637,45 @@ class SimulationStageDevices:
     For control of real, physical stages, see `MovementClasses.py`.
     """
 
-    def __init__(self, name: str, sensor: SimulationSensor = None):
+    def __init__(self, name: str, sensor: Optional[SimulationSensor] = None):
         self.name = name
-        self.stepper_SNs = dict(x=f'{name}_simX', y=f'{name}_simY', z=f'{name}_simZ')
+        self.stepper_SNs = dict(x=f"{name}_simX", y=f"{name}_simY", z=f"{name}_simZ")
         self.axes = {axis: None for axis in self.stepper_SNs.keys()}
         self.sensor = sensor
-        self._exit_stack = contextlib.ExitStack()   # for context management
+        self._exit_stack = contextlib.ExitStack()  # for context management
         # If a simulation sensor is provided, link it to this stage instance
         if self.sensor and isinstance(self.sensor, SimulationSensor):
             self.sensor._connect_to_stage(self)
-            log.info(f"{self.name} connected to SimulationSensor")
+            logger.info(f"{self.name} connected to SimulationSensor")
 
         for axis, stepper_SN in self.stepper_SNs.items():
             self.axes[axis] = SimulationStageAxis(axis, stepper_SN)
-            log.info(f"{self.name} established SimulationStageAxis {stepper_SN}")
+            logger.info(f"{self.name} established SimulationStageAxis {stepper_SN}")
 
     def get_piezo_position(self) -> Dict[str, Distance]:
         """Returns axis-keyed dictionary of piezo positions."""
-        return {axis: stage_axis.get_piezo_position() for axis, stage_axis in self.axes.items()}
+        return {
+            axis: stage_axis.get_piezo_position()
+            for axis, stage_axis in self.axes.items()
+        }
 
     def get_stepper_position(self) -> Dict[str, Distance]:
         """Returns axis-keyed dictionary of stepper positions."""
-        return {axis: stage_axis.get_stepper_position() for axis, stage_axis in self.axes.items()}
+        return {
+            axis: stage_axis.get_stepper_position()
+            for axis, stage_axis in self.axes.items()
+        }
 
     def get_current_position(self) -> Dict[str, Distance]:
         """Returns axis-keyed dictionary of axis positions."""
-        return {axis: stage_axis.get_current_position() for axis, stage_axis in self.axes.items()}
+        return {
+            axis: stage_axis.get_current_position()
+            for axis, stage_axis in self.axes.items()
+        }
 
-    def move(self, axis: str, movement: Distance, which: Optional[MovementType] = None) -> MoveResult:
+    def move(
+        self, axis: str, movement: Distance, which: Optional[MovementType] = None
+    ) -> MoveResult:
         """
         Move `axis` by `movement` using its stepper and/or piezo.
 
@@ -655,10 +695,12 @@ class SimulationStageDevices:
             Info to be logged regarding the movement.
         """
         result = self.axes[axis].move(movement, which)
-        log.trace(f"{self.name}, Axis {axis} :" + result.text)
+        logger.trace(f"{self.name}, Axis {axis} :" + result.text)
         return result
 
-    def goto(self, axis: str, position: Distance, which: Optional[MovementType] = None) -> MoveResult:
+    def goto(
+        self, axis: str, position: Distance, which: Optional[MovementType] = None
+    ) -> MoveResult:
         """
         Move `axis` to `position` using its stepper and/or piezo.
 
@@ -678,25 +720,25 @@ class SimulationStageDevices:
             Info to be logged regarding the movement.
         """
         result = self.axes[axis].goto(position, which)
-        log.trace(f"{self.name}, Axis {axis} :" + result.text)
+        logger.trace(f"{self.name}, Axis {axis} :" + result.text)
         return result
 
     def read(self) -> Optional[float]:
         """Takes a reading from the attached sensor, if it exists."""
         if self.sensor is None:
-            log.warning("No sensor assigned to {self.name}")
+            logger.warning("No sensor assigned to {self.name}")
             return None
         return self.sensor.read()
 
     def integrate(self, Texp: int, avg: bool = True) -> Optional[float]:
         """Performs an integration with the attached sensor, if it exists."""
         if self.sensor is None:
-            log.warning("No sensor assigned to {self.name}")
+            logger.warning("No sensor assigned to {self.name}")
             return None
         return self.sensor.integrate(Texp, avg)
 
     # --- Dummy methods to match the real hardware class interface ---
-    def deenergize(self, axes: Optional[str] = None):
+    def deenergize(self, axes: Union[str, List[str]] = "all"):
         """
         Call `deenergize` (no-op dummy) on one or more axes.
 
@@ -705,12 +747,12 @@ class SimulationStageDevices:
         axes : {'x', 'y', 'z', None}, optional
             Which axes to call on.
         """
-        if axes is None or axes.lower() == 'all':
-            axes = self.axes.keys()
+        if str([c.lower() for c in axes]) == "all":
+            axes = list(self.axes.keys())
         for axis in list(axes):
             self.axes[axis].deenergize()
 
-    def home(self, axes: Optional[str] = None):
+    def home(self, axes: Union[str, List[str]] = "all"):
         """
         Call `home` on one or more axes.
 
@@ -719,12 +761,12 @@ class SimulationStageDevices:
         axes : {'x', 'y', 'z', None}, optional
             Which axes to home.
         """
-        if axes is None or axes.lower() == 'all':
-            axes = self.axes.keys()
+        if str([c.lower() for c in axes]) == "all":
+            axes = list(self.axes.keys())
         for axis in list(axes):
             self.axes[axis].home()
 
-    def energize(self, axes: Optional[str] = None):
+    def energize(self, axes: Union[str, List[str]] = "all"):
         """
         Call `energize` (no-op dummy) on one or more axes.
 
@@ -733,8 +775,8 @@ class SimulationStageDevices:
         axes : {'x', 'y', 'z', None}, optional
             Which axes to call on.
         """
-        if axes is None or axes.lower() == 'all':
-            axes = self.axes.keys()
+        if str([c.lower() for c in axes]) == "all":
+            axes = list(self.axes.keys())
         for axis in list(axes):
             self.axes[axis].energize()
 

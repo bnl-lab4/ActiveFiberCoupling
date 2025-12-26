@@ -2,12 +2,12 @@
 Basic movement controls for steppers and piezos.
 """
 
-import logging
 from typing import Optional
 from MovementClasses import StageDevices, MovementType
+from LoggingUtils import get_logger
 
 # unique logger name for this module
-log = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def energize(stage: StageDevices, axes: Optional[str] = None):
@@ -73,16 +73,16 @@ def center(stage: StageDevices, which: MovementType):
     """
 
     if which == MovementType.PIEZO or which == MovementType.GENERAL:
-        log.info(f"Centering {stage.name} piezos")
-        stage.goto('x', stage.axes['x'].PIEZO_CENTER, MovementType.PIEZO)
-        stage.goto('y', stage.axes['y'].PIEZO_CENTER, MovementType.PIEZO)
-        stage.goto('z', stage.axes['z'].PIEZO_CENTER, MovementType.PIEZO)
+        logger.info(f"Centering {stage.name} piezos")
+        stage.goto("x", stage.axes["x"].PIEZO_CENTER, MovementType.PIEZO)
+        stage.goto("y", stage.axes["y"].PIEZO_CENTER, MovementType.PIEZO)
+        stage.goto("z", stage.axes["z"].PIEZO_CENTER, MovementType.PIEZO)
     if which == MovementType.STEPPER or which == MovementType.GENERAL:
-        log.info(f"Centering {stage.name} steppers")
+        logger.info(f"Centering {stage.name} steppers")
         # empty assignments makes them finish before moving on
-        _ = stage.goto('x', stage.axes['x'].STEPPER_CENTER, MovementType.STEPPER)
-        _ = stage.goto('y', stage.axes['y'].STEPPER_CENTER, MovementType.STEPPER)
-        _ = stage.goto('z', stage.axes['z'].STEPPER_CENTER, MovementType.STEPPER)
+        _ = stage.goto("x", stage.axes["x"].STEPPER_CENTER, MovementType.STEPPER)
+        _ = stage.goto("y", stage.axes["y"].STEPPER_CENTER, MovementType.STEPPER)
+        _ = stage.goto("z", stage.axes["z"].STEPPER_CENTER, MovementType.STEPPER)
 
 
 def zero(stage: StageDevices, which: MovementType):
@@ -99,16 +99,16 @@ def zero(stage: StageDevices, which: MovementType):
         Whether to move the piezos, the steppers, or both (``GENERAL``).
     """
     if which == MovementType.PIEZO or which == MovementType.GENERAL:
-        log.info(f"Zeroing {stage.name} piezos")
-        stage.goto('x', stage.axes['x'].PIEZO_LIMITS[0], MovementType.PIEZO)
-        stage.goto('y', stage.axes['y'].PIEZO_LIMITS[0], MovementType.PIEZO)
-        stage.goto('z', stage.axes['z'].PIEZO_LIMITS[0], MovementType.PIEZO)
+        logger.info(f"Zeroing {stage.name} piezos")
+        stage.goto("x", stage.axes["x"].PIEZO_LIMITS[0], MovementType.PIEZO)
+        stage.goto("y", stage.axes["y"].PIEZO_LIMITS[0], MovementType.PIEZO)
+        stage.goto("z", stage.axes["z"].PIEZO_LIMITS[0], MovementType.PIEZO)
     if which == MovementType.STEPPER or which == MovementType.GENERAL:
-        log.info(f"Zeroing {stage.name} steppers")
+        logger.info(f"Zeroing {stage.name} steppers")
         # empty assignments makes them finish before moving on
-        _ = stage.goto('x', stage.axes['x'].STEPPER_LIMITS[0], MovementType.STEPPER)
-        _ = stage.goto('y', stage.axes['y'].STEPPER_LIMITS[0], MovementType.STEPPER)
-        _ = stage.goto('z', stage.axes['z'].STEPPER_LIMITS[0], MovementType.STEPPER)
+        _ = stage.goto("x", stage.axes["x"].STEPPER_LIMITS[0], MovementType.STEPPER)
+        _ = stage.goto("y", stage.axes["y"].STEPPER_LIMITS[0], MovementType.STEPPER)
+        _ = stage.goto("z", stage.axes["z"].STEPPER_LIMITS[0], MovementType.STEPPER)
 
 
 def max(stage: StageDevices, which: MovementType):
@@ -126,13 +126,13 @@ def max(stage: StageDevices, which: MovementType):
     """
 
     if which == MovementType.PIEZO or which == MovementType.GENERAL:
-        log.info(f"Maximizing {stage.name} piezos")
-        stage.goto('x', stage.axes['x'].PIEZO_LIMITS[1], MovementType.PIEZO)
-        stage.goto('y', stage.axes['y'].PIEZO_LIMITS[1], MovementType.PIEZO)
-        stage.goto('z', stage.axes['z'].PIEZO_LIMITS[1], MovementType.PIEZO)
+        logger.info(f"Maximizing {stage.name} piezos")
+        stage.goto("x", stage.axes["x"].PIEZO_LIMITS[1], MovementType.PIEZO)
+        stage.goto("y", stage.axes["y"].PIEZO_LIMITS[1], MovementType.PIEZO)
+        stage.goto("z", stage.axes["z"].PIEZO_LIMITS[1], MovementType.PIEZO)
     if which == MovementType.STEPPER or which == MovementType.GENERAL:
-        log.info(f"Maximizing {stage.name} steppers")
+        logger.info(f"Maximizing {stage.name} steppers")
         # empty assignments makes them finish before moving on
-        _ = stage.goto('x', stage.axes['x'].STEPPER_LIMITS[1], MovementType.STEPPER)
-        _ = stage.goto('y', stage.axes['y'].STEPPER_LIMITS[1], MovementType.STEPPER)
-        _ = stage.goto('z', stage.axes['z'].STEPPER_LIMITS[1], MovementType.STEPPER)
+        _ = stage.goto("x", stage.axes["x"].STEPPER_LIMITS[1], MovementType.STEPPER)
+        _ = stage.goto("y", stage.axes["y"].STEPPER_LIMITS[1], MovementType.STEPPER)
+        _ = stage.goto("z", stage.axes["z"].STEPPER_LIMITS[1], MovementType.STEPPER)

@@ -7,7 +7,6 @@
 Defines the `StageAxis` and `StageDevices` classes for controlling stages.
 """
 
-import logging
 import time
 import serial
 import warnings
@@ -16,12 +15,14 @@ import yaml
 import contextlib
 from ticlib import TicUSB
 from typing import Dict, Optional, Union
+from typing_extensions import assert_never
 
 from SensorClasses import Sensor
 from Distance import Distance
+from LoggingUtils import get_logger
 
 # unique logger name for this module
-log = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # load stepper info file
 with open("stepper_info.yaml", "r") as stream:
@@ -261,7 +262,7 @@ class StageAxis:
                     f"Stepper serial number {stepper} is not in stepper_info.yaml."
                     + "Stage range set to safe defaults."
                 )
-            log.debug(
+            logger.debug(
                 f"True stepper {self.stepper_SN} stage limits set to "
                 + f"({self._TRUE_STEPPER_LIMITS[0].prettyprint()}, {self._TRUE_STEPPER_LIMITS[1].prettyprint()})"
             )
@@ -273,7 +274,7 @@ class StageAxis:
 
             # stepper center is defined with lower limit = 0 steps
             self.STEPPER_CENTER = (self.STEPPER_LIMITS[1] - self.STEPPER_LIMITS[0]) / 2
-            log.debug(
+            logger.debug(
                 f"Stepper {self.stepper_SN} stage center set to {self.STEPPER_CENTER.prettyprint()}"
             )
 
@@ -338,7 +339,7 @@ class StageAxis:
                     )
                 )  # sorry
             else:
-                log.debug(f"Stepper {stepper_SN} settings are as expected")
+                logger.debug(f"Stepper {stepper_SN} settings are as expected")
 
     def __enter__(self):
         """
@@ -427,7 +428,7 @@ class StageAxis:
             self.PIEZO_LIMITS[0].volts, min(self.PIEZO_LIMITS[1].volts, voltage)
         )  # piezo voltage limits
         if clamped != voltage:
-            log.warning(
+            logger.warning(
                 f"Cannot move {self.axis} to {voltage} because it is"
                 + " outside the piezo's limits of"
                 + f"({self.PIEZO_LIMITS[0].volts}, {self.PIEZO_LIMITS[1].volts}) volts"
@@ -470,7 +471,7 @@ class StageAxis:
             self.STEPPER_LIMITS[0].steps, min(self.STEPPER_LIMITS[1].steps, steps)
         )  # stepper steps limits
         if clamped != steps:
-            log.warning(
+            logger.warning(
                 f"Cannot move {self.axis} stepper {self.stepper_SN} to {steps} because it is"
                 + "outside the stepper's stage limits of"
                 + f"({self.STEPPER_LIMITS[0].steps}, {self.STEPPER_LIMITS[1].steps}) steps"
@@ -488,12 +489,14 @@ class StageAxis:
         board will ignore move commands if the stepper is not energized.
         """
         if self._energized():
-            log.info(f"Axis {self.axis} stepper {self.stepper_SN} is already energized")
+            logger.info(
+                f"Axis {self.axis} stepper {self.stepper_SN} is already energized"
+            )
             return
         self.stepper.halt_and_set_position(0)
         self.stepper.energize()
         self.stepper.exit_safe_start()
-        log.info(f"Axis {self.axis} stepper {self.stepper_SN} energized")
+        logger.info(f"Axis {self.axis} stepper {self.stepper_SN} energized")
 
     def deenergize(self):
         """
@@ -502,14 +505,14 @@ class StageAxis:
         ignore move commands until the board is re-energized.
         """
         if not self._energized():
-            log.info(
+            logger.info(
                 f"Axis {self.axis} stepper {self.stepper_SN} is already deenergized"
             )
             return
         self.stepper.halt_and_hold()
         self.stepper.deenergize()
         self.stepper.enter_safe_start()
-        log.info(f"Axis {self.axis} stepper {self.stepper_SN} deenergized")
+        logger.info(f"Axis {self.axis} stepper {self.stepper_SN} deenergized")
 
     def home(self):
         """
@@ -531,7 +534,7 @@ class StageAxis:
                 f"Axis {self.axis} stepper {self.stepper_SN} not energized"
             )
         self.stepper.go_home(0)
-        log.info(f"Axis {self.axis} stepper {self.stepper_SN} homing")
+        logger.info(f"Axis {self.axis} stepper {self.stepper_SN} homing")
         while self._position_uncertain():
             # homing sequence sets "position uncertain" to false upon success
             time.sleep(0.1)
@@ -539,7 +542,7 @@ class StageAxis:
         #   set lower stage limit to 0
         self._goto_stepper(self._TRUE_STEPPER_LIMITS[0].steps)
         self.stepper.halt_and_set_position(0)
-        log.debug(
+        logger.debug(
             f"Axis {self.axis} stepper {self.stepper_SN} homing complete, "
             + f"zeroed at lower stage limit {self._TRUE_STEPPER_LIMITS[0].prettyprint()}"
         )
@@ -630,7 +633,7 @@ class StageAxis:
             result.centered_piezos = True
             return result
 
-        raise ValueError("which must be a MovementType enum or None.")
+        assert_never(which)
 
     def move(
         self, movement: Distance, which: Optional[MovementType] = None
@@ -680,7 +683,7 @@ class StageAxis:
             result.centered_piezos = True
             return result
 
-        raise ValueError("which must be a MovementType enum or None.")
+        assert_never(which)
 
 
 class StageDevices:
@@ -777,11 +780,11 @@ class StageDevices:
         piezo = None
         try:
             piezo = serial.Serial(self.piezo_port, piezo_baud_rate, timeout=1)
-            log.info(f"Connected to {piezo_port} at {piezo_baud_rate} baud.")
+            logger.info(f"Connected to {piezo_port} at {piezo_baud_rate} baud.")
         except serial.SerialException as e:
             if require_connection:
                 raise e
-            log.warning(f"Could not open serial port {piezo_port}: {e}")
+            logger.warning(f"Could not open serial port {piezo_port}: {e}")
 
         # loop a similar try-except over the stepper controllers
         # while also creating the axis objects
@@ -790,14 +793,14 @@ class StageDevices:
                 if stepper_SN is not None:
                     stepper = TicUSB(product=0x00B5, serial_number=stepper_SNs[axis])
                     # Designation for Tic T834          Serial number (binary) of specific controller
-                    log.info(f"Connected to {stepper_SNs[axis]} as axis {axis}.")
+                    logger.info(f"Connected to {stepper_SNs[axis]} as axis {axis}.")
                 else:
                     stepper = None
-                    log.info(f"{self.name}:: no connection for {axis} provided")
+                    logger.info(f"{self.name}:: no connection for {axis} provided")
             except Exception as e:
                 if require_connection or str(e) != "USB device not found":
                     raise e
-                log.warning(
+                logger.warning(
                     f"Error opening stepper port {stepper_SNs[axis]} as axis {axis}: {e}"
                 )
                 stepper = None
@@ -813,7 +816,7 @@ class StageDevices:
         for axis, stageAxis in self.axes.items():
             if stageAxis is not None:
                 self._exit_stack.enter_context(stageAxis)
-                log.debug(
+                logger.debug(
                     f"Axis {axis} context entered for stepper {stageAxis.stepper_SN}"
                 )
         return self
@@ -825,7 +828,7 @@ class StageDevices:
         Returns ``False``, letting exceptions propogate.
         """
         self._exit_stack.close()
-        log.debug("Exited context stack")
+        logger.debug("Exited context stack")
         return False
 
     def __str__(self):
@@ -907,7 +910,7 @@ class StageDevices:
             Info to be logged regarding the movement.
         """
         result = self.axes[axis].move(movement, which)
-        log.trace(f"{self.name}, Axis {axis} :" + result.text)
+        logger.trace(f"{self.name}, Axis {axis} :" + result.text)
         return result
 
     def goto(self, axis: str, position: Distance, which: Optional[MovementType] = None):
@@ -930,7 +933,7 @@ class StageDevices:
             Info to be logged regarding the movement.
         """
         result = self.axes[axis].goto(position, which)
-        log.trace(f"{self.name} Axis {axis} : " + result.text)
+        logger.trace(f"{self.name} Axis {axis} : " + result.text)
         return result
 
     def read(self):
@@ -945,7 +948,7 @@ class StageDevices:
             Value read from the sensor.
         """
         if self.sensor is None:
-            log.warning("No sensor assigned to {self.name}")
+            logger.warning("No sensor assigned to {self.name}")
             return None
         return self.sensor.read()
 
@@ -961,6 +964,6 @@ class StageDevices:
             Integrate value from the sensor.
         """
         if self.sensor is None:
-            log.warning("No sensor assigned to {self.name}")
+            logger.warning("No sensor assigned to {self.name}")
             return None
         return self.sensor.integrate(Texp, avg)
