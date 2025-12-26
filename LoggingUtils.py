@@ -19,16 +19,19 @@ SAFE_MODULES = {
     "manual_control",
     "StageStatus",
     "LoggingUtils",
+    "__main__",
 }
 
 
 # Add Trace level to logging
 TRACE_LEVEL_NUM = 5
+logging.addLevelName(TRACE_LEVEL_NUM, "TRACE")
+setattr(logging, "TRACE", TRACE_LEVEL_NUM)
 
 
 class CustomLogger(logging.Logger):
     def trace(self, message, *args, **kwargs):
-        """Custim logging level (5) below `logging.debug`."""
+        """Custim logging level below `logging.debug`."""
         if self.isEnabledFor(TRACE_LEVEL_NUM):
             self._log(
                 TRACE_LEVEL_NUM, message, args, **kwargs
