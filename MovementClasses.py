@@ -14,7 +14,7 @@ import enum
 import yaml
 import contextlib
 from ticlib import TicUSB
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Union, List
 from typing_extensions import assert_never
 
 from SensorClasses import Sensor
@@ -772,7 +772,7 @@ class StageDevices:
     ):
         self.name = name
         self.sensor = sensor
-        self.axes = {axis: None for axis in stepper_SNs.keys()}
+        self.axes: Dict[str, StageAxis] = {}
         self.piezo_port = piezo_port
         self.piezo_baud_rate = piezo_baud_rate
         self._exit_stack = contextlib.ExitStack()  # for context management
@@ -839,7 +839,7 @@ class StageDevices:
         """Returns `name`."""
         return self.name
 
-    def deenergize(self, axes: Optional[str] = None):
+    def deenergize(self, axes: Union[str, List[str]]):
         """
         Deenergize the steppers of one or more axes.
 
@@ -850,13 +850,12 @@ class StageDevices:
             string (e.g. 'xz'), or 'all' for all axes. ``None``
             defaults to 'all'.
         """
-        if axes is None or axes.lower() == "all":
-            axes = "xyz"
-        axes = list(axes)
+        if str([c.lower() for c in axes]) == "all":
+            axes = list(self.axes.keys())
         for axis in axes:
             self.axes[axis].deenergize()
 
-    def home(self, axes: Optional[str] = None):
+    def home(self, axes: Union[str, List[str]]):
         """
         Home the steppers of one or more axes.
 
@@ -867,13 +866,12 @@ class StageDevices:
             string (e.g. 'xz'), or 'all' for all axes. ``None``
             defaults to 'all'.
         """
-        if axes is None or axes.lower() == "all":
-            axes = "xyz"
-        axes = list(axes)
+        if str([c.lower() for c in axes]) == "all":
+            axes = list(self.axes.keys())
         for axis in axes:
             self.axes[axis].home()
 
-    def energize(self, axes: Optional[str] = None):
+    def energize(self, axes: Union[str, List[str]] = "all"):
         """
         Energize the steppers of one or more axes.
 
@@ -884,9 +882,8 @@ class StageDevices:
             string (e.g. 'xz'), or 'all' for all axes. ``None``
             defaults to 'all'.
         """
-        if axes is None or axes.lower() == "all":
-            axes = "xyz"
-        axes = list(axes)
+        if str([c.lower() for c in axes]) == "all":
+            axes = list(self.axes.keys())
         for axis in axes:
             self.axes[axis].energize()
 

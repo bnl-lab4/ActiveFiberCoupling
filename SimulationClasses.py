@@ -5,6 +5,7 @@ Simulated stage with virtual piezos, steppers, and sensor.
 import contextlib
 import math
 from typing import Dict, Optional, Tuple, Union, List
+from typing_extensions import assert_never
 
 from MovementClasses import MovementType, MoveResult
 from Distance import Distance
@@ -167,7 +168,7 @@ class SimulationSensor:
         self,
         propagation_axis: str,
         focal_ratio: float = 4.0,
-        beam_waist_position: Tuple[float, float, float] = (2000.0,) * 3,  # microns
+        beam_waist_position: Tuple[float, float, float] = (2000.0, 2000.0, 2000.0),
         angle_of_deviation: float = 0.0,
         peak_intensity: float = 1.0,
     ):
@@ -273,6 +274,9 @@ class SimulationSensor:
         float
             Intensity at the current stage position.
         """
+        if self.stage is None:
+            raise RuntimeError("Sensor is not connected to a stage.")
+
         result = self.read()
         logger.debug(f"{self.stage.name} simulation sensor power: {result:.6f}")
         return result
@@ -496,7 +500,7 @@ class SimulationStageAxis:
             result.centered_piezos = True
             return result
 
-        raise ValueError("which must be a MovementType enum or None.")
+        assert_never(which)
 
     def move(
         self, movement: Distance, which: Optional[MovementType] = None
@@ -562,7 +566,7 @@ class SimulationStageAxis:
         self.stepper_position = Distance(0, "microns")
         logger.info(
             f"Stepper {self.stepper_SN} homing complete, "
-            + f"zeroed at lower stage limit {self.TRUE_STEPPER_LIMITS[0].prettyprint()}"
+            + f"zeroed at lower stage limit {self.STEPPER_LIMITS[0].prettyprint()}"
         )
 
     def __enter__(self):
@@ -640,7 +644,7 @@ class SimulationStageDevices:
     def __init__(self, name: str, sensor: Optional[SimulationSensor] = None):
         self.name = name
         self.stepper_SNs = dict(x=f"{name}_simX", y=f"{name}_simY", z=f"{name}_simZ")
-        self.axes = {axis: None for axis in self.stepper_SNs.keys()}
+        self.axes: Dict[str, SimulationStageAxis] = {}
         self.sensor = sensor
         self._exit_stack = contextlib.ExitStack()  # for context management
         # If a simulation sensor is provided, link it to this stage instance
@@ -777,7 +781,7 @@ class SimulationStageDevices:
         """
         if str([c.lower() for c in axes]) == "all":
             axes = list(self.axes.keys())
-        for axis in list(axes):
+        for axis in axes:
             self.axes[axis].energize()
 
     def __enter__(self):
