@@ -4,7 +4,7 @@ Defines the `Distance` class as a general quantity with several equivalent units
 
 from __future__ import annotations
 import sigfig
-from typing import Union, Sequence
+from typing import Union, Sequence, SupportsFloat
 from collections.abc import Sequence as sequence  # sorry
 
 from LoggingUtils import get_logger
@@ -95,7 +95,7 @@ class Distance:
     _MICRONS_PER_STEP = _MICRONS_PER_FULL_STEP / 32
     # enforcing 32 microsteps per full step in StageAxis __init__
 
-    def __init__(self, value: float, unit: str = "microns"):
+    def __init__(self, value: SupportsFloat, unit: str = "microns"):
         if unit == "microns":
             self._microns = float(value)
         elif unit == "volts":
@@ -186,7 +186,7 @@ class Distance:
         """
         return self.__sub__(other)
 
-    def __mul__(self, other: float) -> Distance:
+    def __mul__(self, other: SupportsFloat) -> Distance:
         """
         Multiply this object with a scalar.
 
@@ -200,19 +200,19 @@ class Distance:
         `Distance`
             A new instance of the `Distance` class whose value is the product.
         """
-        if isinstance(other, int | float):
-            new_microns = self.microns * other
+        if isinstance(other, SupportsFloat):
+            new_microns = self.microns * float(other)
             return Distance(new_microns, "microns")
 
         return NotImplemented
 
-    def __rmul__(self, other: float) -> Distance:
+    def __rmul__(self, other: SupportsFloat) -> Distance:
         """
         See `__mul__`.
         """
         return self.__mul__(other)
 
-    def __truediv__(self, other: float) -> Distance:
+    def __truediv__(self, other: SupportsFloat) -> Distance:
         """
         Divide this object by a scalar.
 
@@ -226,13 +226,13 @@ class Distance:
         `Distance`
             A new instance of the `Distance` class whose value is the quotient.
         """
-        if isinstance(other, int | float):
-            new_microns = self.microns / other
+        if isinstance(other, SupportsFloat):
+            new_microns = self.microns / float(other)
             return Distance(new_microns, "microns")
 
         return NotImplemented
 
-    def __rtruediv__(self, other: float) -> Distance:
+    def __rtruediv__(self, other: SupportsFloat) -> Distance:
         """
         See `__truediv__`.
         """
@@ -327,7 +327,7 @@ class Distance:
         return self._microns
 
     @microns.setter
-    def microns(self, value: float):
+    def microns(self, value: SupportsFloat):
         self._microns = float(value)
         return
 
@@ -339,7 +339,7 @@ class Distance:
         return self._microns / self._MICRONS_PER_VOLT
 
     @volts.setter
-    def volts(self, value: float):
+    def volts(self, value: SupportsFloat):
         self._microns = float(value) * self._MICRONS_PER_VOLT
         return
 
@@ -353,7 +353,7 @@ class Distance:
         return self._microns / self._MICRONS_PER_STEP
 
     @steps.setter
-    def steps(self, value: float):
+    def steps(self, value: SupportsFloat):
         self._microns = float(value) * self._MICRONS_PER_STEP
 
     @property
@@ -364,7 +364,7 @@ class Distance:
         return self._microns / self._MICRONS_PER_FULL_STEP
 
     @fullsteps.setter
-    def fullsteps(self, value: float):
+    def fullsteps(self, value: SupportsFloat):
         self._microns = float(value) * self._MICRONS_PER_FULL_STEP
 
     ######### Functions
