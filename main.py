@@ -9,6 +9,7 @@
 #####################
 
 
+from __future__ import annotations  # for type hinting types not yet defined
 import os
 import sys
 import importlib  # for reloading modules
@@ -19,7 +20,7 @@ import readline  # enables input() to save history just by being loaded
 import atexit  # for saving readline history file
 import inspect  # checking input kwargs match to function in menu
 import traceback  # show traceback in main menu
-from typing import Tuple, Dict, Optional
+from typing import Tuple, Dict, Optional, List, Union, Any, cast
 from collections.abc import Callable
 
 # Import alignment algorithms and control modes
@@ -50,16 +51,34 @@ SIMSENSOR_SKYTELE = dict(propagation_axis="y", focal_ratio=7.0, angle_of_deviati
 STEPPER_DICT0 = dict(x="00485175", y="00485185", z="00485159")
 STEPPER_DICT1 = dict(x="00485149", y="00485151", z="00485168")
 
-STAGENAME_LIST = (
+STAGENAME_LIST: Tuple[str, ...] = (
     "stage0",
     "stage1",
     "simstage_asph",
     "simstage_labtel",
     "simstage_skytel",
 )
-SENSOR_LIST = (PIPLATE0, PIPLATE1, SIMSENSOR_ASPH, SIMSENSOR_LABTELE, SIMSENSOR_SKYTELE)
-PIEZO_PORT_LIST = ("/dev/ttyACM0", "/dev/ttyACM1", None, None, None)
-STEPPER_DICT_LIST = (STEPPER_DICT0, STEPPER_DICT1, None, None, None)
+SENSOR_LIST: Tuple[Dict[str, Any], ...] = (
+    PIPLATE0,
+    PIPLATE1,
+    SIMSENSOR_ASPH,
+    SIMSENSOR_LABTELE,
+    SIMSENSOR_SKYTELE,
+)
+PIEZO_PORT_LIST: Tuple[Optional[str], ...] = (
+    "/dev/ttyACM0",
+    "/dev/ttyACM1",
+    None,
+    None,
+    None,
+)
+STEPPER_DICT_LIST: Tuple[Optional[Dict[str, str]], ...] = (
+    STEPPER_DICT0,
+    STEPPER_DICT1,
+    None,
+    None,
+    None,
+)
 
 
 MOVEMENT_TYPE_MAP = {
@@ -81,7 +100,9 @@ def custom_formatwarning(message, category, filename, lineno, line=None):
 logger = get_logger(__name__)
 
 
-def AcceptInputArgs(inputTuple, inputArgs):
+def AcceptInputArgs(
+    inputTuple: List[Union[bool, str, int, None]], inputArgs: List[str]
+) -> list:
     # relies upon order of inputTuple, should be refactored
 
     CommandArg_ValueDict = dict(
@@ -132,7 +153,7 @@ def AcceptInputArgs(inputTuple, inputArgs):
     return inputTuple
 
 
-def Update_ExposureTime(texp):
+def Update_ExposureTime(texp: float) -> float:
     print(
         f"Update default exposure time (currently {texp}):"
         + "(iterations for piplates, milliseconds for sockets)"
@@ -153,7 +174,7 @@ class MenuEntry:
     def __init__(
         self,
         text: str,
-        func: Callable,
+        func: Optional[Callable] = None,
         args_config: Tuple[str, ...] = (),
         kwargs_config: Dict["str", dict] = {},
     ):
@@ -170,8 +191,13 @@ class MenuEntry:
             kwargs=self.kwargs_config,
         )
 
-    def execute(self, controller, user_input_parts):
+    def execute(
+        self, controller: ProgramController, user_input_parts: List[str]
+    ) -> None:
         # Handle special case for help function
+        if self.func is None:
+            logger.warning("No function assigned to this menu entry")
+            return
         if self.func == StringUtils.menu_help:
             target_func = user_input_parts[0] if user_input_parts else None
             self.func(target_func, controller.menu)
@@ -271,7 +297,7 @@ class ProgramController:
         self.menu = self._build_menu()
 
     def __enter__(self):
-        LoggingUtils.setup_logging(*self.logging_settings)
+        LoggingUtils.setup_logging(*self.logging_settings)  # type: ignore [reportOptionalIterable]
         self._initialize_devices()
         return self
 
@@ -285,7 +311,10 @@ class ProgramController:
             zip(STAGENAME_LIST, SENSOR_LIST, PIEZO_PORT_LIST, STEPPER_DICT_LIST)
         ):
             if "propagation_axis" not in SENSOR.keys():
-                sensor = self.stack.enter_context(Sensor(SENSOR, SENSOR["sensortype"]))
+                sensor_dict = cast(Dict[str, Any], SENSOR)
+                sensor = self.stack.enter_context(
+                    Sensor(sensor_dict, sensor_dict["sensortype"])
+                )
                 stage = self.stack.enter_context(
                     StageDevices(
                         NAME,
@@ -297,7 +326,8 @@ class ProgramController:
                     )
                 )
             else:
-                sensor = self.stack.enter_context(SimulationSensor(**SENSOR))
+                sensor_dict = cast(Dict[str, Any], SENSOR)
+                sensor = self.stack.enter_context(SimulationSensor(**sensor_dict))
                 stage = self.stack.enter_context(
                     SimulationStageDevices(NAME, sensor=sensor)
                 )
@@ -492,18 +522,17 @@ def main():
     # Default runtime variable
     AutoHome = True  # home motors upon establishing connection
     RequireConnection = False  # raise exception if device connections fail to establish
-    LoggingSettings = [None] * 5
+    LoggingSettings: List[Any] = [None] * 5
 
     if len(sys.argv) > 1:
         InputArgs = sys.argv[1:]
         AutoHome, RequireConnection, *LoggingSettings = AcceptInputArgs(
             [AutoHome, RequireConnection] + LoggingSettings, InputArgs
         )
-        # print(f"Received input args: {AutoHome}, {RequireConnection}, {LoggingSettings}")
 
     try:
         with ProgramController(
-            AutoHome, RequireConnection, LoggingSettings
+            AutoHome, RequireConnection, tuple(LoggingSettings)
         ) as controller:
             controller.run()
     except Exception as e:

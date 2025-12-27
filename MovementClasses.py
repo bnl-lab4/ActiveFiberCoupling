@@ -763,8 +763,8 @@ class StageDevices:
     def __init__(
         self,
         name: str,
-        piezo_port: str,
-        stepper_SNs: Dict[str, str],
+        piezo_port: Optional[str],
+        stepper_SNs: Optional[Dict[str, str]],
         sensor: Optional[Sensor] = None,
         piezo_baud_rate: int = 115200,
         require_connection: bool = False,
