@@ -2,7 +2,6 @@
 # deviation angles in 3d fit
 ###########
 
-import logging
 import numpy as np
 import scipy.stats as stats
 import lmfit
@@ -10,7 +9,7 @@ import copy
 import sigfig
 import matplotlib.pyplot as plt
 from collections.abc import Sequence as sequence
-from typing import Optional, Union, Tuple, Sequence
+from typing import Optional, Union, Sequence, MutableSequence, List, cast
 from datetime import datetime
 
 from MovementClasses import MovementType, StageDevices
@@ -50,15 +49,15 @@ def accept_fit():
 
 
 def gaussbeam(
-    x1,
-    x2,
-    x3,
-    waistx1=0.0,
-    waistx2=0.0,
-    waistx3=0.0,
-    I0=1.0,
-    w0=8 * np.pi * WAVELENGTH,
-    C=0.0,
+    x1: np.ndarray,
+    x2: np.ndarray,
+    x3: np.ndarray,
+    waistx1: float = 0.0,
+    waistx2: float = 0.0,
+    waistx3: float = 0.0,
+    I0: float = 1.0,
+    w0: float = 8 * np.pi * WAVELENGTH,
+    C: float = 0.0,
 ):
     pR2 = (
         np.pi * w0**2 / 0.65
@@ -74,7 +73,7 @@ def gaussbeam(
 
 
 def Gbeamfit_3d(
-    axes: str,
+    axes: Union[str, List[str]],
     movementType: MovementType,
     stagename: str,
     axis0_cube: np.ndarray,
@@ -103,12 +102,11 @@ def Gbeamfit_3d(
     weights /= weights.max()
     weights = np.sqrt(weights)
 
-    position_cubes = dict(
-        x1=axis0_cube.flatten(), x2=axis1_cube.flatten(), x3=focus_cube.flatten()
-    )
     result = model.fit(
         data=data_cube.flatten(),
-        **position_cubes,
+        x1=axis0_cube.flatten(),
+        x2=axis1_cube.flatten(),
+        x3=focus_cube.flatten(),
         params=params,
         weights=weights.flatten(),
     )
@@ -118,7 +116,9 @@ def Gbeamfit_3d(
     if log_plot or show_plot:
         fig = plot_3dfit(
             axes,
-            *[cube.reshape(focus_cube.shape) for cube in position_cubes.values()],
+            axis0_cube,
+            axis1_cube,
+            focus_cube,
             result,
         )
         logger.info("Plot Generated")
@@ -139,7 +139,7 @@ def Gbeamfit_3d(
 
 
 def Gbeamfit_2d(
-    axes: str,
+    axes: Union[str, List[str]],
     movementType: MovementType,
     stagename: str,
     axis0_grid: np.ndarray,
@@ -192,12 +192,12 @@ def Gbeamfit_2d(
 
 
 def waist_parafit(
-    axes: str,
+    axes: Union[str, List[str]],
     movementType: MovementType,
     stagename: str,
     planes: Sequence[Distance],
-    waists: Sequence[float],
-    waists_unc: Sequence[float],
+    waists: np.ndarray,
+    waists_unc: np.ndarray,
     show_plot: bool = False,
     log_plot: bool = True,
 ):
@@ -229,14 +229,13 @@ def waist_parafit(
 
 
 def peaks_linfit(
-    axes: str,
+    axes: Union[str, List[str]],
     first_axis: bool,
     movementType: MovementType,
     stagename: str,
     planes: Sequence[Distance],
-    peak_pos: Sequence[float],
-    peak_unc: Sequence[float],
-    focus_pos: Distance,
+    peak_pos: np.ndarray,
+    peak_unc: np.ndarray,
     show_plot: bool = False,
     log_plot: bool = True,
 ):
@@ -276,8 +275,8 @@ def plane_grid(
     movementType: MovementType,
     plane: Distance,
     axes: list,
-    axis0: np.array,
-    axis1: np.array,
+    axis0: np.ndarray,
+    axis1: np.ndarray,
     exposureTime: Union[int, float],
     show_plot: bool = False,
     log_plot: bool = True,
@@ -323,7 +322,7 @@ def run(
     movementType: MovementType,
     exposureTime: Union[int, float],
     spacing: Union[None, Distance, Sequence[Distance]] = None,  # default 10 volts
-    num_points: Tuple[None, int, Sequence[int]] = None,
+    num_points: Union[None, int, Sequence[int]] = None,
     center: Union[None, str, Sequence[Distance]] = None,
     limits: Optional[
         Sequence[Distance]
@@ -396,27 +395,28 @@ def run(
 
     if limits is None:
         if movementType == MovementType.PIEZO:
-            limits = []
+            limits_default = []
             for axis in axes:
                 axis_center = stage.axes[axis].PIEZO_CENTER
                 lower, upper = stage.axes[axis].PIEZO_LIMITS
                 if center == "center":
                     lower -= axis_center
                     upper -= axis_center
-                limits.append([lower, upper])
+                limits_default.append([lower, upper])
         elif movementType == MovementType.STEPPER:
-            limits = []
+            limits_default = []
             for axis in axes:
                 axis_center = stage.axes[axis].STEPPER_CENTER
                 lower, upper = stage.axes[axis].STEPPER_LIMITS
                 if center == "center":
                     lower -= axis_center
                     upper -= axis_center
-                limits.append([lower, upper])
+                limits_default.append([lower, upper])
         else:
             raise ValueError(
                 "movementType must be a MovementType.PIEZO or " + ".STEPPER enum"
             )
+        limits = limits_default
 
     if center == "center":
         if movementType == MovementType.STEPPER:
@@ -436,6 +436,7 @@ def run(
         raise ValueError(
             "center must be None, 'center', 'current', or" + " a 2-tuple of Distances"
         )
+    center = cast(List[Distance], center)
 
     #   Duck typing
     if isinstance(limits, sequence) and all(
@@ -448,21 +449,20 @@ def run(
         num_points = (num_points, num_points)
 
     if isinstance(planes, int):
-        # I think planes should always use steppers unless specified
-        # if movementType == MovementType.PIEZO:
-        #     planes_limits = [limit.microns for limit in stage.axes[focus_axis].PIEZO_LIMITS]
-        # elif movementType == MovementType.STEPPER:
         planes_limits = [
             limit.microns for limit in stage.axes[focus_axis].STEPPER_LIMITS
         ]
-        planes = np.linspace(*planes_limits, planes)
-        planes = [Distance(plane, "microns") for plane in planes]
+        planes_microns = np.linspace(planes_limits[0], planes_limits[1], planes)
+        planes = [Distance(plane, "microns") for plane in planes_microns]
 
     if center is not None:
         limits[0][0] += center[0]
         limits[0][1] += center[0]
         limits[1][0] += center[1]
         limits[1][1] += center[1]
+
+    axis0: np.ndarray = np.array([])
+    axis1: np.ndarray = np.array([])
 
     if spacing is not None:
         axis0 = np.arange(
@@ -480,7 +480,7 @@ def run(
 
     # take data in planes
     grid_values = []
-    for n, plane in enumerate(planes):
+    for plane in planes:
         logger.info(
             f"Running grid search in plane {focus_axis} = "
             + f"{plane.prettyprint()} microns with grid:\n"
@@ -652,7 +652,9 @@ def run(
                 axis_peak_unc1 = np.array(
                     [result.params["centery"].stderr for result in accepted_results]
                 )
-                waist_min = Distance(para_result.eval(x=focus_pos), "microns")
+                waist_min = Distance(
+                    cast(float, para_result.eval(x=focus_pos)), "microns"
+                )
                 lin_result0 = peaks_linfit(
                     axes,
                     True,
@@ -752,7 +754,7 @@ def run(
 
     # fit parabola to plane standard deviations
     if fit_waists and len(planes) >= 3:
-        background = stats.mode(grid_values, axis=None)[0]
+        background = stats.mode(grid_values.flatten)[0]
         logger.info(
             f"Sensor background determined to be {sigfig.round(background, 3)}"
             + "by taking the mode of all grid values"
@@ -793,6 +795,8 @@ def run(
                 axis_peak_pos0.append(np.sum(plane_xgrid * grid) / np.sum(plane_xgrid))
                 axis_peak_pos1.append(np.sum(plane_ygrid * grid) / np.sum(plane_ygrid))
 
+            axis_peak_pos0 = np.array(axis_peak_pos0)
+            axis_peak_pos1 = np.array(axis_peak_pos1)
             axis_peak_unc0 = np.ones_like(axis_peak_pos0)
             axis_peak_unc1 = np.ones_like(axis_peak_pos1)
 

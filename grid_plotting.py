@@ -2,6 +2,7 @@ import lmfit
 import sigfig
 import numpy as np
 import matplotlib.pyplot as plt
+from typing import cast, Union, List
 
 from MovementClasses import Distance
 from LoggingUtils import get_logger
@@ -96,10 +97,10 @@ def Gbeam_fit_string(fit_result, axes):
 
 
 def plot_2dfit(
-    response_grid: np.array,
-    axis0_grid: np.array,
-    axis1_grid: np.array,
-    axes: list,
+    response_grid: np.ndarray,
+    axis0_grid: np.ndarray,
+    axis1_grid: np.ndarray,
+    axes: Union[str, List[str]],
     plane: Distance,
     fit_result: lmfit.model.ModelResult,
 ):
@@ -157,10 +158,10 @@ def plot_2dfit(
 
 
 def plot_plane(
-    response_grid: np.array,
-    axis0_grid: np.array,
-    axis1_grid: np.array,
-    axes: list,
+    response_grid: np.ndarray,
+    axis0_grid: np.ndarray,
+    axis1_grid: np.ndarray,
+    axes: Union[str, List[str]],
     plane: Distance,
 ):
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
@@ -177,13 +178,11 @@ def plot_plane(
 
 
 def plot_para_fit(
-    axes: str,
+    axes: Union[str, List[str]],
     waists: np.ndarray,
     waists_unc: np.ndarray,
     planes_microns: np.ndarray,
     result: lmfit.model.ModelResult,
-    show_plot: bool = False,
-    log_plot: bool = True,
 ):
     fake_unc = all(waists_unc == 1)
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
@@ -232,7 +231,7 @@ def plot_para_fit(
 
 
 def plot_3dfit(
-    axes: str,
+    axes: Union[str, List[str]],
     axis0_cube: np.ndarray,
     axis1_cube: np.ndarray,
     focus_cube: np.ndarray,
