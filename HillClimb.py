@@ -31,7 +31,7 @@ def plot_climber(
     step_factor: float,
     init_position: Distance,
     init_positive: bool,
-    movementType: MovementType,
+    movement_type: MovementType,
 ):
     position = init_position
     step = init_step
@@ -121,7 +121,7 @@ def plot_climber(
     if suptitle_fontsize > 15:
         suptitle_fontsize = 15
     fig.suptitle(
-        f"{stagename} axis {axis} climbing with {movementType.value}",
+        f"{stagename} axis {axis} climbing with {movement_type.value}",
         fontsize=suptitle_fontsize,
     )
 
@@ -131,7 +131,7 @@ def plot_climber(
 def hill_climb(
     stage: StageDevices,
     axis: str,
-    movementType: MovementType,
+    movement_type: MovementType,
     step: Distance,
     max_steps: int,
     softening: float,
@@ -139,7 +139,7 @@ def hill_climb(
     exposureTime: Union[int, float],
 ):
     logger.info(
-        f"Hill climbing on {stage.name} axis {axis} {movementType.value}"
+        f"Hill climbing on {stage.name} axis {axis} {movement_type.value}"
         + f" with step size {step.prettyprint()} and exposure time {exposureTime}"
     )
 
@@ -152,7 +152,7 @@ def hill_climb(
     ]
     for n in range(max_steps):
         last.append(current + abs(current) * softening)
-        _ = stage.move(axis, step_size, movementType)
+        _ = stage.move(axis, step_size, movement_type)
         current = stage.integrate(exposureTime)
         results.append(current)
 
@@ -169,7 +169,7 @@ def hill_climber(
     stage: StageDevices,
     axis: str,
     exposureTime: Union[int, float],
-    movementType: MovementType,
+    movement_type: MovementType,
     init_step: Distance,
     step_factor: float,
     init_positive: bool,
@@ -183,20 +183,20 @@ def hill_climber(
     show_plot: bool = False,
     log_plot: bool = True,
 ):
-    assert movementType != MovementType.GENERAL, (
+    assert movement_type != MovementType.GENERAL, (
         "General movement hill climb may be added later"
     )
 
     logger.info(
-        f"Activating hill climber on {stage.name} axis {axis} {movementType.value}"
+        f"Activating hill climber on {stage.name} axis {axis} {movement_type.value}"
         + f" initially in the {'positive' if init_positive else 'negative'} direction"
         + f" with exposure time {exposureTime} and initial step size {init_step.prettyprint()}"
     )
 
     init_position = Distance(0, "microns")
-    if movementType == MovementType.PIEZO or movementType == MovementType.GENERAL:
+    if movement_type == MovementType.PIEZO or movement_type == MovementType.GENERAL:
         init_position += stage.axes[axis].get_piezo_position()
-    if movementType == MovementType.STEPPER or movementType == MovementType.GENERAL:
+    if movement_type == MovementType.STEPPER or movement_type == MovementType.GENERAL:
         init_position += stage.axes[axis].get_stepper_position()
 
     step = copy(init_step)
@@ -211,7 +211,7 @@ def hill_climber(
         results, success = hill_climb(
             stage,
             axis,
-            movementType,
+            movement_type,
             step,
             max_steps,
             softening,
@@ -227,7 +227,9 @@ def hill_climber(
         if current / last < 1 + rel_tol:
             print(current / last, 1 + rel_tol)
             # go back to highest recorded point
-            stage.move(axis, step * (results.argmax() - len(results) + 1), movementType)
+            stage.move(
+                axis, step * (results.argmax() - len(results) + 1), movement_type
+            )
             logger.info(
                 "Hill climber successfully converged to within"
                 + f" relative tolerance of {sigfig.round(rel_tol, 3, warn=False)}"
@@ -238,7 +240,9 @@ def hill_climber(
         if current / last < abs_tol:
             print(current / last, abs_tol)
             # go back to highest recorded point
-            stage.move(axis, step * (results.argmax() - len(results) + 1), movementType)
+            stage.move(
+                axis, step * (results.argmax() - len(results) + 1), movement_type
+            )
             logger.info(
                 "Hill climber succesfully converged to within"
                 + f" absolute tolerance of {sigfig.round(abs_tol, 3, warn=False)}"
@@ -270,13 +274,13 @@ def hill_climber(
             step_factor,
             init_position,
             init_positive,
-            movementType,
+            movement_type,
         )
         logger.info("plot_generated")
         if log_plot:
             fig.savefig(
                 f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_"
-                + f"{stage.name}_{axis}_{movementType.value}_HillClimb.png",
+                + f"{stage.name}_{axis}_{movement_type.value}_HillClimb.png",
                 format="png",
                 facecolor="white",
                 dpi=200,
@@ -320,7 +324,7 @@ def arg_check(
 
 def run(
     stage: StageDevices,
-    movementType: Union[MovementType, Sequence[MovementType]],
+    movement_type: Union[MovementType, Sequence[MovementType]],
     exposureTime: Union[int, float, Sequence[Union[int, float]]],
     axes: Optional[str] = None,
     init_step: Union[None, Distance, Sequence[Distance]] = None,
@@ -338,7 +342,7 @@ def run(
     log_plot: Union[bool, Sequence[bool]] = True,
 ):
     # axes are the axes you want to hill climb on
-    # movementType can be general, and must either be a single or have same length as axes
+    # movement_type can be general, and must either be a single or have same length as axes
     # init_step is the initial step size either for all axes or for each axis
     # step_factor is multiplied by init_step when the peak is overshot
     # init_positive can tell whether to start moving forwards or backwards first
@@ -351,15 +355,15 @@ def run(
     if axes is None:
         axes = "xzy"
 
-    if movementType is None:
-        movementType = MovementType.GENERAL
+    if movement_type is None:
+        movement_type = MovementType.GENERAL
 
     # has to go before the for loops below
-    movementType = arg_check(movementType, "movementType", MovementType, axes)
+    movement_type = arg_check(movement_type, "movement_type", MovementType, axes)
 
     if min_step is None:
         min_step = []
-        for movetype in movementType:
+        for movetype in movement_type:
             if movetype == MovementType.PIEZO or movetype == MovementType.GENERAL:
                 min_step.append(Distance(0.1, "volts"))
             if movetype == MovementType.STEPPER:
@@ -367,7 +371,7 @@ def run(
 
     if init_step is None:
         init_step = []
-        for movetype in movementType:
+        for movetype in movement_type:
             if movetype == MovementType.STEPPER or movetype == MovementType.GENERAL:
                 init_step.append(Distance(100, "microns"))
             if movetype == MovementType.PIEZO:
@@ -431,7 +435,7 @@ def run(
     hill_climber_kwargs = zip(hill_climber_kwargs_keys, hill_climber_kwargs_values)
 
     # run hill climbers
-    for i, (axis, movetype) in enumerate(zip(axes, movementType)):
+    for i, (axis, movetype) in enumerate(zip(axes, movement_type)):
         kwargs = {key: val[i] for key, val in hill_climber_kwargs}
         _ = hill_climber(stage, axis, exposureTime, movetype, **kwargs)
 

@@ -74,7 +74,7 @@ def gaussbeam(
 
 def Gbeamfit_3d(
     axes: Union[str, List[str]],
-    movementType: MovementType,
+    movement_type: MovementType,
     stagename: str,
     axis0_cube: np.ndarray,
     axis1_cube: np.ndarray,
@@ -125,7 +125,7 @@ def Gbeamfit_3d(
         if log_plot:
             fig.savefig(
                 f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_"
-                + f"{stagename}_{movementType.value}_Gaussian_beam_fit.png",
+                + f"{stagename}_{movement_type.value}_Gaussian_beam_fit.png",
                 format="png",
                 facecolor="white",
                 dpi=200,
@@ -140,7 +140,7 @@ def Gbeamfit_3d(
 
 def Gbeamfit_2d(
     axes: Union[str, List[str]],
-    movementType: MovementType,
+    movement_type: MovementType,
     stagename: str,
     axis0_grid: np.ndarray,
     axis1_grid: np.ndarray,
@@ -178,7 +178,7 @@ def Gbeamfit_2d(
         if log_plot:
             fig.savefig(
                 f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_2dfit_"
-                + f"{stagename}_{movementType.value}_{focus_axis}-{plane.microns}um.png",
+                + f"{stagename}_{movement_type.value}_{focus_axis}-{plane.microns}um.png",
                 format="png",
                 facecolor="white",
                 dpi=200,
@@ -193,7 +193,7 @@ def Gbeamfit_2d(
 
 def waist_parafit(
     axes: Union[str, List[str]],
-    movementType: MovementType,
+    movement_type: MovementType,
     stagename: str,
     planes: Sequence[Distance],
     waists: np.ndarray,
@@ -216,7 +216,7 @@ def waist_parafit(
         if log_plot:
             fig.savefig(
                 f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_parafit_"
-                + f"{stagename}_{movementType.value}_w-vs-{focus_axis}.png",
+                + f"{stagename}_{movement_type.value}_w-vs-{focus_axis}.png",
                 format="png",
                 facecolor="white",
                 dpi=200,
@@ -231,7 +231,7 @@ def waist_parafit(
 def peaks_linfit(
     axes: Union[str, List[str]],
     first_axis: bool,
-    movementType: MovementType,
+    movement_type: MovementType,
     stagename: str,
     planes: Sequence[Distance],
     peak_pos: np.ndarray,
@@ -258,7 +258,7 @@ def peaks_linfit(
         if log_plot:
             fig.savefig(
                 f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_linfit_"
-                + f"{stagename}_{movementType.value}_{axis}-vs-{focus_axis}.png",
+                + f"{stagename}_{movement_type.value}_{axis}-vs-{focus_axis}.png",
                 format="png",
                 facecolor="white",
                 dpi=200,
@@ -272,7 +272,7 @@ def peaks_linfit(
 
 def plane_grid(
     stage: StageDevices,
-    movementType: MovementType,
+    movement_type: MovementType,
     plane: Distance,
     axes: list,
     axis0: np.ndarray,
@@ -286,14 +286,14 @@ def plane_grid(
     axis0_grid, axis1_grid = np.meshgrid(axis0, axis1)
     response_grid = np.zeros_like(axis0_grid)
     for i, pos0 in enumerate(axis0):
-        stage.goto(axes[0], Distance(pos0, "microns"), movementType)
+        stage.goto(axes[0], Distance(pos0, "microns"), movement_type)
         if i % 2:  # to snake along the grid
             for j, pos1 in enumerate(axis1):
-                stage.goto(axes[1], Distance(pos1, "microns"), movementType)
+                stage.goto(axes[1], Distance(pos1, "microns"), movement_type)
                 response_grid[j, i] += stage.integrate(exposureTime)
         else:
             for j, pos1 in enumerate(axis1[::-1]):
-                stage.goto(axes[1], Distance(pos1, "microns"), movementType)
+                stage.goto(axes[1], Distance(pos1, "microns"), movement_type)
                 response_grid[-j - 1, i] += stage.integrate(exposureTime)
 
     logger.info(f"Grid values:\n{response_grid}")
@@ -304,7 +304,7 @@ def plane_grid(
         if log_plot:
             fig.savefig(
                 f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_gridvalues_"
-                + f"{stage.name}_{movementType.value}_{focus_axis}-{plane.microns}um.png",
+                + f"{stage.name}_{movement_type.value}_{focus_axis}-{plane.microns}um.png",
                 format="png",
                 facecolor="white",
                 dpi=200,
@@ -319,7 +319,7 @@ def plane_grid(
 
 def run(
     stage: StageDevices,
-    movementType: MovementType,
+    movement_type: MovementType,
     exposureTime: Union[int, float],
     spacing: Union[None, Distance, Sequence[Distance]] = None,  # default 10 volts
     num_points: Union[None, int, Sequence[int]] = None,
@@ -343,8 +343,8 @@ def run(
     fit_waists_kwargs: dict = {},
     fit_lin_kwargs: dict = {},
 ):
-    assert movementType in (MovementType.PIEZO, MovementType.STEPPER), (
-        "movementType must be MovementType.PIEZO or .STEPPER"
+    assert movement_type in (MovementType.PIEZO, MovementType.STEPPER), (
+        "movement_type must be MovementType.PIEZO or .STEPPER"
     )
     #   may add .GENERAL later
     assert not (spacing is not None and num_points is not None), (
@@ -386,15 +386,15 @@ def run(
 
     #   Default values
     if spacing is None and num_points is None:
-        if movementType == MovementType.PIEZO:
+        if movement_type == MovementType.PIEZO:
             spacing = Distance(15, "volts")
-        if movementType == MovementType.STEPPER:
+        if movement_type == MovementType.STEPPER:
             spacing = Distance(200, "fullsteps")
     if planes is None:
         planes = 3
 
     if limits is None:
-        if movementType == MovementType.PIEZO:
+        if movement_type == MovementType.PIEZO:
             limits_default = []
             for axis in axes:
                 axis_center = stage.axes[axis].PIEZO_CENTER
@@ -403,7 +403,7 @@ def run(
                     lower -= axis_center
                     upper -= axis_center
                 limits_default.append([lower, upper])
-        elif movementType == MovementType.STEPPER:
+        elif movement_type == MovementType.STEPPER:
             limits_default = []
             for axis in axes:
                 axis_center = stage.axes[axis].STEPPER_CENTER
@@ -414,19 +414,19 @@ def run(
                 limits_default.append([lower, upper])
         else:
             raise ValueError(
-                "movementType must be a MovementType.PIEZO or " + ".STEPPER enum"
+                "movement_type must be a MovementType.PIEZO or " + ".STEPPER enum"
             )
         limits = limits_default
 
     if center == "center":
-        if movementType == MovementType.STEPPER:
+        if movement_type == MovementType.STEPPER:
             center = [stage.axes[axis].STEPPER_CENTER for axis in axes]
-        if movementType == MovementType.PIEZO:
+        if movement_type == MovementType.PIEZO:
             center = [stage.axes[axis].PIEZO_CENTER for axis in axes]
     if center == "current":
-        if movementType == MovementType.STEPPER:
+        if movement_type == MovementType.STEPPER:
             center = [stage.axes[axis].get_stepper_position() for axis in axes]
-        if movementType == MovementType.PIEZO:
+        if movement_type == MovementType.PIEZO:
             center = [stage.axes[axis].get_piezo_position() for axis in axes]
     if not isinstance(center, sequence) and center is not None:
         raise ValueError(
@@ -491,7 +491,14 @@ def run(
         stage.goto(focus_axis, plane, MovementType.STEPPER)
 
         plane_values = plane_grid(
-            stage, movementType, plane, axes, axis0, axis1, exposureTime, **plane_kwargs
+            stage,
+            movement_type,
+            plane,
+            axes,
+            axis0,
+            axis1,
+            exposureTime,
+            **plane_kwargs,
         )
         grid_values.append(plane_values)
 
@@ -538,7 +545,7 @@ def run(
 
             result = Gbeamfit_3d(
                 axes,
-                movementType,
+                movement_type,
                 stage.name,
                 axis0_cube,
                 axis1_cube,
@@ -562,9 +569,9 @@ def run(
                     Distance(result.params[f"waistx{n}"].value, "microns")
                     for n in range(1, 4)
                 ]
-                stage.goto(axes[0], best_pos[0], movementType)
-                stage.goto(axes[1], best_pos[1], movementType)
-                stage.goto(focus_axis, best_pos[2], movementType)
+                stage.goto(axes[0], best_pos[0], movement_type)
+                stage.goto(axes[1], best_pos[1], movement_type)
+                stage.goto(focus_axis, best_pos[2], movement_type)
 
                 logger.info(
                     f"Moved to maximum of {peak} at ({axes[0]}, {axes[1]}, {focus_axis}) = "
@@ -583,7 +590,7 @@ def run(
         for plane, plane_values in zip(planes, grid_values):
             result = Gbeamfit_2d(
                 axes,
-                movementType,
+                movement_type,
                 stage.name,
                 axis0_grid,
                 axis1_grid,
@@ -616,7 +623,7 @@ def run(
 
             para_result = waist_parafit(
                 axes,
-                movementType,
+                movement_type,
                 stage.name,
                 accepted_planes,
                 waists,
@@ -658,7 +665,7 @@ def run(
                 lin_result0 = peaks_linfit(
                     axes,
                     True,
-                    movementType,
+                    movement_type,
                     stage.name,
                     accepted_planes,
                     axis_peak_pos0,
@@ -669,7 +676,7 @@ def run(
                 lin_result1 = peaks_linfit(
                     axes,
                     False,
-                    movementType,
+                    movement_type,
                     stage.name,
                     accepted_planes,
                     axis_peak_pos1,
@@ -699,9 +706,9 @@ def run(
                         )
                         waist_pos[i] = Distance(waistpos, "microns")
 
-                stage.goto(axes[0], waist_pos[0], movementType)
-                stage.goto(axes[1], waist_pos[1], movementType)
-                stage.goto(focus_axis, waist_pos[2], movementType)
+                stage.goto(axes[0], waist_pos[0], movement_type)
+                stage.goto(axes[1], waist_pos[1], movement_type)
+                stage.goto(focus_axis, waist_pos[2], movement_type)
 
                 logger.info(
                     f"Moved to minimum fit-waist of {waist_min.prettyprint()} at ({axes[0]}, {axes[1]}, {focus_axis}) = "
@@ -736,9 +743,9 @@ def run(
                 accepted_planes[max_peak_idx],
             ]
 
-            stage.goto(axes[0], best_pos[0], movementType)
-            stage.goto(axes[1], best_pos[1], movementType)
-            stage.goto(focus_axis, best_pos[2], movementType)
+            stage.goto(axes[0], best_pos[0], movement_type)
+            stage.goto(axes[1], best_pos[1], movement_type)
+            stage.goto(focus_axis, best_pos[2], movement_type)
 
             logger.info(
                 f"Moved to maximum of known peaks {max_peak} at ({axes[0]}, {axes[1]}, {focus_axis}) = "
@@ -766,7 +773,7 @@ def run(
 
         para_result = waist_parafit(
             axes,
-            movementType,
+            movement_type,
             stage.name,
             planes,
             waists,
@@ -804,7 +811,7 @@ def run(
             lin_result0 = peaks_linfit(
                 axes,
                 True,
-                movementType,
+                movement_type,
                 stage.name,
                 planes,
                 axis_peak_pos0,
@@ -815,7 +822,7 @@ def run(
             lin_result1 = peaks_linfit(
                 axes,
                 False,
-                movementType,
+                movement_type,
                 stage.name,
                 planes,
                 axis_peak_pos1,
@@ -841,9 +848,9 @@ def run(
                     waistpos = np.mean(axis_peak_poses[i])
                     waist_pos[i] = Distance(waistpos, "microns")
 
-            stage.goto(axes[0], waist_pos[0], movementType)
-            stage.goto(axes[1], waist_pos[1], movementType)
-            stage.goto(focus_axis, waist_pos[2], movementType)
+            stage.goto(axes[0], waist_pos[0], movement_type)
+            stage.goto(axes[1], waist_pos[1], movement_type)
+            stage.goto(focus_axis, waist_pos[2], movement_type)
 
             logger.info(
                 f"Moved to minimum fit-waist of {waist_min.prettyprint()} at ({axes[0]}, {axes[1]}, {focus_axis}) = "
@@ -865,9 +872,9 @@ def run(
             Distance(focus_cube[max_value_idx], "microns"),
         ]
 
-        stage.goto(axes[0], max_value_pos[0], movementType)
-        stage.goto(axes[1], max_value_pos[1], movementType)
-        stage.goto(focus_axis, max_value_pos[2], movementType)
+        stage.goto(axes[0], max_value_pos[0], movement_type)
+        stage.goto(axes[1], max_value_pos[1], movement_type)
+        stage.goto(focus_axis, max_value_pos[2], movement_type)
 
         logger.info(
             f"Moved to maximum of visited positions {max_value} at ({axes[0]}, {axes[1]}, {focus_axis}) = "

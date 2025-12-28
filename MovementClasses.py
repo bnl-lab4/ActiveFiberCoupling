@@ -67,9 +67,9 @@ class MoveResult:
     ----------
     distance : `Distance.Distance`
         The distance by which the stepper or piezo was moved.
-    movementType : `MovementType`
+    movement_type : `MovementType`
         Whether the movement was with the steppers or the piezos. The
-        `movementType` cannot be ``GENERAL`` because that is not specific.
+        `movement_type` cannot be ``GENERAL`` because that is not specific.
     centered_piezos : bool, default=False
         Whether the piezos were centered during the move. This will only be
         ``True`` if the initially requested movement type was ``GENERAL``
@@ -84,17 +84,17 @@ class MoveResult:
     def __init__(
         self,
         distance: Distance,
-        movementType: MovementType,
+        movement_type: MovementType,
         centered_piezos: bool = False,
     ):
         self.distance = distance
-        self.movementType = movementType
+        self.movement_type = movement_type
         self.centered_piezos = centered_piezos
 
         # Any general move is composed of a piezo move and possibly
         #   a stepper move. It should be logged as such.
-        assert self.movementType != MovementType.GENERAL, (
-            "movementType cannot be general"
+        assert self.movement_type != MovementType.GENERAL, (
+            "movement_type cannot be general"
         )
 
     @property
@@ -104,14 +104,14 @@ class MoveResult:
         """
         values = []
         values.append(f"{self.distance.microns} microns")
-        if self.movementType == MovementType.PIEZO:
+        if self.movement_type == MovementType.PIEZO:
             values.append(f"{self.distance.volts} volts")
-        if self.movementType == MovementType.STEPPER:
+        if self.movement_type == MovementType.STEPPER:
             values.append(f"{self.distance.steps} steps")
             values.append(f"{self.distance.fullsteps} full steps")
         values = "(" + ", ".join(values) + ")"
         return (
-            f"set {self.movementType.value} to {values}"
+            f"set {self.movement_type.value} to {values}"
             + f"{'after centering piezos' if self.centered_piezos else ''}"
         )
 
