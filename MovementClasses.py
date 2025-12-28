@@ -156,13 +156,13 @@ class StageAxis:
     autohome : bool, default=True
         Whether to run the homing routine on upon establishing a
         connection to the stepper control board.
-    PIEZO_LIMITS : 2-tuple of `Distance.Distance`
+    piezo_limits : 2-tuple of `Distance.Distance`
         Upper and lower limits of the piezo travel range.
-    PIEZO_CENTER : `Distance.Distance`
+    piezo_center : `Distance.Distance`
         Center of the piezo travel range.
-    STEPPER_LIMITS : 2-tuple of `Distance.Distance`
+    stepper_limits : 2-tuple of `Distance.Distance`
         Upper and lower limits of the stepper travel range.
-    STEPPER_CENTER : `Distance.Distance`
+    stepper_center : `Distance.Distance`
         Center of the stepper travel range.
     stepper_settings : dict
         Dictionary of the stepper control board settings.
@@ -234,8 +234,8 @@ class StageAxis:
         self.autohome = autohome
 
         if self.piezo is not None:
-            self.PIEZO_LIMITS = (Distance(0, "volts"), Distance(75, "volts"))
-            self.PIEZO_CENTER = (self.PIEZO_LIMITS[1] - self.PIEZO_LIMITS[0]) / 2
+            self.piezo_limits = (Distance(0, "volts"), Distance(75, "volts"))
+            self.piezo_center = (self.piezo_limits[1] - self.piezo_limits[0]) / 2
 
         if self.stepper is not None:
             if self.stepper.get_step_mode() != 5:
@@ -248,13 +248,13 @@ class StageAxis:
 
             #   getting stage limits from yaml file, if possible
             if stepper_sn in stepper_info.keys():
-                self._TRUE_STEPPER_LIMITS = (
+                self._true_stepper_limits = (
                     Distance(stepper_info[stepper_sn][0], "fullsteps"),
                     Distance(stepper_info[stepper_sn][1], "fullsteps"),
                 )
             else:
                 #   should be safe values
-                self._TRUE_STEPPER_LIMITS = (
+                self._true_stepper_limits = (
                     Distance(1000, "fullsteps"),
                     Distance(2800, "fullsteps"),
                 )
@@ -264,18 +264,18 @@ class StageAxis:
                 )
             logger.debug(
                 f"True stepper {self.stepper_sn} stage limits set to "
-                + f"({self._TRUE_STEPPER_LIMITS[0].prettyprint()}, {self._TRUE_STEPPER_LIMITS[1].prettyprint()})"
+                + f"({self._true_stepper_limits[0].prettyprint()}, {self._true_stepper_limits[1].prettyprint()})"
             )
 
-            self.STEPPER_LIMITS = (
+            self.stepper_limits = (
                 Distance(0, "fullsteps"),
-                self._TRUE_STEPPER_LIMITS[1] - self._TRUE_STEPPER_LIMITS[0],
+                self._true_stepper_limits[1] - self._true_stepper_limits[0],
             )
 
             # stepper center is defined with lower limit = 0 steps
-            self.STEPPER_CENTER = (self.STEPPER_LIMITS[1] - self.STEPPER_LIMITS[0]) / 2
+            self.stepper_center = (self.stepper_limits[1] - self.stepper_limits[0]) / 2
             logger.debug(
-                f"Stepper {self.stepper_sn} stage center set to {self.STEPPER_CENTER.prettyprint()}"
+                f"Stepper {self.stepper_sn} stage center set to {self.stepper_center.prettyprint()}"
             )
 
             #   checking that the stepper controller settings are what we want
@@ -425,13 +425,13 @@ class StageAxis:
         """
 
         clamped = max(
-            self.PIEZO_LIMITS[0].volts, min(self.PIEZO_LIMITS[1].volts, voltage)
+            self.piezo_limits[0].volts, min(self.piezo_limits[1].volts, voltage)
         )  # piezo voltage limits
         if clamped != voltage:
             logger.warning(
                 f"Cannot move {self.axis} to {voltage} because it is"
                 + " outside the piezo's limits of"
-                + f"({self.PIEZO_LIMITS[0].volts}, {self.PIEZO_LIMITS[1].volts}) volts"
+                + f"({self.piezo_limits[0].volts}, {self.piezo_limits[1].volts}) volts"
             )
         command = f"{self.axis.lower()}voltage={clamped}\n"
         self.piezo.read(self.piezo.in_waiting).decode("utf-8")
@@ -468,13 +468,13 @@ class StageAxis:
             )
 
         clamped = max(
-            self.STEPPER_LIMITS[0].steps, min(self.STEPPER_LIMITS[1].steps, steps)
+            self.stepper_limits[0].steps, min(self.stepper_limits[1].steps, steps)
         )  # stepper steps limits
         if clamped != steps:
             logger.warning(
                 f"Cannot move {self.axis} stepper {self.stepper_sn} to {steps} because it is"
                 + "outside the stepper's stage limits of"
-                + f"({self.STEPPER_LIMITS[0].steps}, {self.STEPPER_LIMITS[1].steps}) steps"
+                + f"({self.stepper_limits[0].steps}, {self.stepper_limits[1].steps}) steps"
             )
         self.stepper.set_target_position(int(clamped))
         while self.stepper.get_target_position() != self.stepper.get_current_position():
@@ -540,11 +540,11 @@ class StageAxis:
             time.sleep(0.1)
 
         #   set lower stage limit to 0
-        self._goto_stepper(self._TRUE_STEPPER_LIMITS[0].steps)
+        self._goto_stepper(self._true_stepper_limits[0].steps)
         self.stepper.halt_and_set_position(0)
         logger.debug(
             f"Axis {self.axis} stepper {self.stepper_sn} homing complete, "
-            + f"zeroed at lower stage limit {self._TRUE_STEPPER_LIMITS[0].prettyprint()}"
+            + f"zeroed at lower stage limit {self._true_stepper_limits[0].prettyprint()}"
         )
 
     def get_stepper_position(self):
@@ -585,11 +585,11 @@ class StageAxis:
         Move stepper and/or piezo to the desired position.
 
         If `which` is ``PIEZO``, the piezo will be set to `position`, taking
-        ``PIEZO_LIMITS[0]`` to be zero. If `which` is ``STEPPER``, the
-        stepper will be set to `position`, taking ``STEPPER_LIMITS[0]`` to
+        ``piezo_limits[0]`` to be zero. If `which` is ``STEPPER``, the
+        stepper will be set to `position`, taking ``stepper_limits[0]`` to
         be zero.
 
-        If `which` is ``GENERAL``, then ``STEPPER_LIMITS[0]`` is
+        If `which` is ``GENERAL``, then ``stepper_limits[0]`` is
         taken to be zero. Then, if `position` is accessible with just the
         piezo, then only the piezo will be used. If the piezo cannot reach
         `position`, then the piezo is centered in its range and the
@@ -622,13 +622,13 @@ class StageAxis:
 
             # decide whether the position can be reached with only the piezos
             if (
-                self.PIEZO_LIMITS[0]
+                self.piezo_limits[0]
                 < position - stepper_position
-                < self.PIEZO_LIMITS[1]
+                < self.piezo_limits[1]
             ):
                 return self._goto_piezo((position - stepper_position).volts)
-            self._goto_piezo(self.PIEZO_CENTER.volts)
-            stepper_target = position - self.PIEZO_CENTER
+            self._goto_piezo(self.piezo_center.volts)
+            stepper_target = position - self.piezo_center
             result = self._goto_stepper(stepper_target.steps)
             result.centered_piezos = True
             return result
@@ -673,11 +673,11 @@ class StageAxis:
         if which == MovementType.GENERAL:
             stepper_position = self.get_stepper_position()
             piezo_position = self.get_piezo_position()
-            if self.PIEZO_LIMITS[0] < piezo_position + movement < self.PIEZO_LIMITS[1]:
+            if self.piezo_limits[0] < piezo_position + movement < self.piezo_limits[1]:
                 return self._goto_piezo((piezo_position + movement).volts)
-            self._goto_piezo(self.PIEZO_CENTER.volts)
+            self._goto_piezo(self.piezo_center.volts)
             stepper_target = (
-                stepper_position + movement + (piezo_position - self.PIEZO_CENTER)
+                stepper_position + movement + (piezo_position - self.piezo_center)
             )
             result = self._goto_stepper(stepper_target.steps)
             result.centered_piezos = True

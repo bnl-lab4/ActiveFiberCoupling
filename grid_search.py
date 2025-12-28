@@ -397,8 +397,8 @@ def run(
         if movement_type == MovementType.PIEZO:
             limits_default = []
             for axis in axes:
-                axis_center = stage.axes[axis].PIEZO_CENTER
-                lower, upper = stage.axes[axis].PIEZO_LIMITS
+                axis_center = stage.axes[axis].piezo_center
+                lower, upper = stage.axes[axis].piezo_limits
                 if center == "center":
                     lower -= axis_center
                     upper -= axis_center
@@ -406,8 +406,8 @@ def run(
         elif movement_type == MovementType.STEPPER:
             limits_default = []
             for axis in axes:
-                axis_center = stage.axes[axis].STEPPER_CENTER
-                lower, upper = stage.axes[axis].STEPPER_LIMITS
+                axis_center = stage.axes[axis].stepper_center
+                lower, upper = stage.axes[axis].stepper_limits
                 if center == "center":
                     lower -= axis_center
                     upper -= axis_center
@@ -420,9 +420,9 @@ def run(
 
     if center == "center":
         if movement_type == MovementType.STEPPER:
-            center = [stage.axes[axis].STEPPER_CENTER for axis in axes]
+            center = [stage.axes[axis].stepper_center for axis in axes]
         if movement_type == MovementType.PIEZO:
-            center = [stage.axes[axis].PIEZO_CENTER for axis in axes]
+            center = [stage.axes[axis].piezo_center for axis in axes]
     if center == "current":
         if movement_type == MovementType.STEPPER:
             center = [stage.axes[axis].get_stepper_position() for axis in axes]
@@ -450,7 +450,7 @@ def run(
 
     if isinstance(planes, int):
         planes_limits = [
-            limit.microns for limit in stage.axes[focus_axis].STEPPER_LIMITS
+            limit.microns for limit in stage.axes[focus_axis].stepper_limits
         ]
         planes_microns = np.linspace(planes_limits[0], planes_limits[1], planes)
         planes = [Distance(plane, "microns") for plane in planes_microns]

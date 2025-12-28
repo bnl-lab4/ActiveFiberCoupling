@@ -153,23 +153,23 @@ Switch between goto and move (default) modes with 'goto' and 'move'.
         if value.lower() == "zero":
             special = True
             if movetype == MovementType.PIEZO:
-                value = getattr(stage.axes[axis].PIEZO_LIMITS[0], unit)
+                value = getattr(stage.axes[axis].piezo_limits[0], unit)
             else:
-                value = getattr(stage.axes[axis].STEPPER_LIMITS[0], unit)
+                value = getattr(stage.axes[axis].stepper_limits[0], unit)
 
         elif value.lower() == "max":
             special = True
             if movetype == MovementType.PIEZO:
-                value = getattr(stage.axes[axis].PIEZO_LIMITS[1], unit)
+                value = getattr(stage.axes[axis].piezo_limits[1], unit)
             else:
-                value = getattr(stage.axes[axis].STEPPER_LIMITS[1], unit)
+                value = getattr(stage.axes[axis].stepper_limits[1], unit)
 
         elif value.lower() == "center":
             special = True
             if movetype == MovementType.PIEZO:
-                value = getattr(stage.axes[axis].PIEZO_CENTER, unit)
+                value = getattr(stage.axes[axis].piezo_center, unit)
             else:
-                value = getattr(stage.axes[axis].STEPPER_CENTER, unit)
+                value = getattr(stage.axes[axis].stepper_center, unit)
 
         try:
             value = float(value)
