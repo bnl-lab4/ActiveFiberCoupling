@@ -400,7 +400,7 @@ class ProgramController:
             ),
             "log": MenuEntry(
                 text="Change the logging settings",
-                func=LoggingUtils.Update_Logging,
+                func=LoggingUtils.update_logging,
             ),
             "help": MenuEntry(
                 text="Help with the menu or a function ('help <func_name>')",
@@ -489,7 +489,7 @@ class ProgramController:
                 if entry_key == "reload":
                     self._reload_menu()
                 elif entry_key == "log":
-                    self.logging_settings = LoggingUtils.Update_Logging()
+                    self.logging_settings = LoggingUtils.update_logging()
                 elif entry_key == "texp":
                     self.exposure_time = update_exposure_time(self.exposure_time)
                 else:
@@ -522,17 +522,17 @@ def main():
     # Default runtime variable
     AutoHome = True  # home motors upon establishing connection
     RequireConnection = False  # raise exception if device connections fail to establish
-    LoggingSettings: List[Any] = [None] * 5
+    logging_settings: List[Any] = [None] * 5
 
     if len(sys.argv) > 1:
         InputArgs = sys.argv[1:]
-        AutoHome, RequireConnection, *LoggingSettings = AcceptInputArgs(
-            [AutoHome, RequireConnection] + LoggingSettings, InputArgs
+        AutoHome, RequireConnection, *logging_settings = AcceptInputArgs(
+            [AutoHome, RequireConnection] + logging_settings, InputArgs
         )
 
     try:
         with ProgramController(
-            AutoHome, RequireConnection, tuple(LoggingSettings)
+            AutoHome, RequireConnection, tuple(logging_settings)
         ) as controller:
             controller.run()
     except Exception as e:

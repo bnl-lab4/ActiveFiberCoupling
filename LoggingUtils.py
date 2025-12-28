@@ -276,7 +276,7 @@ def setup_logging(
             logger.info(f"Logging to {loc} with level {level}")
 
 
-def Update_Logging():
+def update_logging():
     """
     Series of questions allowing user to update logging configuration.
 
@@ -285,17 +285,17 @@ def Update_Logging():
     or ``skip`` will retain the current setting. Calls `setup_logging` at
     the end, which will instantiate a new logger and handlers.
     """
-    LoggingSettings = dict()
+    logging_settings = dict()
 
     while True:  # Log to console?
         user_input = input("Log to console? [y/n/s]: ").strip().lower()
         if user_input == "s":
             break
         if user_input == "y":
-            LoggingSettings["Log to console"] = True
+            logging_settings["Log to console"] = True
             break
         if user_input == "n":
-            LoggingSettings["Log to console"] = False
+            logging_settings["Log to console"] = False
             break
         print(f"Could not interpret {user_input}")
 
@@ -304,26 +304,26 @@ def Update_Logging():
         if user_input == "s":
             break
         if user_input == "y":
-            LoggingSettings["Log to file"] = True
+            logging_settings["Log to file"] = True
             break
         if user_input == "n":
-            LoggingSettings["Log to file"] = False
+            logging_settings["Log to file"] = False
             break
         print(f"Could not interpret {user_input}")
 
-    while LoggingSettings["Log to file"]:  # log file?
+    while logging_settings["Log to file"]:  # log file?
         user_input = input("Log filename? [s]: ").strip()
         if user_input == "s":
             break
         try:
             if verify_logfile(user_input):
-                LoggingSettings["Log filename"] = user_input
+                logging_settings["Log filename"] = user_input
                 break
         except Exception as e:
             print(f"Error while verifying input filename: {e}")
         print(f"Could not update log file to {user_input}")
 
-    while LoggingSettings["Log to console"]:  # console log level?
+    while logging_settings["Log to console"]:  # console log level?
         user_input = (
             input("Console log level? [trace/debug/info/warning/error/critical/skip]: ")
             .strip()
@@ -332,7 +332,7 @@ def Update_Logging():
         if user_input == "s" or user_input == "skip":
             break
         try:
-            LoggingSettings["Console log level"] = getattr(logging, user_input.upper())
+            logging_settings["Console log level"] = getattr(logging, user_input.upper())
             break
         except AttributeError:
             print(f"Could not find log level matching {user_input}")
@@ -347,10 +347,10 @@ def Update_Logging():
         if user_input == "s" or user_input == "skip":
             break
         try:
-            LoggingSettings["Log level"] = getattr(logging, user_input.upper())
+            logging_settings["Log level"] = getattr(logging, user_input.upper())
             break
         except AttributeError:
             print(f"Could not find log level matching {user_input}")
         print(f"Could not update log level to {user_input}")
 
-    setup_logging(*list(LoggingSettings.values()))
+    setup_logging(*list(logging_settings.values()))
