@@ -290,7 +290,7 @@ class SimulationSensor:
         pass
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, _, __, ___):
         """
         No-op method for use with context management.
 
@@ -577,7 +577,7 @@ class SimulationStageAxis:
         """
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, _, __, ___):
         """
         No-op method for use with context management.
 
@@ -792,7 +792,7 @@ class SimulationStageDevices:
         """
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, _, __, ___):
         """
         No-op method for use with context management.
 

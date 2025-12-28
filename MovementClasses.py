@@ -354,7 +354,7 @@ class StageAxis:
             self.home()
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, _, __, ___):
         """
         Deenergize the stepper upon exiting context.
 
@@ -821,7 +821,7 @@ class StageDevices:
                 )
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, _, __, ___):
         """
         Exits all open contexts.
 

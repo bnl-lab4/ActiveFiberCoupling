@@ -201,7 +201,7 @@ class Socket:
         logger.debug(f"Entered context of socket host {self.host} at port {self.port}")
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, _, __, ___):
         """
         Closes the connection to the socket server.
 
@@ -304,7 +304,7 @@ class Sensor:
         logger.debug("Entered sensor context")
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, _, __, ___):
         """
         No-op method for use with context management.
 

@@ -301,7 +301,7 @@ class ProgramController:
         self._initialize_devices()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, _, __, ___):
         self.stack.close()
         logger.debug("Device contexts closed cleanly")
         return False
