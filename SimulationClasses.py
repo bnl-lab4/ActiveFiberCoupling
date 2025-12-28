@@ -317,14 +317,14 @@ class SimulationStageAxis:
     ----------
     axis : {'x', 'y', 'z'}
         Which axis this class instance will control.
-    stepper_SN : str
+    stepper_sn : str
         Identifying string of the specific stepper.
 
     Attributes
     ----------
     axis : {'x', 'y', 'z'}
         Which axis of the stage is controlled.
-    stepper_SN : str
+    stepper_sn : str
         Identifying string of the specific stepper.
     stepper_position : `Distance.Distance`
         Position of the stepper.
@@ -361,9 +361,9 @@ class SimulationStageAxis:
         No-op dummy method.
     """
 
-    def __init__(self, axis: str, stepper_SN: str):
+    def __init__(self, axis: str, stepper_sn: str):
         self.axis = axis
-        self.stepper_SN = stepper_SN
+        self.stepper_sn = stepper_sn
         self.stepper_position = Distance(0, "microns")
         self.piezo_position = Distance(0, "microns")
 
@@ -553,19 +553,19 @@ class SimulationStageAxis:
     # --- Dummy methods to match the real hardware class interface ---
     def energize(self):
         """No-op dummy method."""
-        logger.info(f"Axis {self.axis} stepper {self.stepper_SN} energized")
+        logger.info(f"Axis {self.axis} stepper {self.stepper_sn} energized")
         pass
 
     def deenergize(self):
         """No-op dummy method."""
-        logger.info(f"Stepper {self.stepper_SN} deenergized")
+        logger.info(f"Stepper {self.stepper_sn} deenergized")
         pass
 
     def home(self):
         """Set the stepper position to 0 (microns)."""
         self.stepper_position = Distance(0, "microns")
         logger.info(
-            f"Stepper {self.stepper_SN} homing complete, "
+            f"Stepper {self.stepper_sn} homing complete, "
             + f"zeroed at lower stage limit {self.STEPPER_LIMITS[0].prettyprint()}"
         )
 
@@ -610,7 +610,7 @@ class SimulationStageDevices:
     axes : Dict[str, `StageAxis` or ``None``]
         Dictionary of stage axes, with the axis names as keys and
         `SimulationStageAxis` classes as values.
-    stepper_SNs : Dict[{'x', 'y', 'z'}, str]
+    stepper_sns : Dict[{'x', 'y', 'z'}, str]
         Dummy "serial numbers" for the steppers.
 
     Methods
@@ -643,7 +643,7 @@ class SimulationStageDevices:
 
     def __init__(self, name: str, sensor: Optional[SimulationSensor] = None):
         self.name = name
-        self.stepper_SNs = dict(x=f"{name}_simX", y=f"{name}_simY", z=f"{name}_simZ")
+        self.stepper_sns = dict(x=f"{name}_simX", y=f"{name}_simY", z=f"{name}_simZ")
         self.axes: Dict[str, SimulationStageAxis] = {}
         self.sensor = sensor
         self._exit_stack = contextlib.ExitStack()  # for context management
@@ -652,9 +652,9 @@ class SimulationStageDevices:
             self.sensor._connect_to_stage(self)
             logger.info(f"{self.name} connected to SimulationSensor")
 
-        for axis, stepper_SN in self.stepper_SNs.items():
-            self.axes[axis] = SimulationStageAxis(axis, stepper_SN)
-            logger.info(f"{self.name} established SimulationStageAxis {stepper_SN}")
+        for axis, stepper_sn in self.stepper_sns.items():
+            self.axes[axis] = SimulationStageAxis(axis, stepper_sn)
+            logger.info(f"{self.name} established SimulationStageAxis {stepper_sn}")
 
     def get_piezo_position(self) -> Dict[str, Distance]:
         """Returns axis-keyed dictionary of piezo positions."""

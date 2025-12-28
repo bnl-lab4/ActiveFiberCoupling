@@ -137,7 +137,7 @@ class StageAxis:
         Serial object for the piezo controller.
     stepper : `ticlib.TicUSB`
         Serial object for the stepper controller.
-    stepper_SN : str
+    stepper_sn : str
         The serial number for the specific stepper control board.
     autohome : bool, default=True
         Whether to run the homing routine on upon establishing a
@@ -151,7 +151,7 @@ class StageAxis:
         Serial object for the piezo controller.
     stepper : `ticlib.TicUSB`
         Serial object for the stepper controller.
-    stepper_SN : str
+    stepper_sn : str
         The serial number for the specific stepper control board.
     autohome : bool, default=True
         Whether to run the homing routine on upon establishing a
@@ -187,7 +187,7 @@ class StageAxis:
         determines the movement type, which defaults to ``GENERAL``.
     """
 
-    def __init__(self, axis: str, piezo, stepper, stepper_SN, autohome: bool = True):
+    def __init__(self, axis: str, piezo, stepper, stepper_sn, autohome: bool = True):
         """
         Initializes `StageAxis` and checks stepper settings.
 
@@ -204,7 +204,7 @@ class StageAxis:
             Serial object for the piezo controller.
         stepper : `ticlib.TicUSB`
             Serial object for the stepper controller.
-        stepper_SN : str
+        stepper_sn : str
             The serial number for the specific stepper control board.
         autohome : bool, default=True
             Whether to run the homing routine on upon establishing a
@@ -230,7 +230,7 @@ class StageAxis:
         self.axis = axis
         self.piezo = piezo
         self.stepper = stepper
-        self.stepper_SN = stepper_SN
+        self.stepper_sn = stepper_sn
         self.autohome = autohome
 
         if self.piezo is not None:
@@ -240,17 +240,17 @@ class StageAxis:
         if self.stepper is not None:
             if self.stepper.get_step_mode() != 5:
                 raise Exception(
-                    f"Stepper {self.stepper_SN} step mode is set to "
+                    f"Stepper {self.stepper_sn} step mode is set to "
                     + str(self.stepper.get_step_mode())
                     + " instead of the expected value of 5 (32 microsteps per step)."
                 )
             self._step_mode_mult = 32  # currently going to enforce this
 
             #   getting stage limits from yaml file, if possible
-            if stepper_SN in stepper_info.keys():
+            if stepper_sn in stepper_info.keys():
                 self._TRUE_STEPPER_LIMITS = (
-                    Distance(stepper_info[stepper_SN][0], "fullsteps"),
-                    Distance(stepper_info[stepper_SN][1], "fullsteps"),
+                    Distance(stepper_info[stepper_sn][0], "fullsteps"),
+                    Distance(stepper_info[stepper_sn][1], "fullsteps"),
                 )
             else:
                 #   should be safe values
@@ -263,7 +263,7 @@ class StageAxis:
                     + "Stage range set to safe defaults."
                 )
             logger.debug(
-                f"True stepper {self.stepper_SN} stage limits set to "
+                f"True stepper {self.stepper_sn} stage limits set to "
                 + f"({self._TRUE_STEPPER_LIMITS[0].prettyprint()}, {self._TRUE_STEPPER_LIMITS[1].prettyprint()})"
             )
 
@@ -275,7 +275,7 @@ class StageAxis:
             # stepper center is defined with lower limit = 0 steps
             self.STEPPER_CENTER = (self.STEPPER_LIMITS[1] - self.STEPPER_LIMITS[0]) / 2
             logger.debug(
-                f"Stepper {self.stepper_SN} stage center set to {self.STEPPER_CENTER.prettyprint()}"
+                f"Stepper {self.stepper_sn} stage center set to {self.STEPPER_CENTER.prettyprint()}"
             )
 
             #   checking that the stepper controller settings are what we want
@@ -327,7 +327,7 @@ class StageAxis:
                     )
             if stepper_settings_fail != {}:
                 warnings.warn(
-                    f"Stepper {stepper_SN} settings not expected values:\n"
+                    f"Stepper {stepper_sn} settings not expected values:\n"
                     + "\n".join(
                         [
                             "setting  |  current  |  expected",
@@ -339,7 +339,7 @@ class StageAxis:
                     )
                 )  # sorry
             else:
-                logger.debug(f"Stepper {stepper_SN} settings are as expected")
+                logger.debug(f"Stepper {stepper_sn} settings are as expected")
 
     def __enter__(self):
         """
@@ -459,12 +459,12 @@ class StageAxis:
 
         if not self._energized():
             raise RuntimeError(
-                f"Axis {self.axis} stepper {self.stepper_SN} not energized"
+                f"Axis {self.axis} stepper {self.stepper_sn} not energized"
             )
 
         if self._position_uncertain():
             raise RuntimeError(
-                f"Axis {self.axis} stepper {self.stepper_SN} position is uncertain and needs homing"
+                f"Axis {self.axis} stepper {self.stepper_sn} position is uncertain and needs homing"
             )
 
         clamped = max(
@@ -472,7 +472,7 @@ class StageAxis:
         )  # stepper steps limits
         if clamped != steps:
             logger.warning(
-                f"Cannot move {self.axis} stepper {self.stepper_SN} to {steps} because it is"
+                f"Cannot move {self.axis} stepper {self.stepper_sn} to {steps} because it is"
                 + "outside the stepper's stage limits of"
                 + f"({self.STEPPER_LIMITS[0].steps}, {self.STEPPER_LIMITS[1].steps}) steps"
             )
@@ -490,13 +490,13 @@ class StageAxis:
         """
         if self._energized():
             logger.info(
-                f"Axis {self.axis} stepper {self.stepper_SN} is already energized"
+                f"Axis {self.axis} stepper {self.stepper_sn} is already energized"
             )
             return
         self.stepper.halt_and_set_position(0)
         self.stepper.energize()
         self.stepper.exit_safe_start()
-        logger.info(f"Axis {self.axis} stepper {self.stepper_SN} energized")
+        logger.info(f"Axis {self.axis} stepper {self.stepper_sn} energized")
 
     def deenergize(self):
         """
@@ -506,13 +506,13 @@ class StageAxis:
         """
         if not self._energized():
             logger.info(
-                f"Axis {self.axis} stepper {self.stepper_SN} is already deenergized"
+                f"Axis {self.axis} stepper {self.stepper_sn} is already deenergized"
             )
             return
         self.stepper.halt_and_hold()
         self.stepper.deenergize()
         self.stepper.enter_safe_start()
-        logger.info(f"Axis {self.axis} stepper {self.stepper_SN} deenergized")
+        logger.info(f"Axis {self.axis} stepper {self.stepper_sn} deenergized")
 
     def home(self):
         """
@@ -531,10 +531,10 @@ class StageAxis:
         """
         if not self._energized():
             raise RuntimeError(
-                f"Axis {self.axis} stepper {self.stepper_SN} not energized"
+                f"Axis {self.axis} stepper {self.stepper_sn} not energized"
             )
         self.stepper.go_home(0)
-        logger.info(f"Axis {self.axis} stepper {self.stepper_SN} homing")
+        logger.info(f"Axis {self.axis} stepper {self.stepper_sn} homing")
         while self._position_uncertain():
             # homing sequence sets "position uncertain" to false upon success
             time.sleep(0.1)
@@ -543,7 +543,7 @@ class StageAxis:
         self._goto_stepper(self._TRUE_STEPPER_LIMITS[0].steps)
         self.stepper.halt_and_set_position(0)
         logger.debug(
-            f"Axis {self.axis} stepper {self.stepper_SN} homing complete, "
+            f"Axis {self.axis} stepper {self.stepper_sn} homing complete, "
             + f"zeroed at lower stage limit {self._TRUE_STEPPER_LIMITS[0].prettyprint()}"
         )
 
@@ -708,7 +708,7 @@ class StageDevices:
         Name of the stage.
     piezo_port : str
         File path for the piezo controller connection.
-    stepper_SNs : Dict[str, str]
+    stepper_sns : Dict[str, str]
         Dictionary of strings mapping axis labels (x, y, z) to their
         respective controller boards' serial numbers.
     sensor : `SensorClasses.Sensor`
@@ -764,7 +764,7 @@ class StageDevices:
         self,
         name: str,
         piezo_port: Optional[str],
-        stepper_SNs: Optional[Dict[str, str]],
+        stepper_sns: Optional[Dict[str, str]],
         sensor: Optional[Sensor] = None,
         piezo_baud_rate: int = 115200,
         require_connection: bool = False,
@@ -788,12 +788,12 @@ class StageDevices:
 
         # loop a similar try-except over the stepper controllers
         # while also creating the axis objects
-        for axis, stepper_SN in stepper_SNs.items():
+        for axis, stepper_sn in stepper_sns.items():
             try:
-                if stepper_SN is not None:
-                    stepper = TicUSB(product=0x00B5, serial_number=stepper_SNs[axis])
+                if stepper_sn is not None:
+                    stepper = TicUSB(product=0x00B5, serial_number=stepper_sns[axis])
                     # Designation for Tic T834          Serial number (binary) of specific controller
-                    logger.info(f"Connected to {stepper_SNs[axis]} as axis {axis}.")
+                    logger.info(f"Connected to {stepper_sns[axis]} as axis {axis}.")
                 else:
                     stepper = None
                     logger.info(f"{self.name}:: no connection for {axis} provided")
@@ -801,11 +801,11 @@ class StageDevices:
                 if require_connection or str(e) != "USB device not found":
                     raise e
                 logger.warning(
-                    f"Error opening stepper port {stepper_SNs[axis]} as axis {axis}: {e}"
+                    f"Error opening stepper port {stepper_sns[axis]} as axis {axis}: {e}"
                 )
                 stepper = None
 
-            self.axes[axis] = StageAxis(axis, piezo, stepper, stepper_SN, autohome)
+            self.axes[axis] = StageAxis(axis, piezo, stepper, stepper_sn, autohome)
 
     def __enter__(self):
         """
@@ -813,11 +813,11 @@ class StageDevices:
 
         Returns ``self`` for use in 'with... as...' statements.
         """
-        for axis, stageAxis in self.axes.items():
-            if stageAxis is not None:
-                self._exit_stack.enter_context(stageAxis)
+        for axis, stage_axis in self.axes.items():
+            if stage_axis is not None:
+                self._exit_stack.enter_context(stage_axis)
                 logger.debug(
-                    f"Axis {axis} context entered for stepper {stageAxis.stepper_SN}"
+                    f"Axis {axis} context entered for stepper {stage_axis.stepper_sn}"
                 )
         return self
 

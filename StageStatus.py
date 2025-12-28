@@ -168,22 +168,22 @@ def run(
                     continue
                 if not stage.axes[axis]._energized():
                     lines.append(
-                        f"    {axis} stepper (SN {stage.axes[axis].stepper_SN}) is not energized"
+                        f"    {axis} stepper (SN {stage.axes[axis].stepper_sn}) is not energized"
                     )
                     continue
                 if stage.axes[axis]._position_uncertain():
                     lines.append(
-                        f"    {axis} (SN {stage.axes[axis].stepper_SN}) position is uncertain"
+                        f"    {axis} (SN {stage.axes[axis].stepper_sn}) position is uncertain"
                     )
                     continue
             if verbose:
                 lines.append(
-                    f"    {axis} (SN {stage.axes[axis].stepper_SN}) = "
+                    f"    {axis} (SN {stage.axes[axis].stepper_sn}) = "
                     + stage.axes[axis].get_stepper_position().prettyprint()
                 )
             else:
                 lines.append(
-                    f"    {axis} (SN {stage.axes[axis].stepper_SN}) = "
+                    f"    {axis} (SN {stage.axes[axis].stepper_sn}) = "
                     + f"{sigfig.round(stage.axes[axis].get_stepper_position().microns, 3, warn=False)} microns"
                 )
         lines.append("")
