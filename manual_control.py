@@ -146,26 +146,26 @@ Switch between goto and move (default) modes with 'goto' and 'move'.
             print("Invalid input: Unit must be u, v, s, fs")
             continue
 
-        movetype = WHICH_DICT[device]
+        movement_type = WHICH_DICT[device]
 
         special = False
         if value.lower() == "zero":
             special = True
-            if movetype == MovementType.PIEZO:
+            if movement_type == MovementType.PIEZO:
                 value = getattr(stage.axes[axis].piezo_limits[0], unit)
             else:
                 value = getattr(stage.axes[axis].stepper_limits[0], unit)
 
         elif value.lower() == "max":
             special = True
-            if movetype == MovementType.PIEZO:
+            if movement_type == MovementType.PIEZO:
                 value = getattr(stage.axes[axis].piezo_limits[1], unit)
             else:
                 value = getattr(stage.axes[axis].stepper_limits[1], unit)
 
         elif value.lower() == "center":
             special = True
-            if movetype == MovementType.PIEZO:
+            if movement_type == MovementType.PIEZO:
                 value = getattr(stage.axes[axis].piezo_center, unit)
             else:
                 value = getattr(stage.axes[axis].stepper_center, unit)
@@ -193,10 +193,10 @@ Switch between goto and move (default) modes with 'goto' and 'move'.
                 break
 
         if goto or special:
-            _ = stage.goto(axis, Distance(value, unit), movetype)
+            _ = stage.goto(axis, Distance(value, unit), movement_type)
         else:
-            _ = stage.move(axis, Distance(value, unit), movetype)
+            _ = stage.move(axis, Distance(value, unit), movement_type)
 
         if status_mode:
             time.sleep(0.1)
-            status(stage, exposure_time, movetype.value, expose=False)
+            status(stage, exposure_time, movement_type.value, expose=False)

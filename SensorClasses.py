@@ -282,17 +282,17 @@ class Sensor:
     def __init__(
         self,
         connection_dict: Dict[str, str],
-        sensorType: Optional[enum.Enum] = SensorType.PIPLATE,
+        sensor_type: Optional[enum.Enum] = SensorType.PIPLATE,
     ):
         self._exit_stack = contextlib.ExitStack()
         self.connection_dict = connection_dict
-        self.sensorType = sensorType
-        if sensorType == SensorType.PIPLATE:
+        self.sensor_type = sensor_type
+        if sensor_type == SensorType.PIPLATE:
             self.sensor = Piplate(connection_dict)
-        elif sensorType == SensorType.SOCKET:
+        elif sensor_type == SensorType.SOCKET:
             self.sensor = Socket(connection_dict)
         else:
-            raise ValueError("sensorType must be a SensorType enum.")
+            raise ValueError("sensor_type must be a SensorType enum.")
 
     def __enter__(self):
         """
