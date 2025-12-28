@@ -136,24 +136,24 @@ def hill_climb(
     max_steps: int,
     softening: float,
     Ndecrease: int,
-    exposureTime: Union[int, float],
+    exposure_time: Union[int, float],
 ):
     logger.info(
         f"Hill climbing on {stage.name} axis {axis} {movement_type.value}"
-        + f" with step size {step.prettyprint()} and exposure time {exposureTime}"
+        + f" with step size {step.prettyprint()} and exposure time {exposure_time}"
     )
 
     step_size = copy(step)
 
     last = deque(maxlen=Ndecrease)
-    current = stage.integrate(exposureTime)
+    current = stage.integrate(exposure_time)
     results = [
         current,
     ]
     for n in range(max_steps):
         last.append(current + abs(current) * softening)
         _ = stage.move(axis, step_size, movement_type)
-        current = stage.integrate(exposureTime)
+        current = stage.integrate(exposure_time)
         results.append(current)
 
         if len(last) == Ndecrease and current < sum(last) / Ndecrease:
@@ -168,7 +168,7 @@ def hill_climb(
 def hill_climber(
     stage: StageDevices,
     axis: str,
-    exposureTime: Union[int, float],
+    exposure_time: Union[int, float],
     movement_type: MovementType,
     init_step: Distance,
     step_factor: float,
@@ -190,7 +190,7 @@ def hill_climber(
     logger.info(
         f"Activating hill climber on {stage.name} axis {axis} {movement_type.value}"
         + f" initially in the {'positive' if init_positive else 'negative'} direction"
-        + f" with exposure time {exposureTime} and initial step size {init_step.prettyprint()}"
+        + f" with exposure time {exposure_time} and initial step size {init_step.prettyprint()}"
     )
 
     init_position = Distance(0, "microns")
@@ -204,7 +204,7 @@ def hill_climber(
         step = -step
 
     last = -np.inf
-    current = stage.integrate(exposureTime)
+    current = stage.integrate(exposure_time)
     climber_results = []
     for n in range(max_climbs):
         last = current
@@ -216,7 +216,7 @@ def hill_climber(
             max_steps,
             softening,
             Ndecrease,
-            exposureTime,
+            exposure_time,
         )
         if not success:
             logger.info("Hill climber stopped because last climb did not find peak")
@@ -325,7 +325,7 @@ def arg_check(
 def run(
     stage: StageDevices,
     movement_type: Union[MovementType, Sequence[MovementType]],
-    exposureTime: Union[int, float, Sequence[Union[int, float]]],
+    exposure_time: Union[int, float, Sequence[Union[int, float]]],
     axes: Optional[str] = None,
     init_step: Union[None, Distance, Sequence[Distance]] = None,
     step_factor: Union[float, Sequence[float]] = 0.5,
@@ -382,7 +382,7 @@ def run(
 
     # veryfing and ducking inputs
     assert all(ax.lower() in VALID_AXES for ax in axes), "axes must be x, y, or z"
-    assert isinstance(exposureTime, int) or isinstance(exposureTime, float)
+    assert isinstance(exposure_time, int) or isinstance(exposure_time, float)
 
     Gthan0 = (lambda x: x > 0, "greater than zero")  # common requirements
     Geqthan0 = (lambda x: x >= 0, "greater than or equal to zero")
@@ -437,6 +437,6 @@ def run(
     # run hill climbers
     for i, (axis, movetype) in enumerate(zip(axes, movement_type)):
         kwargs = {key: val[i] for key, val in hill_climber_kwargs}
-        _ = hill_climber(stage, axis, exposureTime, movetype, **kwargs)
+        _ = hill_climber(stage, axis, exposure_time, movetype, **kwargs)
 
     return

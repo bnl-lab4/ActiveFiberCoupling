@@ -61,8 +61,8 @@ class Piplate:
     -------
     read()
         Read the voltage of the analog input (once) .
-    integrate(Texp, avg=True)
-        Read the voltage of the Pi-Plate analog input Texp times and
+    integrate(exposure_time, avg=True)
+        Read the voltage of the Pi-Plate analog input exposure_time times and
         return the sum (default) or average value.
 
     Notes
@@ -103,16 +103,16 @@ class Piplate:
         #             f"read power {sigfig.round(power, 6, warn=False)}")
         return power
 
-    def integrate(self, Texp: Union[int, float], avg: bool = True):
+    def integrate(self, exposure_time: Union[int, float], avg: bool = True):
         """
         Integrate the voltage of the Pi-plate  over many readings.
 
-        Calls `read` `Texp` times and returns either the sum
+        Calls `read` `exposure_time` times and returns either the sum
         or the average (default) of the readings.
 
         Parameters
         ----------
-        Texp : int, float
+        exposure_time : int, float
             Number of times to call read the voltage input.
         avg : bool, default=False
             Whether to average the total integrated value over the number
@@ -125,20 +125,20 @@ class Piplate:
 
         Notes
         -----
-        Despite the parameter name `Texp`, the voltage will be read an
+        Despite the parameter name `exposure_time`, the voltage will be read an
         integer number of times. However, each function call of
         `piplates.DAQC2plate.getADC` typically takes about 1 millisecond.
         """
         # this would be much better if it integrated over time
         power = 0
-        Texp = int(Texp)
-        for _ in range(Texp):
+        exposure_time = int(exposure_time)
+        for _ in range(exposure_time):
             power += self.read()
         if avg:
-            power /= Texp
+            power /= exposure_time
         logger.trace(
             f"Piplate addr {self.addr} channel {self.channel} : "
-            + f"integrated power {sigfig.round(power, 6, warn=False)}{' averaged' if avg else ''} over {Texp} iterations"
+            + f"integrated power {sigfig.round(power, 6, warn=False)}{' averaged' if avg else ''} over {exposure_time} iterations"
         )
         return power
 
@@ -163,8 +163,8 @@ class Socket:
     -------
     read()
         Get a sensor reading over 1 ms from the server.
-    integrate(Texp, avg=True)
-        Get a sensor reading from the socket server over `Texp`.
+    integrate(exposure_time, avg=True)
+        Get a sensor reading from the socket server over `exposure_time`.
 
     Notes
     -----
@@ -228,17 +228,17 @@ class Socket:
         #         f"returned {sigfig.round(power, 6, warn=False)} averaged over 100ms")
         return power
 
-    def integrate(self, Texp: Union[int, float], avg: bool = True):
+    def integrate(self, exposure_time: Union[int, float], avg: bool = True):
         """
-        Get a sensor reading over `Texp` ms from the server.
+        Get a sensor reading over `exposure_time` ms from the server.
 
         Parameters
         ----------
-        Texp : int, float
+        exposure_time : int, float
             Number of milliseconds the server will integrate for.
         avg : bool, default=True
             Whether the server should return the sum (default) or average
-            reading over `Texp`. Currently ignored and reserved for
+            reading over `exposure_time`. Currently ignored and reserved for
             future use.
 
         Returns
@@ -246,12 +246,12 @@ class Socket:
         float
             The integrated value from the socket server.
         """
-        self.connection.sendall(str(Texp).encode("utf-8"))
+        self.connection.sendall(str(exposure_time).encode("utf-8"))
         power = float(self.connection.recv(1024).decode("utf-8"))
         # power = int(power)
         logger.trace(
             f"Socket at host {self.host} port {self.port} : "
-            + f"returned {sigfig.round(power, 6, warn=False)} {'averaged ' if avg else ''}over {Texp}ms"
+            + f"returned {sigfig.round(power, 6, warn=False)} {'averaged ' if avg else ''}over {exposure_time}ms"
         )
         return power
 
@@ -270,8 +270,8 @@ class Sensor:
     -------
     read()
         Read the sensor once.
-    integrate(Texp, avg=True)
-        Read the sensor over `Texp` and return the sum or average (default).
+    integrate(exposure_time, avg=True)
+        Read the sensor over `exposure_time` and return the sum or average (default).
 
     Notes
     -----
@@ -327,9 +327,9 @@ class Sensor:
         """
         return self.sensor.read()
 
-    def integrate(self, Texp: Union[int, float], avg: bool = True):
+    def integrate(self, exposure_time: Union[int, float], avg: bool = True):
         """
-        Returns the value of the sensor over `Texp`.
+        Returns the value of the sensor over `exposure_time`.
 
         See `Piplate` and `Socket` for more details.
 
@@ -348,4 +348,4 @@ class Sensor:
         float or int
             Integrated value from the sensor.
         """
-        return self.sensor.integrate(Texp, avg)
+        return self.sensor.integrate(exposure_time, avg)

@@ -751,8 +751,8 @@ class StageDevices:
         Move an axis to a position using its stepper and/or piezo.
     read()
         Read the value of the sensor.
-    integrate(Texp, avg=True)
-        Read the sensor over `Texp` and return the sum or average (default).
+    integrate(exposure_time, avg=True)
+        Read the sensor over `exposure_time` and return the sum or average (default).
 
     Notes
     -----
@@ -949,9 +949,9 @@ class StageDevices:
             return None
         return self.sensor.read()
 
-    def integrate(self, Texp: Union[int, float], avg: bool = True):
+    def integrate(self, exposure_time: Union[int, float], avg: bool = True):
         """
-        Integrate the value of the sensor of `Texp`.
+        Integrate the value of the sensor of `exposure_time`.
 
         See `SensorClasses.Socket` and `SensorClasses.Piplate`.
 
@@ -963,4 +963,4 @@ class StageDevices:
         if self.sensor is None:
             logger.warning("No sensor assigned to {self.name}")
             return None
-        return self.sensor.integrate(Texp, avg)
+        return self.sensor.integrate(exposure_time, avg)

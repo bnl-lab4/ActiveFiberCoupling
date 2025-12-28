@@ -13,7 +13,7 @@ from LoggingUtils import get_logger
 logger = get_logger(__name__)
 
 
-def run(stage, ExposureTime):
+def run(stage, exposure_time):
     """
     Allows for manual control of a stage via text commands.
 
@@ -39,7 +39,7 @@ def run(stage, ExposureTime):
 
     Parameters
     ----------
-    ExposureTime : int, float
+    exposure_time : int, float
         Exposure time to use when integrating the sensor value.
     """
 
@@ -74,7 +74,6 @@ Switch between goto and move (default) modes with 'goto' and 'move'.
         f=UNITS[3],
         fs=UNITS[3],
     )
-    Texp = ExposureTime
 
     while True:
         input_msg = "goto >> " if goto else "move >> "
@@ -82,9 +81,9 @@ Switch between goto and move (default) modes with 'goto' and 'move'.
         if user_input == "q":
             break
         if user_input == "":
-            power = stage.sensor.integrate(Texp)
+            power = stage.sensor.integrate(exposure_time)
             power_str = str(f"{power:.6f}") if isinstance(power, float) else str(power)
-            print(f"Power: {power_str}\nIntegrated for {Texp}")
+            print(f"Power: {power_str}\nIntegrated for {exposure_time}")
             continue
         if user_input == "move":
             if goto:
@@ -102,7 +101,7 @@ Switch between goto and move (default) modes with 'goto' and 'move'.
             continue
 
         if user_input == "status":
-            status(stage, Texp, "all")
+            status(stage, exposure_time, "all")
             continue
         if user_input == "status on":
             if status_mode:
@@ -121,8 +120,8 @@ Switch between goto and move (default) modes with 'goto' and 'move'.
 
         user_input = user_input.split()
         if len(user_input) == 2 and set(user_input[0].lower()) == set("texp"):
-            Texp = int(user_input[1])
-            print(f'Exposure "time" set to {Texp}')
+            exposure_time = int(user_input[1])
+            print(f'Exposure "time" set to {exposure_time}')
             continue
         if len(user_input) != 3 and len(user_input) != 4:
             print("Invalid input: Enter command as [axis] [device] [value] ([unit]).")
@@ -200,4 +199,4 @@ Switch between goto and move (default) modes with 'goto' and 'move'.
 
         if status_mode:
             time.sleep(0.1)
-            status(stage, Texp, movetype.value, expose=False)
+            status(stage, exposure_time, movetype.value, expose=False)

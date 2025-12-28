@@ -17,7 +17,7 @@ VALID_AXES = ["x", "y", "z"]
 
 def run(
     stage: StageDevices,
-    exposureTime: Union[int, float],
+    exposure_time: Union[int, float],
     which: Optional[str] = None,
     expose: bool = True,
     verbose: bool = True,
@@ -30,7 +30,7 @@ def run(
     ----------
     stage : `MovementClasses.StageDevices`
         Stage to report the status of.
-    exposureTime : int, float
+    exposure_time : int, float
         Exposure time to use for reporting sensor reading.
     which : {'all', 'general', 'stepper', 'piezo', 'sensor', None}, optional
         Which parts of the stage to report the status of. 'all' and
@@ -130,8 +130,8 @@ def run(
             lines.append(f"    waist position (x, y, z) ={waist_pos}")
         if expose:
             lines.append(
-                f"\nSensor current reading (exposure time {exposureTime}): "
-                + f"{sigfig.round(stage.sensor.integrate(exposureTime), 3, warn=False)}"
+                f"\nSensor current reading (exposure time {exposure_time}): "
+                + f"{sigfig.round(stage.sensor.integrate(exposure_time), 3, warn=False)}"
             )
         lines.append("")
     if show_piezo:

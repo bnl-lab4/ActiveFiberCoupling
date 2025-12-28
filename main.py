@@ -153,7 +153,7 @@ def AcceptInputArgs(
     return inputTuple
 
 
-def Update_ExposureTime(texp: float) -> float:
+def update_exposure_time(texp: float) -> float:
     print(
         f"Update default exposure time (currently {texp}):"
         + "(iterations for piplates, milliseconds for sockets)"
@@ -218,12 +218,12 @@ class MenuEntry:
                 warnings.warn(f"{e} is not an acceptable movement type key")
                 print("Function call aborted")
                 return
-        if "ExposureTime" in self.args_config:
+        if "exposure_time" in self.args_config:
             resolved_args.append(controller.exposure_time)
 
         args_len = (
             len(self.args_config) - 1
-            if "ExposureTime" in self.args_config
+            if "exposure_time" in self.args_config
             else len(self.args_config)
         )
         kwargs = {}
@@ -252,8 +252,8 @@ class MenuEntry:
             kwargs.update(StringUtils.str_to_dict(user_input_parts[args_len:]))
 
         # if exposure time is entered as a kwarg, replace the arg value
-        if "exposureTime" in kwargs.keys() and "ExposureTime" in self.args_config:
-            resolved_args[-1] = kwargs.pop("exposureTime")
+        if "exposure_time" in kwargs.keys() and "exposure_time" in self.args_config:
+            resolved_args[-1] = kwargs.pop("exposure_time")
 
         # check whether kwargs are valid
         try:
@@ -339,7 +339,7 @@ class ProgramController:
             "manual": MenuEntry(
                 text="Stage manual control",
                 func=manual_control.run,
-                args_config=("stage", "ExposureTime"),
+                args_config=("stage", "exposure_time"),
             ),
             "zero": MenuEntry(
                 text="Zero piezos or steppers positions",
@@ -372,31 +372,31 @@ class ProgramController:
             "read": MenuEntry(
                 text="Continuous readout of sensor in terminal",
                 func=ContinuousReadout.run,
-                args_config=("stage", "ExposureTime"),
+                args_config=("stage", "exposure_time"),
             ),
             "_optimization": "Optimization Algorithms",
             "grid": MenuEntry(
                 text="Grid search in one or more planes",
                 func=grid_search.run,
-                args_config=("stage", "MovementType", "ExposureTime"),
+                args_config=("stage", "MovementType", "exposure_time"),
             ),
             "hillclimb": MenuEntry(
                 text="Hill climbing on one or more axes",
                 func=HillClimb.run,
-                args_config=("stage", "MovementType", "ExposureTime"),
+                args_config=("stage", "MovementType", "exposure_time"),
             ),
             "_misc": "Miscellaneous",
             "status": MenuEntry(
                 text="Report the status of all or part of a stage",
                 func=StageStatus.run,
-                args_config=("stage", "ExposureTime"),
+                args_config=("stage", "exposure_time"),
                 kwargs_config={"quick": dict(verbose=False), "log": dict(log=True)},
             ),
             "reload": MenuEntry(text="Reload all ActiveFiberCoupling modules"),
             # reload is a special case, whose function must not be in the menu
             "texp": MenuEntry(
                 text="Change the default exposure time",
-                func=Update_ExposureTime,
+                func=update_exposure_time,
             ),
             "log": MenuEntry(
                 text="Change the logging settings",
@@ -491,7 +491,7 @@ class ProgramController:
                 elif entry_key == "log":
                     self.logging_settings = LoggingUtils.Update_Logging()
                 elif entry_key == "texp":
-                    self.exposure_time = Update_ExposureTime(self.exposure_time)
+                    self.exposure_time = update_exposure_time(self.exposure_time)
                 else:
                     entry = self.menu[entry_key]
                     entry.execute(self, parts[1:])

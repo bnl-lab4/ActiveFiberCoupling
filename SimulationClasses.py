@@ -138,7 +138,7 @@ class SimulationSensor:
     -------
     read()
         Determine the beam intensity based on the stage's current position.
-    integrate(Texp, avg=True)
+    integrate(exposure_time, avg=True)
         Calls `read()`. Included for general compatibility.
 
     Notes
@@ -254,7 +254,7 @@ class SimulationSensor:
 
         return intensity
 
-    def integrate(self, Texp: int, avg: bool = True) -> float:
+    def integrate(self, exposure_time: int, avg: bool = True) -> float:
         """
         Calculates and returns the intensity at the current stage position.
 
@@ -264,7 +264,7 @@ class SimulationSensor:
 
         Parameters
         ----------
-        Texp : int
+        exposure_time : int
             IGNORED. Included for compatibility.
         avg : bool, default=True
             IGNORED. Included for compatibility.
@@ -627,7 +627,7 @@ class SimulationStageDevices:
         Move an axis to a position using its stepper and/or piezo.
     read()
         "Read" the simulated sensor, if one is defined.
-    integrate(Texp, avg=True)
+    integrate(exposure_time, avg=True)
        Dummy method calling `read`. Parameters are ignored.
     home(axes=None)
         Call `home` on one or more axes.
@@ -734,12 +734,12 @@ class SimulationStageDevices:
             return None
         return self.sensor.read()
 
-    def integrate(self, Texp: int, avg: bool = True) -> Optional[float]:
+    def integrate(self, exposure_time: int, avg: bool = True) -> Optional[float]:
         """Performs an integration with the attached sensor, if it exists."""
         if self.sensor is None:
             logger.warning("No sensor assigned to {self.name}")
             return None
-        return self.sensor.integrate(Texp, avg)
+        return self.sensor.integrate(exposure_time, avg)
 
     # --- Dummy methods to match the real hardware class interface ---
     def deenergize(self, axes: Union[str, List[str]] = "all"):

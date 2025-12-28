@@ -277,7 +277,7 @@ def plane_grid(
     axes: list,
     axis0: np.ndarray,
     axis1: np.ndarray,
-    exposureTime: Union[int, float],
+    exposure_time: Union[int, float],
     show_plot: bool = False,
     log_plot: bool = True,
 ):
@@ -290,11 +290,11 @@ def plane_grid(
         if i % 2:  # to snake along the grid
             for j, pos1 in enumerate(axis1):
                 stage.goto(axes[1], Distance(pos1, "microns"), movement_type)
-                response_grid[j, i] += stage.integrate(exposureTime)
+                response_grid[j, i] += stage.integrate(exposure_time)
         else:
             for j, pos1 in enumerate(axis1[::-1]):
                 stage.goto(axes[1], Distance(pos1, "microns"), movement_type)
-                response_grid[-j - 1, i] += stage.integrate(exposureTime)
+                response_grid[-j - 1, i] += stage.integrate(exposure_time)
 
     logger.info(f"Grid values:\n{response_grid}")
 
@@ -320,7 +320,7 @@ def plane_grid(
 def run(
     stage: StageDevices,
     movement_type: MovementType,
-    exposureTime: Union[int, float],
+    exposure_time: Union[int, float],
     spacing: Union[None, Distance, Sequence[Distance]] = None,  # default 10 volts
     num_points: Union[None, int, Sequence[int]] = None,
     center: Union[None, str, Sequence[Distance]] = None,
@@ -486,7 +486,7 @@ def run(
             + f"{plane.prettyprint()} microns with grid:\n"
             + f"{axes[0]} = {axis0} microns\n{axes[1]} = {axis1} microns\n"
             + "Total integration time ~ "
-            + f"{sigfig.round(len(axis0) * len(axis1) * exposureTime / 1e3, 3)} seconds"
+            + f"{sigfig.round(len(axis0) * len(axis1) * exposure_time / 1e3, 3)} seconds"
         )
         stage.goto(focus_axis, plane, MovementType.STEPPER)
 
@@ -497,7 +497,7 @@ def run(
             axes,
             axis0,
             axis1,
-            exposureTime,
+            exposure_time,
             **plane_kwargs,
         )
         grid_values.append(plane_values)
