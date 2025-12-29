@@ -72,7 +72,7 @@ def gaussbeam(
     return I0 * (w0**2 / wp2) * np.exp(-2 * r2 / wp2) + C
 
 
-def Gbeamfit_3d(
+def gaussbeam_fit_3d(
     axes: Union[str, List[str]],
     movement_type: MovementType,
     stagename: str,
@@ -138,7 +138,7 @@ def Gbeamfit_3d(
     return result
 
 
-def Gbeamfit_2d(
+def gaussbeam_fit_2d(
     axes: Union[str, List[str]],
     movement_type: MovementType,
     stagename: str,
@@ -543,7 +543,7 @@ def run(
         else:
             logger.info("Attempting to fit data with a 3d Gaussian beam model")
 
-            result = Gbeamfit_3d(
+            result = gaussbeam_fit_3d(
                 axes,
                 movement_type,
                 stage.name,
@@ -588,7 +588,7 @@ def run(
         accepted_results = []
         accepted_planes = []
         for plane, plane_values in zip(planes, grid_values):
-            result = Gbeamfit_2d(
+            result = gaussbeam_fit_2d(
                 axes,
                 movement_type,
                 stage.name,

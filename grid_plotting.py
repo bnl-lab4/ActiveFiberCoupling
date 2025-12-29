@@ -65,7 +65,7 @@ def lin_fit_string(fit_result, axes):
     return "\n".join(best_fit)
 
 
-def Gbeam_fit_string(fit_result, axes):
+def gaussbeam_fit_string(fit_result, axes):
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
     best_fit = []
     best_fit.append(f"$I_0$ = {val_unc(fit_result.params['I0'])}")
@@ -118,7 +118,7 @@ def plot_2dfit(
     dense_grids = np.meshgrid(*dense_axes)
     dense_result = fit_result.eval(x=dense_grids[0], y=dense_grids[1])
     result = fit_result.eval(x=axis0_grid, y=axis1_grid)
-    resid = response_grid - result
+    residuals = response_grid - result
     vmin = min(response_grid.min(), dense_result.min())
     vmax = max(response_grid.max(), dense_result.max())
 
@@ -127,8 +127,8 @@ def plot_2dfit(
     )
     fig.colorbar(data_c, cax=axs[1], label="Intensity")
     axs[2].pcolormesh(*dense_grids, dense_result, shading="auto", vmin=vmin, vmax=vmax)
-    resid_c = axs[3].pcolormesh(axis0_grid, axis1_grid, resid, shading="auto")
-    fig.colorbar(resid_c, cax=axs[4], label="Residual (Absolute)")
+    residuals_c = axs[3].pcolormesh(axis0_grid, axis1_grid, residuals, shading="auto")
+    fig.colorbar(residuals_c, cax=axs[4], label="Residual (Absolute)")
 
     titles = ("Data", "", "Best Fit", "Data - Best Fit")
     for ax, title in zip(axs, titles):
@@ -195,7 +195,7 @@ def plot_para_fit(
     planes_dense = np.linspace(*dense_lims, 1000)
     waists_dense = result.eval(x=planes_dense)
     fit_waists = result.eval(x=planes_microns)
-    resid = waists - fit_waists
+    residuals = waists - fit_waists
 
     fig, axs = plt.subplots(
         nrows=2,
@@ -213,9 +213,9 @@ def plot_para_fit(
         color="C1",
         label=para_fit_string(result, focus_axis),
     )
-    axs[1].scatter(planes_microns, resid)
+    axs[1].scatter(planes_microns, residuals)
     if not fake_unc:
-        axs[1].errorbar(planes_microns, resid, yerr=waists_unc, fmt="none")
+        axs[1].errorbar(planes_microns, residuals, yerr=waists_unc, fmt="none")
 
     axs[1].axhline(0, color="black", alpha=0.3)
 
@@ -258,7 +258,7 @@ def plot_3dfit(
             x1=axis0_grid_dense, x2=axis1_grid_dense, x3=focus_grid_dense
         )
         fit_grid = result.eval(x1=axis0_cube[0], x2=axis1_cube[0], x3=focus_grid)
-        resid_grid = grid_values - fit_grid
+        residuals_grid = grid_values - fit_grid
 
         vmin = min(grid_values.min(), fit_grid_dense.min())
         vmax = max(grid_values.max(), fit_grid_dense.max())
@@ -279,12 +279,12 @@ def plot_3dfit(
             vmax=vmax,
             shading="auto",
         )
-        resid_cbar = axrow[3].pcolormesh(
-            axis0_cube[0], axis1_cube[0], resid_grid, shading="auto"
+        residuals_cbar = axrow[3].pcolormesh(
+            axis0_cube[0], axis1_cube[0], residuals_grid, shading="auto"
         )
 
         fig.colorbar(data_cbar, cax=axrow[1], label="Intensity")
-        fig.colorbar(resid_cbar, cax=axrow[4], label="Residual (Absolute)")
+        fig.colorbar(residuals_cbar, cax=axrow[4], label="Residual (Absolute)")
 
         axrow[2].sharey(axrow[0])
         axrow[2].tick_params(labelleft=False)
@@ -306,7 +306,7 @@ def plot_3dfit(
     for ax in axs[:-1, 3]:
         ax.sharex(axs[-1, 3])
 
-    fig.suptitle(Gbeam_fit_string(result, axes))
+    fig.suptitle(gaussbeam_fit_string(result, axes))
 
     return fig
 
@@ -329,7 +329,7 @@ def plot_lin_fit(
     planes_dense = np.linspace(*dense_lims, 100)
     axis_peak_dense = result.eval(x=planes_dense)
     fit_axis_peak = result.eval(x=planes_microns)
-    resid = axis_peak_pos - fit_axis_peak
+    residuals = axis_peak_pos - fit_axis_peak
 
     fig, axs = plt.subplots(
         nrows=2,
@@ -347,9 +347,9 @@ def plot_lin_fit(
         color="C1",
         label=lin_fit_string(result, axis + focus_axis),
     )
-    axs[1].scatter(planes_microns, resid)
+    axs[1].scatter(planes_microns, residuals)
     if not fake_unc:
-        axs[1].errorbar(planes_microns, resid, yerr=axis_peak_unc, fmt="none")
+        axs[1].errorbar(planes_microns, residuals, yerr=axis_peak_unc, fmt="none")
 
     axs[1].axhline(0, color="black", alpha=0.3)
 
