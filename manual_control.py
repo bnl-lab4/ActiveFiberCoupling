@@ -13,6 +13,27 @@ from LoggingUtils import get_logger
 logger = get_logger(__name__)
 
 
+WHICH_DICT = dict(
+    p=MovementType.PIEZO,
+    piezo=MovementType.PIEZO,
+    s=MovementType.STEPPER,
+    stepper=MovementType.STEPPER,
+    g=MovementType.GENERAL,
+    general=MovementType.GENERAL,
+)
+AXES = ("x", "y", "z")
+UNITS = ("microns", "volts", "steps", "fullsteps")
+UNITS_ABRV = dict(
+    u=UNITS[0],
+    m=UNITS[0],
+    v=UNITS[1],
+    s=UNITS[2],
+    st=UNITS[2],
+    f=UNITS[3],
+    fs=UNITS[3],
+)
+
+
 def run(stage, exposure_time):
     """
     Allows for manual control of a stage via text commands.
@@ -55,25 +76,6 @@ Switch between goto and move (default) modes with 'goto' and 'move'.
 """)
     goto = False
     status_mode = False
-    WHICH_DICT = dict(
-        p=MovementType.PIEZO,
-        piezo=MovementType.PIEZO,
-        s=MovementType.STEPPER,
-        stepper=MovementType.STEPPER,
-        g=MovementType.GENERAL,
-        general=MovementType.GENERAL,
-    )
-    AXES = ("x", "y", "z")
-    UNITS = ("microns", "volts", "steps", "fullsteps")
-    UNITS_ABRV = dict(
-        u=UNITS[0],
-        m=UNITS[0],
-        v=UNITS[1],
-        s=UNITS[2],
-        st=UNITS[2],
-        f=UNITS[3],
-        fs=UNITS[3],
-    )
 
     while True:
         input_msg = "goto >> " if goto else "move >> "
