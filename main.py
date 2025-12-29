@@ -89,6 +89,8 @@ MOVEMENT_TYPE_MAP = {
 
 WHICH_DEVICE_MAP = {"p": "piezo", "s": "stepper", "r": "sensor"}
 
+COMMAND_ARG_VALUE_DICT = dict(t=True, y=True, true=True, f=False, n=False, false=False)
+
 
 # custom warning format to remove the source line
 def custom_formatwarning(message, category, filename, lineno, line=None):
@@ -100,16 +102,12 @@ def custom_formatwarning(message, category, filename, lineno, line=None):
 logger = get_logger(__name__)
 
 
-def AcceptInputArgs(
-    inputTuple: List[Union[bool, str, int, None]], inputArgs: List[str]
+def accept_input_args(
+    input_tuple: List[Union[bool, str, int, None]], input_args: List[str]
 ) -> list:
-    # relies upon order of inputTuple, should be refactored
+    # relies upon order of input_tuple, should be refactored
 
-    CommandArg_ValueDict = dict(
-        t=True, y=True, true=True, f=False, n=False, false=False
-    )
-
-    for arg in inputArgs:
+    for arg in input_args:
         if "-" not in arg:
             warnings.warn(
                 f"Command-line argument {arg} not formatted properly (arg-bool)"
@@ -117,40 +115,40 @@ def AcceptInputArgs(
             continue
         arg, val = arg.strip().lower().split("-")
         if arg == "autohome":
-            inputTuple[0] = CommandArg_ValueDict[val]
+            input_tuple[0] = COMMAND_ARG_VALUE_DICT[val]
             continue
         if arg == "requireconnection" or arg == "requirecon":
-            inputTuple[1] = CommandArg_ValueDict[val]
+            input_tuple[1] = COMMAND_ARG_VALUE_DICT[val]
             continue
         if arg == "logtoconsole":
-            inputTuple[2] = CommandArg_ValueDict[val]
+            input_tuple[2] = COMMAND_ARG_VALUE_DICT[val]
             continue
         if arg == "logtofile":
-            inputTuple[3] = CommandArg_ValueDict[val]
+            input_tuple[3] = COMMAND_ARG_VALUE_DICT[val]
             continue
         if arg == "logfile":
             if LoggingUtils.verify_logfile(val):
-                inputTuple[4] = val
+                input_tuple[4] = val
         if arg == "consoleloglevel":  # not working? (at least with trace)
             try:
-                inputTuple[5] = getattr(logging, val)
+                input_tuple[5] = getattr(logging, val)
             except AttributeError:
                 warnings.warn(f"Could not find log level {val}, default will be kept")
                 continue
-            inputTuple[5] = val
+            input_tuple[5] = val
             continue
         if arg == "loglevel":
             try:
-                inputTuple[6] = getattr(logging, val)
+                input_tuple[6] = getattr(logging, val)
             except AttributeError:
                 warnings.warn(f"Could not find log level {val}, default will be kept")
                 continue
-            inputTuple[6] = val
+            input_tuple[6] = val
             continue
 
         warnings.warn(f"{'-'.join(arg)} is not a valid argument")
 
-    return inputTuple
+    return input_tuple
 
 
 def update_exposure_time(texp: float) -> float:
@@ -520,19 +518,21 @@ def main():
     atexit.register(readline.write_history_file, history_file)
 
     # Default runtime variable
-    AutoHome = True  # home motors upon establishing connection
-    RequireConnection = False  # raise exception if device connections fail to establish
+    autohome = True  # home motors upon establishing connection
+    require_connection = (
+        False  # raise exception if device connections fail to establish
+    )
     logging_settings: List[Any] = [None] * 5
 
     if len(sys.argv) > 1:
         InputArgs = sys.argv[1:]
-        AutoHome, RequireConnection, *logging_settings = AcceptInputArgs(
-            [AutoHome, RequireConnection] + logging_settings, InputArgs
+        autohome, require_connection, *logging_settings = accept_input_args(
+            [autohome, require_connection] + logging_settings, InputArgs
         )
 
     try:
         with ProgramController(
-            AutoHome, RequireConnection, tuple(logging_settings)
+            autohome, require_connection, tuple(logging_settings)
         ) as controller:
             controller.run()
     except Exception as e:
