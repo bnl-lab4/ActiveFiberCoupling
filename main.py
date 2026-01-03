@@ -36,7 +36,7 @@ import StageStatus
 import LoggingUtils
 from LoggingUtils import get_logger
 import ContinuousReadout
-# import DriftCompensation
+from hardware_interfaces import TicUSB, Serial, DAQ, HardwareLibMissingStub
 
 
 # Device info constants
@@ -44,6 +44,9 @@ SOCKET0 = dict(host="192.168.0.100", port=8000, sensortype=SensorType.SOCKET)
 SOCKET1 = dict(host="192.168.0.100", port=8000, sensortype=SensorType.SOCKET)
 PIPLATE0 = dict(addr=0, channel=0, sensortype=SensorType.PIPLATE)
 PIPLATE1 = dict(addr=0, channel=1, sensortype=SensorType.PIPLATE)
+SIMSENSOR_REPLACEMENT = dict(
+    propagation_axis="y", focal_ratio=4.0, angle_of_deviation=0
+)
 SIMSENSOR_ASPH = dict(propagation_axis="y", focal_ratio=4.0, angle_of_deviation=3 / 180)
 SIMSENSOR_LABTELE = dict(propagation_axis="y", focal_ratio=28.0, angle_of_deviation=0)
 SIMSENSOR_SKYTELE = dict(propagation_axis="y", focal_ratio=7.0, angle_of_deviation=0)
@@ -309,20 +312,35 @@ class ProgramController:
             zip(STAGENAME_LIST, SENSOR_LIST, PIEZO_PORT_LIST, STEPPER_DICT_LIST)
         ):
             if "propagation_axis" not in SENSOR.keys():
-                sensor_dict = cast(Dict[str, Any], SENSOR)
-                sensor = self.stack.enter_context(
-                    Sensor(sensor_dict, sensor_dict["sensortype"])
-                )
-                stage = self.stack.enter_context(
-                    StageDevices(
-                        NAME,
-                        PIEZO_PORT,
-                        STEPPER_DICT,
-                        sensor=sensor,
-                        require_connection=self.require_connection,
-                        autohome=self.autohome,
+                if any(
+                    [
+                        type(lib) is HardwareLibMissingStub
+                        for lib in (TicUSB, Serial, DAQ)
+                    ]
+                ):
+                    logger.warning(
+                        f"One or more of TicUSB, Serial, DAQ is a stub. Loading replacement simulation classes for stage {NAME}."
                     )
-                )
+                    sensor_dict = cast(Dict[str, Any], SIMSENSOR_REPLACEMENT)
+                    sensor = self.stack.enter_context(SimulationSensor(**sensor_dict))
+                    stage = self.stack.enter_context(
+                        SimulationStageDevices(NAME + "_SIMSENSOR", sensor=sensor)
+                    )
+                else:
+                    sensor_dict = cast(Dict[str, Any], SENSOR)
+                    sensor = self.stack.enter_context(
+                        Sensor(sensor_dict, sensor_dict["sensortype"])
+                    )
+                    stage = self.stack.enter_context(
+                        StageDevices(
+                            NAME,
+                            PIEZO_PORT,
+                            STEPPER_DICT,
+                            sensor=sensor,
+                            require_connection=self.require_connection,
+                            autohome=self.autohome,
+                        )
+                    )
             else:
                 sensor_dict = cast(Dict[str, Any], SENSOR)
                 sensor = self.stack.enter_context(SimulationSensor(**sensor_dict))
