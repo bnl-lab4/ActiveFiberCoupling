@@ -12,9 +12,9 @@ import enum
 import sigfig
 import socket
 import contextlib
-import piplates.DAQC2plate as DAQ
 from typing import Dict, Optional, Union
 
+from hardware_interfaces import DAQ
 from LoggingUtils import get_logger
 
 # unique logger name for this module

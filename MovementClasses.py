@@ -8,15 +8,14 @@ Defines the `StageAxis` and `StageDevices` classes for controlling stages.
 """
 
 import time
-import serial
 import warnings
 import enum
 import yaml
 import contextlib
-from ticlib import TicUSB
 from typing import Dict, Optional, Union, List
 from typing_extensions import assert_never
 
+from hardware_interfaces import TicUSB, Serial, SerialException
 from SensorClasses import Sensor
 from Distance import Distance
 from LoggingUtils import get_logger
@@ -779,9 +778,9 @@ class StageDevices:
 
         piezo = None
         try:
-            piezo = serial.Serial(self.piezo_port, piezo_baud_rate, timeout=1)
+            piezo = Serial(self.piezo_port, piezo_baud_rate, timeout=1)
             logger.info(f"Connected to {piezo_port} at {piezo_baud_rate} baud.")
-        except serial.SerialException as e:
+        except SerialException as e:
             if require_connection:
                 raise e
             logger.warning(f"Could not open serial port {piezo_port}: {e}")
