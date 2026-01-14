@@ -6,6 +6,7 @@
 # useful exceptions for input parsing
 # better handling of non-connected stage devices
 # rewrite command line arg handling to be more flexible (dict?)
+# Move device info constants section into a config file (yaml)
 #####################
 
 
