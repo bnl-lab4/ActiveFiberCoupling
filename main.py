@@ -10,34 +10,35 @@
 
 
 from __future__ import annotations  # for type hinting types not yet defined
-import os
-import sys
-import importlib  # for reloading modules
-import logging
-import warnings
-import contextlib  # better than nested 'with' statements
-import readline  # enables input() to save history just by being loaded
-import atexit  # for saving readline history file
-import inspect  # checking input kwargs match to function in menu
-import traceback  # show traceback in main menu
-from typing import Tuple, Dict, Optional, List, Union, Any, cast
-from collections.abc import Callable
 
-# Import alignment algorithms and control modes
-from MovementClasses import StageDevices, MovementType
-from SensorClasses import Sensor, SensorType
-from SimulationClasses import SimulationSensor, SimulationStageDevices
+import atexit  # for saving readline history file
+import contextlib  # better than nested 'with' statements
+import importlib  # for reloading modules
+import inspect  # checking input kwargs match to function in menu
+import logging
+import os
+import readline  # enables input() to save history just by being loaded
+import sys
+import traceback  # show traceback in main menu
+import warnings
+from collections.abc import Callable
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
+
+import continuous_readout
+import grid_search
+import HillClimb
+import LoggingUtils
 import manual_control
 import MovementUtils
-import grid_search
-import StringUtils
-import HillClimb
 import StageStatus
-import LoggingUtils
+import StringUtils
+from hardware_interfaces import DAQ, HardwareLibMissingStub, Serial, TicUSB
 from LoggingUtils import get_logger
-import ContinuousReadout
-from hardware_interfaces import TicUSB, Serial, DAQ, HardwareLibMissingStub
 
+# Import alignment algorithms and control modes
+from MovementClasses import MovementType, StageDevices
+from SensorClasses import Sensor, SensorType
+from SimulationClasses import SimulationSensor, SimulationStageDevices
 
 # Device info constants
 SOCKET0 = dict(host="192.168.0.100", port=8000, sensortype=SensorType.SOCKET)
@@ -388,7 +389,7 @@ class ProgramController:
             ),
             "read": MenuEntry(
                 text="Continuous readout of sensor in terminal",
-                func=ContinuousReadout.run,
+                func=continuous_readout.run,
                 args_config=("stage", "exposure_time"),
             ),
             "_optimization": "Optimization Algorithms",
