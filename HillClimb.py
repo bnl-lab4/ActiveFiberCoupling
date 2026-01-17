@@ -3,19 +3,20 @@
 # climb in an arbitrary direction (vector input)
 ###############
 import math
-import sigfig
-import numpy as np
-import matplotlib.pyplot as plt
+from collections import deque
+from collections.abc import Callable
+from collections.abc import Sequence as sequence  # sorry
 from copy import copy
 from datetime import datetime
-from collections.abc import Sequence as sequence  # sorry
-from collections.abc import Callable
-from collections import deque
-from typing import Optional, Union, Sequence, Tuple, List, Type
 from numbers import Real
+from typing import List, Optional, Sequence, Tuple, Type, Union
 
-from MovementClasses import Distance, MovementType, StageDevices
+import matplotlib.pyplot as plt
+import numpy as np
+import sigfig
+
 from LoggingUtils import get_logger
+from MovementClasses import Distance, MovementType, StageDevices
 
 # unique logger name for this module
 logger = get_logger(__name__)
@@ -183,9 +184,9 @@ def hill_climber(
     show_plot: bool = False,
     log_plot: bool = True,
 ):
-    assert movement_type != MovementType.GENERAL, (
-        "General movement hill climb may be added later"
-    )
+    assert (
+        movement_type != MovementType.GENERAL
+    ), "General movement hill climb may be added later"
 
     logger.info(
         f"Activating hill climber on {stage.name} axis {axis} {movement_type.value}"

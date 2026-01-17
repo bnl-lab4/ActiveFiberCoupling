@@ -2,9 +2,9 @@
 Control logging configuration of ActiveFiberCoupling.
 """
 
-import warnings
-import os
 import logging
+import os
+import warnings
 from typing import Optional, Union, cast
 
 SAFE_MODULES = {

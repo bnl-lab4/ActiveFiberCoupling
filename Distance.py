@@ -3,9 +3,11 @@ Defines the `Distance` class as a general quantity with several equivalent units
 """
 
 from __future__ import annotations
-import sigfig
-from typing import Union, Sequence, SupportsFloat
+
 from collections.abc import Sequence as sequence  # sorry
+from typing import Sequence, SupportsFloat, Union
+
+import sigfig
 
 from LoggingUtils import get_logger
 
