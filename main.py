@@ -26,7 +26,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import continuous_readout
 import grid_search
-import HillClimb
+import hill_climb
 import LoggingUtils
 import manual_control
 import MovementUtils
@@ -400,7 +400,7 @@ class ProgramController:
             ),
             "hillclimb": MenuEntry(
                 text="Hill climbing on one or more axes",
-                func=HillClimb.run,
+                func=hill_climb.run,
                 args_config=("stage", "MovementType", "exposure_time"),
             ),
             "_misc": "Miscellaneous",

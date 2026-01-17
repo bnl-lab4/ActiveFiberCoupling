@@ -281,7 +281,7 @@ def hill_climber(
         if log_plot:
             fig.savefig(
                 f"./log_plots/{str(datetime.now())[:-7].replace(' ', '_')}_"
-                + f"{stage.name}_{axis}_{movement_type.value}_HillClimb.png",
+                + f"{stage.name}_{axis}_{movement_type.value}_hillclimb.png",
                 format="png",
                 facecolor="white",
                 dpi=200,
