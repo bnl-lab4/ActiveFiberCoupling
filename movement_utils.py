@@ -4,7 +4,7 @@ Basic movement controls for steppers and piezos.
 
 from typing import Optional
 
-from LoggingUtils import get_logger
+from logging_utils import get_logger
 from movement_classes import MovementType, StageDevices
 
 # unique logger name for this module

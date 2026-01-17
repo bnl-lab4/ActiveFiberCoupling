@@ -4,7 +4,7 @@ Continuously print the sensor reading until interrupted.
 
 from typing import Union
 
-from LoggingUtils import get_logger
+from logging_utils import get_logger
 from movement_classes import StageDevices
 
 # unique logger name for this module

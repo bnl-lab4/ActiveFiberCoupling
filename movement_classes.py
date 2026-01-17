@@ -18,7 +18,7 @@ from typing_extensions import assert_never
 
 from distance import Distance
 from hardware_interfaces import Serial, SerialException, TicUSB
-from LoggingUtils import get_logger
+from logging_utils import get_logger
 from sensor_classes import Sensor
 
 # unique logger name for this module

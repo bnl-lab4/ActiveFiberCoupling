@@ -7,7 +7,7 @@ from typing import Optional, Union
 
 import sigfig
 
-from LoggingUtils import get_logger
+from logging_utils import get_logger
 from movement_classes import Distance, StageDevices
 
 # unique logger name for this module

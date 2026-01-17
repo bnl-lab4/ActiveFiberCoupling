@@ -27,13 +27,13 @@ from typing import Any, Dict, List, Optional, Tuple, Union, cast
 import continuous_readout
 import grid_search
 import hill_climb
-import LoggingUtils
+import logging_utils
 import manual_control
 import movement_utils
 import stage_status
 import string_utils
 from hardware_interfaces import DAQ, HardwareLibMissingStub, Serial, TicUSB
-from LoggingUtils import get_logger
+from logging_utils import get_logger
 
 # Import alignment algorithms and control modes
 from movement_classes import MovementType, StageDevices
@@ -131,7 +131,7 @@ def accept_input_args(
             input_tuple[3] = COMMAND_ARG_VALUE_DICT[val]
             continue
         if arg == "logfile":
-            if LoggingUtils.verify_logfile(val):
+            if logging_utils.verify_logfile(val):
                 input_tuple[4] = val
         if arg == "consoleloglevel":  # not working? (at least with trace)
             try:
@@ -300,7 +300,7 @@ class ProgramController:
         self.menu = self._build_menu()
 
     def __enter__(self):
-        LoggingUtils.setup_logging(*self.logging_settings)  # type: ignore [reportOptionalIterable]
+        logging_utils.setup_logging(*self.logging_settings)  # type: ignore [reportOptionalIterable]
         self._initialize_devices()
         return self
 
@@ -418,7 +418,7 @@ class ProgramController:
             ),
             "log": MenuEntry(
                 text="Change the logging settings",
-                func=LoggingUtils.update_logging,
+                func=logging_utils.update_logging,
             ),
             "help": MenuEntry(
                 text="Help with the menu or a function ('help <func_name>')",
@@ -507,7 +507,7 @@ class ProgramController:
                 if entry_key == "reload":
                     self._reload_menu()
                 elif entry_key == "log":
-                    self.logging_settings = LoggingUtils.update_logging()
+                    self.logging_settings = logging_utils.update_logging()
                 elif entry_key == "texp":
                     self.exposure_time = update_exposure_time(self.exposure_time)
                 else:

@@ -16,7 +16,7 @@ from typing import Dict, Optional, Union
 import sigfig
 
 from hardware_interfaces import DAQ
-from LoggingUtils import get_logger
+from logging_utils import get_logger
 
 # unique logger name for this module
 logger = get_logger(__name__)

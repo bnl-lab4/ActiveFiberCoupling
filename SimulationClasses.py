@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Tuple, Union
 from typing_extensions import assert_never
 
 from distance import Distance
-from LoggingUtils import get_logger
+from logging_utils import get_logger
 from movement_classes import MovementType, MoveResult
 
 # unique logger name for this module

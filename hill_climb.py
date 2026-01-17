@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sigfig
 
-from LoggingUtils import get_logger
+from logging_utils import get_logger
 from movement_classes import Distance, MovementType, StageDevices
 
 # unique logger name for this module

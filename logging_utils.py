@@ -18,7 +18,7 @@ SAFE_MODULES = {
     "distance",
     "manual_control",
     "stage_status",
-    "LoggingUtils",
+    "logging_utils",
     "__main__",
 }
 

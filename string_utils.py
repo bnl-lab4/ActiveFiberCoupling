@@ -8,7 +8,7 @@ import warnings
 from collections.abc import Callable
 from typing import List, Optional, Sequence, Union
 
-from LoggingUtils import get_logger
+from logging_utils import get_logger
 from movement_classes import Distance, StageDevices
 
 # Initial logging
