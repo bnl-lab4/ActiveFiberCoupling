@@ -8,7 +8,7 @@ import warnings
 from typing import Optional, Union, cast
 
 SAFE_MODULES = {
-    "MovementClasses",
+    "movement_classes",
     "MovementUtils",
     "StringUtils",
     "SensorClasses",

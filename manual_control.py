@@ -6,7 +6,7 @@ import time
 
 from distance import Distance
 from LoggingUtils import get_logger
-from MovementClasses import MovementType
+from movement_classes import MovementType
 from StageStatus import run as status
 
 # unique logger name for this module
@@ -41,7 +41,7 @@ def run(stage, exposure_time):
     Commands should consist of 3 or 4 space-separated arguments
     (case-insensitive): [axis] [device] [value] [unit, optional]. [axis]
     should be 'x', 'y', or 'z'. Acceptable values of [device] map to the
-    values of `MovementClasses.MovementType`, with first-letter
+    values of `movement_classes.MovementType`, with first-letter
     abbreviations accepted. [value] is assumed to be in microns unless
     [unit] is specified as either 'microns', 'volts', 'steps', or
     'fullsteps', or first-letter abbreviations thereof. If in 'move>>'

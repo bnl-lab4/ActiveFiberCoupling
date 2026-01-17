@@ -5,7 +5,7 @@ Basic movement controls for steppers and piezos.
 from typing import Optional
 
 from LoggingUtils import get_logger
-from MovementClasses import MovementType, StageDevices
+from movement_classes import MovementType, StageDevices
 
 # unique logger name for this module
 logger = get_logger(__name__)
@@ -13,11 +13,11 @@ logger = get_logger(__name__)
 
 def energize(stage: StageDevices, axes: Optional[str] = None):
     """
-    Energize one or more steppers. See MovementClasses.StageAxis.energize.
+    Energize one or more steppers. See movement_classes.StageAxis.energize.
 
     Parameters
     ----------
-    stage : `MovementClasses.StageDevices`
+    stage : `movement_classes.StageDevices`
         The stage for which the steppers will be energized.
     axes : str, optional
         Which axes' steppers to energize, all listed in a single
@@ -29,11 +29,11 @@ def energize(stage: StageDevices, axes: Optional[str] = None):
 
 def home(stage: StageDevices, axes: Optional[str] = None):
     """
-    Home one or more steppers. See MovementClasses.StageAxis.home.
+    Home one or more steppers. See movement_classes.StageAxis.home.
 
     Parameters
     ----------
-    stage : `MovementClasses.StageDevices`
+    stage : `movement_classes.StageDevices`
         The stage for which the steppers will be homed.
     axes : str, optional
         Which axes' steppers to home, all listed in a single
@@ -45,11 +45,11 @@ def home(stage: StageDevices, axes: Optional[str] = None):
 
 def deenergize(stage: StageDevices, axes: Optional[str] = None):
     """
-    Deenergize one or more stepper. See MovementClasses.StageAxis.deenergize.
+    Deenergize one or more stepper. See movement_classes.StageAxis.deenergize.
 
     Parameters
     ----------
-    stage : `MovementClasses.StageDevices`
+    stage : `movement_classes.StageDevices`
         The stage for which the steppers will be deenergized.
     axes : str, optional
         Which axes' steppers to deenergize, all listed in a single
@@ -67,9 +67,9 @@ def center(stage: StageDevices, which: MovementType):
 
     Parameters
     ----------
-    stage : `MovementClasses.StageDevices`
+    stage : `movement_classes.StageDevices`
         The stage for which the axes will be centered.
-    which : `MovementClasses.MovementType`
+    which : `movement_classes.MovementType`
         Whether to move the piezos, the steppers, or both (``GENERAL``).
     """
 
@@ -94,9 +94,9 @@ def zero(stage: StageDevices, which: MovementType):
 
     Parameters
     ----------
-    stage : `MovementClasses.StageDevices`
+    stage : `movement_classes.StageDevices`
         The stage for which the axes will be zeroed.
-    which : `MovementClasses.MovementType`
+    which : `movement_classes.MovementType`
         Whether to move the piezos, the steppers, or both (``GENERAL``).
     """
     if which == MovementType.PIEZO or which == MovementType.GENERAL:
@@ -120,9 +120,9 @@ def max(stage: StageDevices, which: MovementType):
 
     Parameters
     ----------
-    stage : `MovementClasses.StageDevices`
+    stage : `movement_classes.StageDevices`
         The stage for which the axes will be maximized.
-    which : `MovementClasses.MovementType`
+    which : `movement_classes.MovementType`
         Whether to move the piezos, the steppers, or both (``GENERAL``).
     """
 

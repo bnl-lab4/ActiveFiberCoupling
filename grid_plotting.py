@@ -6,7 +6,7 @@ import numpy as np
 import sigfig
 
 from LoggingUtils import get_logger
-from MovementClasses import Distance
+from movement_classes import Distance
 
 # unique logger name for this module
 logger = get_logger(__name__)

@@ -36,7 +36,7 @@ from hardware_interfaces import DAQ, HardwareLibMissingStub, Serial, TicUSB
 from LoggingUtils import get_logger
 
 # Import alignment algorithms and control modes
-from MovementClasses import MovementType, StageDevices
+from movement_classes import MovementType, StageDevices
 from SensorClasses import Sensor, SensorType
 from SimulationClasses import SimulationSensor, SimulationStageDevices
 

@@ -1,5 +1,5 @@
 """
-Reports the status of a stage (`MovementClasses.StageDevices`).
+Reports the status of a stage (`movement_classes.StageDevices`).
 """
 
 import math
@@ -8,7 +8,7 @@ from typing import Optional, Union
 import sigfig
 
 from LoggingUtils import get_logger
-from MovementClasses import Distance, StageDevices
+from movement_classes import Distance, StageDevices
 
 # unique logger name for this module
 logger = get_logger(__name__)
@@ -29,7 +29,7 @@ def run(
 
     Parameters
     ----------
-    stage : `MovementClasses.StageDevices`
+    stage : `movement_classes.StageDevices`
         Stage to report the status of.
     exposure_time : int, float
         Exposure time to use for reporting sensor reading.

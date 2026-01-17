@@ -10,7 +10,7 @@ from typing_extensions import assert_never
 
 from distance import Distance
 from LoggingUtils import get_logger
-from MovementClasses import MovementType, MoveResult
+from movement_classes import MovementType, MoveResult
 
 # unique logger name for this module
 logger = get_logger(__name__)
@@ -308,10 +308,10 @@ class SimulationSensor:
 
 class SimulationStageAxis:
     """
-    Simulates `MovementClasses.StageAxis`, tracking stepper and
+    Simulates `movement_classes.StageAxis`, tracking stepper and
     piezo positions.
 
-    Mirrors all attributes and methods of `MovementClasses.StageAxis`,
+    Mirrors all attributes and methods of `movement_classes.StageAxis`,
     though some are no-op or dummies.
 
     Parameters
@@ -639,7 +639,7 @@ class SimulationStageDevices:
 
     Notes
     -----
-    For control of real, physical stages, see `MovementClasses.py`.
+    For control of real, physical stages, see `movement_classes.py`.
     """
 
     def __init__(self, name: str, sensor: Optional[SimulationSensor] = None):

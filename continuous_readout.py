@@ -5,7 +5,7 @@ Continuously print the sensor reading until interrupted.
 from typing import Union
 
 from LoggingUtils import get_logger
-from MovementClasses import StageDevices
+from movement_classes import StageDevices
 
 # unique logger name for this module
 logger = get_logger(__name__)
@@ -17,7 +17,7 @@ def run(stage: StageDevices, exposure_time: Union[int, float], avg: bool = True)
 
     Parameters
     ----------
-    stage : `MovementClasses.StageDevices`
+    stage : `movement_classes.StageDevices`
         The stage whose sensor will be read.
     exposure_time : int, float
         Exposure time for which to integrate the sensor.

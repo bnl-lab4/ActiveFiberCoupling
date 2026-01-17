@@ -25,7 +25,7 @@ from grid_plotting import (
     plot_plane,
 )
 from LoggingUtils import get_logger
-from MovementClasses import MovementType, StageDevices
+from movement_classes import MovementType, StageDevices
 
 # unique logger name for this module
 logger = get_logger(__name__)
@@ -152,7 +152,7 @@ def gaussbeam_fit_3d(
         Axis labels for the two non-focus axes. Must have length 2, where
         the 0th and 1st names correspond to `axis0_cube` and `axis1_cube`,
         respectively. Used for plotting.
-    movement_type : `MovementClasses.MovementType`
+    movement_type : `movement_classes.MovementType`
         What movement type was used to move around the individual planes
         (may be different from the movement type along the focus axis).
         Used for plotting.
@@ -262,7 +262,7 @@ def gaussbeam_fit_2d(
         Axis labels for the two non-focus axes. Must have length 2, where
         the 0th and 1st names correspond to `axis0_grid` and `axis1_grid`,
         respectively. Used to infer the focus axis and for plotting.
-    movement_type : `MovementClasses.MovementType`
+    movement_type : `movement_classes.MovementType`
         What movement type was used to move around the individual planes
         (may be different from the movement type along the focus axis).
         Used for plotting.
@@ -350,7 +350,7 @@ def width_parafit(
     axes : str, list of str
         Axis labels for the two non-focus axes, from which the focus axis
         is inferred. Must have length 2. Also used for plotting.
-    movement_type : `MovementClasses.MovementType`
+    movement_type : `movement_classes.MovementType`
         What movement type was used to move along the focus axis. Used for
         plotting.
     stagename : str
@@ -432,7 +432,7 @@ def peaks_linfit(
     first_axis : bool
         Whether the data in `peak_pos` and `peak_unc` is for the first axis
         in `axes` (``True``) or the second (``False``).
-    movement_type : `MovementClasses.MovementType`
+    movement_type : `movement_classes.MovementType`
         What movement type was used to move around the individual planes
         (may be different from the movement type along the focus axis).
     stagename : str
@@ -507,9 +507,9 @@ def plane_grid(
 
     Parameters
     ----------
-    stage : `MovementClasses.StageDevices`
+    stage : `movement_classes.StageDevices`
         The stage for which to perform the grid search.
-    movement_type : `MovementClasses.MovementType`
+    movement_type : `movement_classes.MovementType`
         The movement type with which to move the fiber in the plane.
     plane : `Distance.Distance`
         The position of the plane along the focus axis.
@@ -598,9 +598,9 @@ def run(
 
     Parameters
     ----------
-    stage : `MovementClasses.StageDevices`
+    stage : `movement_classes.StageDevices`
         The stage for which to perform the grid search.
-    movement_type : `MovementClasses.MovementType`
+    movement_type : `movement_classes.MovementType`
         The movement type with which to move the fiber in each plane. Note
         that movement along the focus axis is always performed with the
         stepper.

@@ -16,7 +16,7 @@ import numpy as np
 import sigfig
 
 from LoggingUtils import get_logger
-from MovementClasses import Distance, MovementType, StageDevices
+from movement_classes import Distance, MovementType, StageDevices
 
 # unique logger name for this module
 logger = get_logger(__name__)

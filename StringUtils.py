@@ -9,7 +9,7 @@ from collections.abc import Callable
 from typing import List, Optional, Sequence, Union
 
 from LoggingUtils import get_logger
-from MovementClasses import Distance, StageDevices
+from movement_classes import Distance, StageDevices
 
 # Initial logging
 logger = get_logger(__name__)
@@ -197,7 +197,7 @@ def dict_to_str(mydict, joined=True) -> Union[str, List[str]]:
     value is a dict or a sequence, this function calls itself or
     `sequence_to_str`, respectively. If the value is a `Distance.Distance`,
     then its ``prettyprint`` method is called. If the value is a
-    `MovementClasses.StageDevices` object, the ``.name`` attribute is used.
+    `movement_classes.StageDevices` object, the ``.name`` attribute is used.
     If the value is a callable, then the value's module-name and name are
     output. Otherwise, `str()` is called on the value.
 
