@@ -11,7 +11,7 @@ SAFE_MODULES = {
     "movement_classes",
     "movement_utils",
     "string_utils",
-    "SensorClasses",
+    "sensor_classes",
     "SimulationClasses",
     "hill_climb",
     "grid_search",

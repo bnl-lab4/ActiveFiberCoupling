@@ -259,7 +259,7 @@ class SimulationSensor:
         """
         Calculates and returns the intensity at the current stage position.
 
-        This is included to mirror the structure of `SensorClasses.Sensor`,
+        This is included to mirror the structure of `sensor_classes.Sensor`,
         but does not behave any differently from `read`. Exposure time and
         averaging are not simulated and therefore are ignored.
 

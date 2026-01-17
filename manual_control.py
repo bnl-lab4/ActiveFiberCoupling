@@ -51,7 +51,7 @@ def run(stage, exposure_time):
     upper limit of its travel, respectively. Change between 'move>>' and
     'goto>>' modes with keywords 'move' and 'goto'. To change the exposure
     time, enter 'texp [int]', where [int] is the desired exposure time in
-    ~milliseconds (approximately, see `SensorClasses.Sensor.integrate`). An
+    ~milliseconds (approximately, see `sensor_classes.Sensor.integrate`). An
     empty input string results in the integrated sensor value being
     printed. 'status' results in the stage status being printed. If in
     status mode ('status on', 'status off'), the position of the device

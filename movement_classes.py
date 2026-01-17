@@ -19,7 +19,7 @@ from typing_extensions import assert_never
 from distance import Distance
 from hardware_interfaces import Serial, SerialException, TicUSB
 from LoggingUtils import get_logger
-from SensorClasses import Sensor
+from sensor_classes import Sensor
 
 # unique logger name for this module
 logger = get_logger(__name__)
@@ -694,7 +694,7 @@ class StageDevices:
     a single 3-axis NanoMax translation flexure stage from ThorLabs
     (<https://www.thorlabs.com/NewGroupPage9.cfm?ObjectGroup_ID=2386>).
     The associated devices for a complete stage are a sensor (see
-    `SensorClasses.py`), a ThorLabs open-loop three-channel piezo
+    `sensor_classes.py`), a ThorLabs open-loop three-channel piezo
     controller
     (<https://www.thorlabs.com/newgrouppage9.cfm?objectgroup_id=1191>),
     and three ThorLabs stepper motor actuators
@@ -711,7 +711,7 @@ class StageDevices:
     stepper_sns : Dict[str, str]
         Dictionary of strings mapping axis labels (x, y, z) to their
         respective controller boards' serial numbers.
-    sensor : `SensorClasses.Sensor`
+    sensor : `sensor_classes.Sensor`
         Sensor class to be used with the stage.
     piezo_baud_rate : int
         Baud rate of the piezo controller connection.
@@ -727,7 +727,7 @@ class StageDevices:
     ----------
     name : str
         Name of the stage.
-    sensor : `SensorClasses.Sensor`
+    sensor : `sensor_classes.Sensor`
         Sensor used with the stage.
     axes : Dict[str, `StageAxis` or ``None``]
         Dictionary of stage axes, with the axis names as keys and
@@ -940,7 +940,7 @@ class StageDevices:
         """
         Read the value of the sensor.
 
-        See `SensorClasses.Socket` and `SensorClasses.Piplate`.
+        See `sensor_classes.Socket` and `sensor_classes.Piplate`.
 
         Returns
         -------
@@ -956,7 +956,7 @@ class StageDevices:
         """
         Integrate the value of the sensor of `exposure_time`.
 
-        See `SensorClasses.Socket` and `SensorClasses.Piplate`.
+        See `sensor_classes.Socket` and `sensor_classes.Piplate`.
 
         Returns
         -------
