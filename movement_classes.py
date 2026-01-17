@@ -756,7 +756,7 @@ class StageDevices:
 
     Notes
     -----
-    For simulated stages, see `SimulationClasses.py`. This class is only
+    For simulated stages, see `simulation_classes.py`. This class is only
     for real, physical stages.
     """
 

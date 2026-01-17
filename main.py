@@ -38,7 +38,7 @@ from logging_utils import get_logger
 # Import alignment algorithms and control modes
 from movement_classes import MovementType, StageDevices
 from sensor_classes import Sensor, SensorType
-from SimulationClasses import SimulationSensor, SimulationStageDevices
+from simulation_classes import SimulationSensor, SimulationStageDevices
 
 # Device info constants
 SOCKET0 = dict(host="192.168.0.100", port=8000, sensortype=SensorType.SOCKET)
