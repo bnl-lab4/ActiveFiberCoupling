@@ -30,8 +30,10 @@ setattr(logging, "TRACE", TRACE_LEVEL_NUM)
 
 
 class CustomLogger(logging.Logger):
+    """Adds ``trace`` as a named logging level at 5."""
+
     def trace(self, message, *args, **kwargs):
-        """Custim logging level below `logging.debug`."""
+        """Custom logging level (5) below `logging.debug`."""
         if self.isEnabledFor(TRACE_LEVEL_NUM):
             self._log(
                 TRACE_LEVEL_NUM, message, args, **kwargs
@@ -42,6 +44,11 @@ logging.setLoggerClass(CustomLogger)
 
 
 def get_logger(name: str) -> CustomLogger:
+    """
+    Centralized logic for getting logger.
+
+    Centralized for forward compatibility of adding extra logic.
+    """
     return cast(CustomLogger, logging.getLogger(name))
 
 
