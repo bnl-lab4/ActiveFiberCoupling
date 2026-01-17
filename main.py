@@ -30,8 +30,8 @@ import hill_climb
 import LoggingUtils
 import manual_control
 import movement_utils
-import StageStatus
-import StringUtils
+import stage_status
+import string_utils
 from hardware_interfaces import DAQ, HardwareLibMissingStub, Serial, TicUSB
 from LoggingUtils import get_logger
 
@@ -200,7 +200,7 @@ class MenuEntry:
         if self.func is None:
             logger.warning("No function assigned to this menu entry")
             return
-        if self.func == StringUtils.menu_help:
+        if self.func == string_utils.menu_help:
             target_func = user_input_parts[0] if user_input_parts else None
             self.func(target_func, controller.menu)
             return
@@ -251,7 +251,7 @@ class MenuEntry:
                 )
                 print("Function call aborted")
                 return
-            kwargs.update(StringUtils.str_to_dict(user_input_parts[args_len:]))
+            kwargs.update(string_utils.str_to_dict(user_input_parts[args_len:]))
 
         # if exposure time is entered as a kwarg, replace the arg value
         if "exposure_time" in kwargs.keys() and "exposure_time" in self.args_config:
@@ -266,7 +266,7 @@ class MenuEntry:
             return
 
         if kwargs:
-            kwargs_print = StringUtils.dict_to_str(kwargs)
+            kwargs_print = string_utils.dict_to_str(kwargs)
             assert isinstance(kwargs_print, str)
             print("Interpreted kwargs:\n" + kwargs_print)
             yn_input = input("Is this correct? (y/n): ").strip().lower()
@@ -277,7 +277,7 @@ class MenuEntry:
 
         args_string = f" with args {resolved_args}" if resolved_args else ""
         kwargs_string = (
-            f" with kwargs {StringUtils.dict_to_str(kwargs)}" if kwargs else ""
+            f" with kwargs {string_utils.dict_to_str(kwargs)}" if kwargs else ""
         )
         if args_string and kwargs_string:
             args_string += " and"
@@ -406,7 +406,7 @@ class ProgramController:
             "_misc": "Miscellaneous",
             "status": MenuEntry(
                 text="Report the status of all or part of a stage",
-                func=StageStatus.run,
+                func=stage_status.run,
                 args_config=("stage", "exposure_time"),
                 kwargs_config={"quick": dict(verbose=False), "log": dict(log=True)},
             ),
@@ -422,7 +422,7 @@ class ProgramController:
             ),
             "help": MenuEntry(
                 text="Help with the menu or a function ('help <func_name>')",
-                func=StringUtils.menu_help,
+                func=string_utils.menu_help,
             ),
         }
 

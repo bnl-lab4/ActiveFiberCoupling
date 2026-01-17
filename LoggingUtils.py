@@ -10,14 +10,14 @@ from typing import Optional, Union, cast
 SAFE_MODULES = {
     "movement_classes",
     "movement_utils",
-    "StringUtils",
+    "string_utils",
     "SensorClasses",
     "SimulationClasses",
     "hill_climb",
     "grid_search",
     "distance",
     "manual_control",
-    "StageStatus",
+    "stage_status",
     "LoggingUtils",
     "__main__",
 }

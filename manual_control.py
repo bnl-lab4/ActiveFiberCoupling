@@ -7,7 +7,7 @@ import time
 from distance import Distance
 from LoggingUtils import get_logger
 from movement_classes import MovementType
-from StageStatus import run as status
+from stage_status import run as status
 
 # unique logger name for this module
 logger = get_logger(__name__)
