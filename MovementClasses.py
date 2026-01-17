@@ -7,18 +7,19 @@
 Defines the `StageAxis` and `StageDevices` classes for controlling stages.
 """
 
+import contextlib
+import enum
 import time
 import warnings
-import enum
+from typing import Dict, List, Optional, Union
+
 import yaml
-import contextlib
-from typing import Dict, Optional, Union, List
 from typing_extensions import assert_never
 
-from hardware_interfaces import TicUSB, Serial, SerialException
-from SensorClasses import Sensor
 from Distance import Distance
+from hardware_interfaces import Serial, SerialException, TicUSB
 from LoggingUtils import get_logger
+from SensorClasses import Sensor
 
 # unique logger name for this module
 logger = get_logger(__name__)
@@ -92,9 +93,9 @@ class MoveResult:
 
         # Any general move is composed of a piezo move and possibly
         #   a stepper move. It should be logged as such.
-        assert self.movement_type != MovementType.GENERAL, (
-            "movement_type cannot be general"
-        )
+        assert (
+            self.movement_type != MovementType.GENERAL
+        ), "movement_type cannot be general"
 
     @property
     def text(self):
@@ -787,24 +788,27 @@ class StageDevices:
 
         # loop a similar try-except over the stepper controllers
         # while also creating the axis objects
-        for axis, stepper_sn in stepper_sns.items():
-            try:
-                if stepper_sn is not None:
-                    stepper = TicUSB(product=0x00B5, serial_number=stepper_sns[axis])
-                    # Designation for Tic T834          Serial number (binary) of specific controller
-                    logger.info(f"Connected to {stepper_sns[axis]} as axis {axis}.")
-                else:
+        if stepper_sns is not None:
+            for axis, stepper_sn in stepper_sns.items():
+                try:
+                    if stepper_sn is not None:
+                        stepper = TicUSB(
+                            product=0x00B5, serial_number=stepper_sns[axis]
+                        )
+                        # Designation for Tic T834          Serial number (binary) of specific controller
+                        logger.info(f"Connected to {stepper_sns[axis]} as axis {axis}.")
+                    else:
+                        stepper = None
+                        logger.info(f"{self.name}:: no connection for {axis} provided")
+                except Exception as e:
+                    if require_connection or str(e) != "USB device not found":
+                        raise e
+                    logger.warning(
+                        f"Error opening stepper port {stepper_sns[axis]} as axis {axis}: {e}"
+                    )
                     stepper = None
-                    logger.info(f"{self.name}:: no connection for {axis} provided")
-            except Exception as e:
-                if require_connection or str(e) != "USB device not found":
-                    raise e
-                logger.warning(
-                    f"Error opening stepper port {stepper_sns[axis]} as axis {axis}: {e}"
-                )
-                stepper = None
 
-            self.axes[axis] = StageAxis(axis, piezo, stepper, stepper_sn, autohome)
+                self.axes[axis] = StageAxis(axis, piezo, stepper, stepper_sn, autohome)
 
     def __enter__(self):
         """

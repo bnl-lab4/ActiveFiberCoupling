@@ -3,11 +3,12 @@ Reports the status of a stage (`MovementClasses.StageDevices`).
 """
 
 import math
-import sigfig
-from typing import Union, Optional
+from typing import Optional, Union
 
-from MovementClasses import StageDevices, Distance
+import sigfig
+
 from LoggingUtils import get_logger
+from MovementClasses import Distance, StageDevices
 
 # unique logger name for this module
 logger = get_logger(__name__)
