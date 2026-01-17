@@ -96,7 +96,7 @@ COMMAND_ARG_VALUE_DICT = dict(t=True, y=True, true=True, f=False, n=False, false
 
 
 # custom warning format to remove the source line
-def custom_formatwarning(message, category, filename, lineno, line=None):
+def custom_formatwarning(message, category, filename, lineno, _=None):
     # Custom warning formatter that removes the source line.
     return f"{filename}-line{lineno}-{category.__name__} :: {message}\n"
 
@@ -266,6 +266,7 @@ class MenuEntry:
 
         if kwargs:
             kwargs_print = StringUtils.dict_to_str(kwargs)
+            assert isinstance(kwargs_print, str)
             print("Interpreted kwargs:\n" + kwargs_print)
             yn_input = input("Is this correct? (y/n): ").strip().lower()
             print("")

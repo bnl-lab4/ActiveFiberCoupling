@@ -715,7 +715,7 @@ def run(
             Distance(3000), Distance(4000)]
     )
     Notice that the values of `limits` are different because we did not
-    supply value for `center`.
+    supply a value for `center`.
 
     run(
     ...,
@@ -749,28 +749,28 @@ def run(
     Below is the decision tree the function goes through once it has gathered all of the data from the sensor.
 
     If there is more than one plane, fit with 3d Gaussian beam, if enabled.
-        If accepted, go to 3d waist position and return.
+      - If accepted, go to 3d waist position and return.
     If 3d fit is not accepted or doesn't run, fit each plane with a 2d
     Gaussian, if enabled.
-        If at least 3 2d Gaussian fits were accepted, fit a parabola to the
+      - If at least 3 2d Gaussian fits were accepted, fit a parabola to the
     best-fit sigma values.
-            If the parabola fit is accepted, fit each axis' best-fit peak
+         -- If the parabola fit is accepted, fit each axis' best-fit peak
     position vs focus axis position with a line, if enabled.
-                For each linear fit, if it is not accepted or didn't run,
+            --- For each linear fit, if it is not accepted or didn't run,
     find the mean of the axis' peak  positions.
-                Go to the focus of the fit-width position, then go to the
+            --- Go to the focus of the fit-width position, then go to the
     position in that plane detemined by linear fit or taking the mean.
-            If the parabola fit wasn't accepted or wasn't enabled, and
+         -- If the parabola fit wasn't accepted or wasn't enabled, and
     there is at least one successful 2d Gaussian fit, go to the position of
     the highest best-fit peak.
-        If no 2d Gaussian fits were accepted or they didn't run, and
+      - If no 2d Gaussian fits were accepted or they didn't run, and
     fit_widths is enabled, determine the standard deviation of each plane
     and fit a parabola to those widths.
-            If the parabola fit is accepted, fit each axis' photocenter
+         -- If the parabola fit is accepted, fit each axis' photocenter
     position vs focus axis position with a line, if enabled.
-                For each linear fit, if it is not accepted or didn't run,
+            --- For each linear fit, if it is not accepted or didn't run,
     find the mean of the axis' peak photocenter positions.
-                Go to the focus of the std-width position, then go to the
+            --- Go to the focus of the std-width position, then go to the
     position in that plane detemined by linear fit or or taking the mean.
     If no fitting is enabled (or just linear), then go to the position of the highest recorded intensity.
             """

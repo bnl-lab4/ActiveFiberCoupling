@@ -163,10 +163,10 @@ def setup_logging(
     ----------
     log_to_console : bool, optional
         Whether to print log messages to the console (``True``) or
-        not (``False``)). Defaults to ``True``.
+        not (``False``). ``None`` defaults to ``True``.
     log_to_file : bool, optional
         Whether to print log messages to the log file (``True``) or
-        not (``False``)). Defaults to ``True``.
+        not (``False``). ``None`` defaults to ``True``.
     filename : str, optional
         Path for the file to log messages to. Defaults
         to ``./log_output.txt``.
