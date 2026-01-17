@@ -1,29 +1,31 @@
 """Grid search and fitting in one or more planes"""
+
 ########### TODO:
 # disambiguate beam width vs waist
 # deviation angles in 3d fit
 ###########
 
+import copy
+from collections.abc import Sequence as sequence
+from datetime import datetime
+from typing import List, Optional, Sequence, SupportsFloat, Union, cast
+
+import lmfit
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as stats
-import lmfit
-import copy
 import sigfig
-import matplotlib.pyplot as plt
-from collections.abc import Sequence as sequence
-from typing import Optional, Union, Sequence, List, SupportsFloat, cast
-from datetime import datetime
 
-from MovementClasses import MovementType, StageDevices
 from Distance import Distance
 from grid_plotting import (
-    plot_plane,
-    plot_3dfit,
     plot_2dfit,
-    plot_para_fit,
+    plot_3dfit,
     plot_lin_fit,
+    plot_para_fit,
+    plot_plane,
 )
 from LoggingUtils import get_logger
+from MovementClasses import MovementType, StageDevices
 
 # unique logger name for this module
 logger = get_logger(__name__)
@@ -773,19 +775,20 @@ def run(
             --- Go to the focus of the std-width position, then go to the
     position in that plane detemined by linear fit or or taking the mean.
     If no fitting is enabled (or just linear), then go to the position of the highest recorded intensity.
-            """
-    assert movement_type in (MovementType.PIEZO, MovementType.STEPPER), (
-        "movement_type must be MovementType.PIEZO or .STEPPER"
-    )
+    """
+    assert movement_type in (
+        MovementType.PIEZO,
+        MovementType.STEPPER,
+    ), "movement_type must be MovementType.PIEZO or .STEPPER"
     #   may add .GENERAL later
-    assert not (spacing is not None and num_points is not None), (
-        "Cannot supply both spacing and num_points"
-    )
+    assert not (
+        spacing is not None and num_points is not None
+    ), "Cannot supply both spacing and num_points"
 
     axes = list(axes)
-    assert len(axes) == 2 and axes[0] in VALID_AXES and axes[1] in VALID_AXES, (
-        "axes must be two of 'x', 'y', or 'z'"
-    )
+    assert (
+        len(axes) == 2 and axes[0] in VALID_AXES and axes[1] in VALID_AXES
+    ), "axes must be two of 'x', 'y', or 'z'"
     assert axes[0] != axes[1], "axes must be unique"
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
 
@@ -1099,7 +1102,9 @@ def run(
                     elif fit_lin_kwargs["show_plot"]:
                         accepteds[i] = accept_fit()
                     if accepteds[i]:
-                        waist_pos[i] = Distance(cast(SupportsFloat, result.eval(x=focus_pos)), "microns")
+                        waist_pos[i] = Distance(
+                            cast(SupportsFloat, result.eval(x=focus_pos)), "microns"
+                        )
 
                 for i, accept in enumerate(accepteds):
                     centerstr = "centerx" if i == 0 else "centery"
@@ -1213,7 +1218,9 @@ def run(
             axis_peak_unc0 = np.ones_like(axis_peak_pos0)
             axis_peak_unc1 = np.ones_like(axis_peak_pos1)
 
-            width_min = Distance(cast(SupportsFloat, para_result.eval(x=focus_pos)), "microns")
+            width_min = Distance(
+                cast(SupportsFloat, para_result.eval(x=focus_pos)), "microns"
+            )
             lin_result0 = peaks_linfit(
                 axes,
                 True,
@@ -1245,7 +1252,9 @@ def run(
                 elif fit_lin_kwargs["show_plot"]:
                     accepteds[i] = accept_fit()
                 if accepteds[i]:
-                    waist_pos[i] = Distance(cast(SupportsFloat, result.eval(x=focus_pos)), "microns")
+                    waist_pos[i] = Distance(
+                        cast(SupportsFloat, result.eval(x=focus_pos)), "microns"
+                    )
 
             axis_peak_poses = (axis_peak_pos0, axis_peak_pos1)
             for i, accept in enumerate(accepteds):
