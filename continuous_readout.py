@@ -3,8 +3,9 @@ Continuously print the sensor reading until interrupted.
 """
 
 from typing import Union
-from MovementClasses import StageDevices
+
 from LoggingUtils import get_logger
+from MovementClasses import StageDevices
 
 # unique logger name for this module
 logger = get_logger(__name__)

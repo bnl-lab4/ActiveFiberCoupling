@@ -4,12 +4,13 @@ Simulated stage with virtual piezos, steppers, and sensor.
 
 import contextlib
 import math
-from typing import Dict, Optional, Tuple, Union, List
+from typing import Dict, List, Optional, Tuple, Union
+
 from typing_extensions import assert_never
 
-from MovementClasses import MovementType, MoveResult
 from Distance import Distance
 from LoggingUtils import get_logger
+from MovementClasses import MovementType, MoveResult
 
 # unique logger name for this module
 logger = get_logger(__name__)

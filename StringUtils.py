@@ -6,11 +6,10 @@ help function for the main menu in `main.py`.
 import inspect
 import warnings
 from collections.abc import Callable
-from typing import List, Sequence, Optional, Union
+from typing import List, Optional, Sequence, Union
 
-from MovementClasses import Distance, StageDevices
 from LoggingUtils import get_logger
-
+from MovementClasses import Distance, StageDevices
 
 # Initial logging
 logger = get_logger(__name__)

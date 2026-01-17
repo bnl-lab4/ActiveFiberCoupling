@@ -4,10 +4,10 @@ Input context for manual control of a stage.
 
 import time
 
-from StageStatus import run as status
-from MovementClasses import MovementType
 from Distance import Distance
 from LoggingUtils import get_logger
+from MovementClasses import MovementType
+from StageStatus import run as status
 
 # unique logger name for this module
 logger = get_logger(__name__)
@@ -64,7 +64,8 @@ def run(stage, exposure_time):
         Exposure time to use when integrating the sensor value.
     """
 
-    print("""
+    print(
+        """
 'q' returns to menu, Enter key (empty input) returns integrated signal. 'texp' [int] changes exposure time.
 Enter command as [axis] [device] [value], with an optional [unit] argument.
 Arguments must be space separated. [device] can be 'piezo', 'stage', 'general, 'p', 's', or 'g'.
@@ -73,7 +74,8 @@ Piezo unit defaults to volts. Stepper and general units default to microns.
 Value can be a number, 'zero', 'center', or 'max'. General uses stepper limits.
 Examples: >>y piezo 15.2     >>x g -10     >>z p 5 v     >>x s 600 volts     >>y p center
 Switch between goto and move (default) modes with 'goto' and 'move'.
-""")
+"""
+    )
     goto = False
     status_mode = False
 

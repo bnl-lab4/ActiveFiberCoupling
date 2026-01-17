@@ -8,11 +8,12 @@
 Defines the `Sensor` class and sensor-type subclasses.
 """
 
-import enum
-import sigfig
-import socket
 import contextlib
+import enum
+import socket
 from typing import Dict, Optional, Union
+
+import sigfig
 
 from hardware_interfaces import DAQ
 from LoggingUtils import get_logger

@@ -1,11 +1,12 @@
-import lmfit
-import sigfig
-import numpy as np
-import matplotlib.pyplot as plt
-from typing import cast, Union, List
+from typing import List, Union
 
-from MovementClasses import Distance
+import lmfit
+import matplotlib.pyplot as plt
+import numpy as np
+import sigfig
+
 from LoggingUtils import get_logger
+from MovementClasses import Distance
 
 # unique logger name for this module
 logger = get_logger(__name__)
