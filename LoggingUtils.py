@@ -9,7 +9,7 @@ from typing import Optional, Union, cast
 
 SAFE_MODULES = {
     "movement_classes",
-    "MovementUtils",
+    "movement_utils",
     "StringUtils",
     "SensorClasses",
     "SimulationClasses",

@@ -29,7 +29,7 @@ import grid_search
 import hill_climb
 import LoggingUtils
 import manual_control
-import MovementUtils
+import movement_utils
 import StageStatus
 import StringUtils
 from hardware_interfaces import DAQ, HardwareLibMissingStub, Serial, TicUSB
@@ -361,31 +361,31 @@ class ProgramController:
             ),
             "zero": MenuEntry(
                 text="Zero piezos or steppers positions",
-                func=MovementUtils.zero,
+                func=movement_utils.zero,
                 args_config=("stage", "MovementType"),
             ),
             "center": MenuEntry(
                 text="Center piezos or steppers positions",
-                func=MovementUtils.center,
+                func=movement_utils.center,
                 args_config=("stage", "MovementType"),
             ),
             "max": MenuEntry(
                 text="Maximize piezos or steppers positions",
-                func=MovementUtils.max,
+                func=movement_utils.max,
                 args_config=("stage", "MovementType"),
             ),
             "energize": MenuEntry(
                 text="Energize steppers",
-                func=MovementUtils.energize,
+                func=movement_utils.energize,
                 args_config=("stage",),
             ),
             "deenergize": MenuEntry(
                 text="Deenergize steppers",
-                func=MovementUtils.deenergize,
+                func=movement_utils.deenergize,
                 args_config=("stage",),
             ),
             "home": MenuEntry(
-                text="Home steppers", func=MovementUtils.home, args_config=("stage",)
+                text="Home steppers", func=movement_utils.home, args_config=("stage",)
             ),
             "read": MenuEntry(
                 text="Continuous readout of sensor in terminal",
