@@ -1,9 +1,9 @@
-from typing import List, Union
+# DOCSTRINGS
+from typing import List, Union, cast
 
 import lmfit
 import matplotlib.pyplot as plt
 import numpy as np
-import sigfig
 
 from logging_utils import get_logger
 from movement_classes import Distance
@@ -15,82 +15,64 @@ logger = get_logger(__name__)
 VALID_AXES = {"x", "y", "z"}
 
 
-def val_unc(param: lmfit.parameter.Parameter):
-    if param.stderr == 0:
-        return sigfig.round(str(param.value), 3) + "+/- ___ "
-    return sigfig.round(param.value, uncertainty=param.stderr)
-
-
 def plane_fit_string(fit_result, axes):
     best_fit = []
-    best_fit.append(f"A = {val_unc(fit_result.params['height'])}")
+    best_fit.append(f"A = {fit_result.uvars['height']}")
     best_fit.append(
-        r"$\sigma_r$"
-        + f" = {val_unc(fit_result.params['sigmax'])}"
-        + r"$\mathrm{\mu m}$"
+        r"$\sigma_r$" + f" = {fit_result.uvars['sigmax']}" + r"$\mathrm{\mu m}$"
     )
     best_fit.append(
-        f"{axes[0].upper()} = {val_unc(fit_result.params['centerx'])}"
-        + r"$\mathrm{\mu m}$"
+        f"{axes[0].upper()} = {fit_result.uvars['centerx']}" + r"$\mathrm{\mu m}$"
     )
     best_fit.append(
-        f"{axes[1].upper()} = {val_unc(fit_result.params['centery'])}"
-        + r"$\mathrm{\mu m}$"
+        f"{axes[1].upper()} = {fit_result.uvars['centery']}" + r"$\mathrm{\mu m}$"
     )
-    best_fit.append(r"C" + f" = {val_unc(fit_result.params['c'])}")
+    best_fit.append(r"C" + f" = {fit_result.uvars['c']}")
     return "\n".join(best_fit)
 
 
 def para_fit_string(fit_result, axis):
     best_fit = []
     best_fit.append(f"$w({axis}) = a x^2 + b x + c$")
-    best_fit.append(
-        "$a$" + f" = {val_unc(fit_result.params['a'])}" + r"$\mathrm{\mu m^{-1}}$"
-    )
-    best_fit.append("$b$" + f" = {val_unc(fit_result.params['b'])}")
-    best_fit.append(
-        "$c$" + f" = {val_unc(fit_result.params['c'])}" + r"$\mathrm{\mu m}$"
-    )
+    best_fit.append("$a$" + f" = {fit_result.uvars['a']}" + r"$\mathrm{\mu m^{-1}}$")
+    best_fit.append("$b$" + f" = {fit_result.uvars['b']}")
+    best_fit.append("$c$" + f" = {fit_result.uvars['c']}" + r"$\mathrm{\mu m}$")
     return "\n".join(best_fit)
 
 
 def lin_fit_string(fit_result, axes):
     best_fit = []
     best_fit.append(f"$ {axes[0]} = m {axes[1]} + b $")
-    best_fit.append(
-        "$m$" + f" = {val_unc(fit_result.params['slope'])}" + r"$\mathrm{\mu m}$"
-    )
-    best_fit.append(
-        "$b$" + f" = {val_unc(fit_result.params['intercept'])}" + r"$\mathrm{\mu m}$"
-    )
+    best_fit.append("$m$" + f" = {fit_result.uvars['slope']}" + r"$\mathrm{\mu m}$")
+    best_fit.append("$b$" + f" = {fit_result.uvars['intercept']}" + r"$\mathrm{\mu m}$")
     return "\n".join(best_fit)
 
 
 def gaussbeam_fit_string(fit_result, axes):
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
     best_fit = []
-    best_fit.append(f"$I_0$ = {val_unc(fit_result.params['I0'])}")
-    best_fit.append(f"$w_0$ = {val_unc(fit_result.params['w0'])}" + r"$\mathrm{\mu m}$")
-    best_fit.append(f"$C$ = {val_unc(fit_result.params['C'])}")
+    best_fit.append(f"$I_0$ = {fit_result.uvars['I0']}")
+    best_fit.append(f"$w_0$ = {fit_result.uvars['w0']}" + r"$\mathrm{\mu m}$")
+    best_fit.append(f"$C$ = {fit_result.uvars['C']}")
     best_fit.append(
         "$"
         + axes[0]
         + r"_\mathrm{waist}$"
-        + f" = {val_unc(fit_result.params['waistx1'])}"
+        + f" = {fit_result.uvars['waistx1']}"
         + r"$\mathrm{\mu m}$"
     )
     best_fit.append(
         "$"
         + axes[1]
         + r"_\mathrm{waist}$"
-        + f" = {val_unc(fit_result.params['waistx2'])}"
+        + f" = {fit_result.uvars['waistx2']}"
         + r"$\mathrm{\mu m}$"
     )
     best_fit.append(
         "$"
         + focus_axis
         + r"_\mathrm{waist}$"
-        + f" = {val_unc(fit_result.params['waistx3'])}"
+        + f" = {fit_result.uvars['waistx3']}"
         + r"$\mathrm{\mu m}$"
     )
     best_fit = ", ".join(best_fit[:3]) + "\n" + ", ".join(best_fit[3:])
@@ -239,7 +221,7 @@ def plot_3dfit(
     result: lmfit.model.ModelResult,
 ):
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
-    data_cube = result.data.reshape(axis0_cube.shape)
+    data_cube = cast(np.ndarray, result.data).reshape(axis0_cube.shape)
 
     axis0_dense = np.arange(axis0_cube.min(), axis0_cube.max() + 1e-3, 1)
     axis1_dense = np.arange(axis1_cube.min(), axis1_cube.max() + 1e-3, 1)
