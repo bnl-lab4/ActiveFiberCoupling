@@ -15,7 +15,7 @@ SAFE_MODULES = {
     "SimulationClasses",
     "hill_climb",
     "grid_search",
-    "Distance",
+    "distance",
     "manual_control",
     "StageStatus",
     "LoggingUtils",

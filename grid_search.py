@@ -16,7 +16,7 @@ import numpy as np
 import scipy.stats as stats
 import sigfig
 
-from Distance import Distance
+from distance import Distance
 from grid_plotting import (
     plot_2dfit,
     plot_3dfit,

@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 from typing_extensions import assert_never
 
-from Distance import Distance
+from distance import Distance
 from LoggingUtils import get_logger
 from MovementClasses import MovementType, MoveResult
 

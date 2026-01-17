@@ -4,7 +4,7 @@ Input context for manual control of a stage.
 
 import time
 
-from Distance import Distance
+from distance import Distance
 from LoggingUtils import get_logger
 from MovementClasses import MovementType
 from StageStatus import run as status

@@ -16,7 +16,7 @@ from typing import Dict, List, Optional, Union
 import yaml
 from typing_extensions import assert_never
 
-from Distance import Distance
+from distance import Distance
 from hardware_interfaces import Serial, SerialException, TicUSB
 from LoggingUtils import get_logger
 from SensorClasses import Sensor
