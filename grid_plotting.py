@@ -1,9 +1,9 @@
-# DOCSTRINGS
 from typing import List, Union, cast
 
 import lmfit
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.figure import Figure
 
 from logging_utils import get_logger
 from movement_classes import Distance
@@ -15,7 +15,10 @@ logger = get_logger(__name__)
 VALID_AXES = {"x", "y", "z"}
 
 
-def plane_fit_string(fit_result, axes):
+def _plane_fit_string(fit_result, axes):
+    """
+    Generate a report on the 2D Gaussian fit in a plane. See `plot_2dfit`.
+    """
     best_fit = []
     best_fit.append(f"A = {fit_result.uvars['height']}")
     best_fit.append(
@@ -31,7 +34,10 @@ def plane_fit_string(fit_result, axes):
     return "\n".join(best_fit)
 
 
-def para_fit_string(fit_result, axis):
+def _para_fit_string(fit_result, axis):
+    """
+    Generate a report on the parabola fit to beam width vs distance. See `plot_para_fit`.
+    """
     best_fit = []
     best_fit.append(f"$w({axis}) = a x^2 + b x + c$")
     best_fit.append("$a$" + f" = {fit_result.uvars['a']}" + r"$\mathrm{\mu m^{-1}}$")
@@ -40,7 +46,10 @@ def para_fit_string(fit_result, axis):
     return "\n".join(best_fit)
 
 
-def lin_fit_string(fit_result, axes):
+def _lin_fit_string(fit_result, axes):
+    """
+    Generate a report on the linear fit to peak position vs distance. See `plot_lin_fit`.
+    """
     best_fit = []
     best_fit.append(f"$ {axes[0]} = m {axes[1]} + b $")
     best_fit.append("$m$" + f" = {fit_result.uvars['slope']}" + r"$\mathrm{\mu m}$")
@@ -48,7 +57,10 @@ def lin_fit_string(fit_result, axes):
     return "\n".join(best_fit)
 
 
-def gaussbeam_fit_string(fit_result, axes):
+def _gaussbeam_fit_string(fit_result, axes):
+    """
+    Generate a report of the 3D Gaussian beam fit. See `plot_3dfit`.
+    """
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
     best_fit = []
     best_fit.append(f"$I_0$ = {fit_result.uvars['I0']}")
@@ -86,7 +98,36 @@ def plot_2dfit(
     axes: Union[str, List[str]],
     plane: Distance,
     fit_result: lmfit.model.ModelResult,
-):
+) -> Figure:
+    """
+    Plot the result of fitting a circular Gaussian to a single plane.
+
+    Plots the data, best fit, and residuals for the plane. The data and
+    best fit plots share the same colormap, while the residual plot has an
+    independent colormap. Displays the best fit values and uncertainties in
+    the best fit plot.
+
+    Parameters
+    ----------
+    response_grid, axis0_grid, axis1_grid : np.ndarray
+        The sensor values and fiber positions in the grid, respectively.
+        All three must have the same shape, with two dimensions.
+    axes : str, list of strs
+        The axis names corresponding to `axis0_grid` and `axis1_grid`, in
+        that order. Must have length 2.
+    plane : distance.Distance
+        Distance object of the position of the plane in the third axis.
+    fit_result : lmfit.model.ModelResult
+        The result of the fil. Contains the sensor data, along with the best fit parameter values and uncertainties.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+
+    See Also
+    --------
+    grid_search.gaussbeam_fit_2d : Source of the fit results.
+    """
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
     fig, axs = plt.subplots(
         figsize=(18, 5),
@@ -128,7 +169,7 @@ def plot_2dfit(
 
     fig.suptitle(f"{focus_axis.upper()} = {plane.prettyprint()}")
     axs[2].annotate(
-        plane_fit_string(fit_result, axes),
+        _plane_fit_string(fit_result, axes),
         (0.0, 0.0),
         xytext=(0.01, 0.72),
         xycoords="axes fraction",
@@ -146,7 +187,29 @@ def plot_plane(
     axis1_grid: np.ndarray,
     axes: Union[str, List[str]],
     plane: Distance,
-):
+) -> Figure:
+    """
+    Plot the result of a grid search in a single plane.
+
+    Parameters
+    ----------
+    response_grid, axis0_grid, axis1_grid : np.ndarray
+        The sensor values and fiber positions in the grid, respectively.
+        All three must have the same shape, with two dimensions.
+    axes : str, list of strs
+        The axis names corresponding to `axis0_grid` and `axis1_grid`, in
+        that order. Must have length 2.
+    plane : distance.Distance
+        Distance object of the position of the plane in the third axis.
+
+    Returns
+    -------
+    matplotlig.figure.Figure
+
+    See Also
+    --------
+    grid_search.plane_grid : Takes the data in a single plane.
+    """
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
     fig, data_ax = plt.subplots(layout="constrained")
     # pcolormesh correctly handles the cell centering for the given x and y arrays
@@ -162,12 +225,41 @@ def plot_plane(
 
 def plot_para_fit(
     axes: Union[str, List[str]],
-    waists: np.ndarray,
-    waists_unc: np.ndarray,
+    widths: np.ndarray,
+    widths_unc: np.ndarray,
     planes_microns: np.ndarray,
     result: lmfit.model.ModelResult,
-):
-    fake_unc = all(waists_unc == 1)
+) -> Figure:
+    """
+    Plot the result of fitting beam width vs focus-axis distance with a parabola.
+
+    Displays the best fit values and uncertainties in the plot.
+
+    Parameters
+    ----------
+    axes : str, list of strs
+        The axis names corresponding to `axis0_grid` and `axis1_grid`, in
+        that order. Must have length 2.
+    widths, widths_unc : np.ndarray
+        1D arrays containing the widths and width uncertainties of the best
+        fit 2D Gaussians in each plane, respectively. Must have the same length.
+    planes_microns : np.ndarray
+        1D array containing the plane positions along the focal axis. Must
+        have the same length as `widths` and `widths_unc`.
+    result : lmfit.model.ModelResult
+        The result of the fit. Contains the best fit parameter values and
+        uncertainties.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+
+    See Also
+    --------
+    plot_2dfit : The source of the widths and their uncertainties.
+    grid_search.width_parafit : Source of the fit results.
+    """
+    fake_unc = all(widths_unc == 1)
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
     planes_range = planes_microns.max() - planes_microns.min()
     ext_factor = 0.1
@@ -176,9 +268,9 @@ def plot_para_fit(
         planes_microns.max() + ext_factor * planes_range,
     )
     planes_dense = np.linspace(*dense_lims, 1000)
-    waists_dense = result.eval(x=planes_dense)
-    fit_waists = result.eval(x=planes_microns)
-    residuals = waists - fit_waists
+    widths_dense = result.eval(x=planes_dense)
+    fit_widths = result.eval(x=planes_microns)
+    residuals = widths - fit_widths
 
     fig, axs = plt.subplots(
         nrows=2,
@@ -187,18 +279,18 @@ def plot_para_fit(
         sharex=True,
         gridspec_kw=dict(height_ratios=(1, 0.3)),
     )
-    axs[0].scatter(planes_microns, waists)
+    axs[0].scatter(planes_microns, widths)
     if not fake_unc:
-        axs[0].errorbar(planes_microns, waists, yerr=waists_unc, fmt="none")
+        axs[0].errorbar(planes_microns, widths, yerr=widths_unc, fmt="none")
     axs[0].plot(
         planes_dense,
-        waists_dense,
+        widths_dense,
         color="C1",
-        label=para_fit_string(result, focus_axis),
+        label=_para_fit_string(result, focus_axis),
     )
     axs[1].scatter(planes_microns, residuals)
     if not fake_unc:
-        axs[1].errorbar(planes_microns, residuals, yerr=waists_unc, fmt="none")
+        axs[1].errorbar(planes_microns, residuals, yerr=widths_unc, fmt="none")
 
     axs[1].axhline(0, color="black", alpha=0.3)
 
@@ -219,7 +311,35 @@ def plot_3dfit(
     axis1_cube: np.ndarray,
     focus_cube: np.ndarray,
     result: lmfit.model.ModelResult,
-):
+) -> Figure:
+    """
+    Plot the result of fitting a Gaussian beam to 3D data.
+
+    For each focal plane, plots the data, best fit, and residuals in that
+    plane. Note that the fit is performed over all planes simultaneously.
+    The data and best fit plots have the same colormap for a given plane,
+    while the residual plots all have independent colormaps. Displays the best
+    fit values and uncertainties in the figure subtitle.
+
+    axes : str, list of strs
+        The axis names corresponding to `axis0_grid` and `axis1_grid`, in that order. Must have length 2.
+    axis0_cube, axis1_cube, focus_cube : np.ndarray
+        The the positions of the fiber along each axis. The `focus_cube`
+        corresponds to the fiber position along the beam propagation
+        direction, while `axis0_cube` and `axis1_cube` correspond to the
+        two transverse axes. All three must have the same shape, with three
+        dimensions.
+    result : lmfit.model.ModelResult
+        The result of the 3D fit. Contains the sensor data, along with the best fit parameter values and uncertainties.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+
+    See Also
+    --------
+    grid_search.gaussbeam_fit_3d : Source of the fit results.
+    """
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
     data_cube = cast(np.ndarray, result.data).reshape(axis0_cube.shape)
 
@@ -289,7 +409,7 @@ def plot_3dfit(
     for ax in axs[:-1, 3]:
         ax.sharex(axs[-1, 3])
 
-    fig.suptitle(gaussbeam_fit_string(result, axes))
+    fig.suptitle(_gaussbeam_fit_string(result, axes))
 
     return fig
 
@@ -301,7 +421,38 @@ def plot_lin_fit(
     axis_peak_unc: np.ndarray,
     planes_microns: np.ndarray,
     result: lmfit.model.ModelResult,
-):
+) -> Figure:
+    """
+    Plot the result of fitting beam position vs focus-axis distance with a line.
+
+    Displays the best fit values and uncertainties in the plot. This plots
+    the fit for only a single axis.
+
+    Parameters
+    ----------
+
+    axes : str, list of strs
+        The axis names corresponding to `axis0_grid` and `axis1_grid`, in
+        that order. Must have length 2.
+    axis_peak_pos, axis_peak_unc : np.ndarray
+        1D arrays containing the peak positions and corresponding
+        uncertainties of the best fit 2D Gaussians in each plane,
+        respectively. Must have the same length.
+    planes_microns : np.ndarray
+        1D array containing the plane positions along the focal axis. Must
+        have the same length as `axis_peak_pos` and `axis_peak_unc`.
+    result : lmfit.model.ModelResult
+        The result of the fit. Contains the best fit parameter values and
+        uncertainties.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+
+    See Also
+    --------
+    grid_search.peaks_linfit : The source of the peak positions and uncertainties.
+    """
     fake_unc = all(axis_peak_unc == 1)
     planes_range = planes_microns.max() - planes_microns.min()
     ext_factor = 0.1
@@ -328,7 +479,7 @@ def plot_lin_fit(
         planes_dense,
         axis_peak_dense,
         color="C1",
-        label=lin_fit_string(result, axis + focus_axis),
+        label=_lin_fit_string(result, axis + focus_axis),
     )
     axs[1].scatter(planes_microns, residuals)
     if not fake_unc:
