@@ -90,9 +90,9 @@ def plot_climber(
 
     step_sizes = []
     climber_positions = []
-    for i, results in enumerate(climber_results):
+    for results in climber_results:
         climb_positions = []
-        for j, result in enumerate(results):
+        for _ in results:
             climb_positions.append(position.microns)
             position += step
         position -= step  # do not move after stopping climb
@@ -252,7 +252,7 @@ def hill_climb(
     results = [
         current,
     ]
-    for n in range(max_steps):
+    for _ in range(max_steps):
         last.append(current + abs(current) * softening)
         _ = stage.move(axis, step_size, movement_type)
         current = stage.integrate(exposure_time)
@@ -416,7 +416,8 @@ def hill_climber(
             break
 
         step = step * step_factor
-        softening = softening * step_factor
+        # from when softening was additive
+        # softening = softening * step_factor
         step = -step
 
         if abs(step) < min_step:
@@ -528,7 +529,7 @@ def run(
     stage: StageDevices,
     movement_type: Union[MovementType, Sequence[MovementType]],
     exposure_time: Union[int, float, Sequence[Union[int, float]]],
-    axes: Optional[str] = None,
+    axes: Union[None, str, List[str]] = None,
     init_step: Union[None, Distance, Sequence[Distance]] = None,
     step_factor: Union[float, Sequence[float]] = 0.5,
     init_positive: Union[bool, Sequence[bool]] = True,
