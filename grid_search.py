@@ -8,7 +8,7 @@
 import copy
 from collections.abc import Sequence as sequence
 from datetime import datetime
-from typing import List, Optional, Sequence, SupportsFloat, Union, cast
+from typing import Optional, Sequence, SupportsFloat, Union, cast
 
 import lmfit
 import matplotlib.pyplot as plt
@@ -131,7 +131,7 @@ def gaussbeam(
 
 
 def gaussbeam_fit_3d(
-    axes: Union[str, List[str]],
+    axes: Union[str, list[str]],
     movement_type: MovementType,
     stagename: str,
     axis0_cube: np.ndarray,
@@ -244,7 +244,7 @@ def gaussbeam_fit_3d(
 
 
 def gaussbeam_fit_2d(
-    axes: Union[str, List[str]],
+    axes: Union[str, list[str]],
     movement_type: MovementType,
     stagename: str,
     axis0_grid: np.ndarray,
@@ -337,7 +337,7 @@ def gaussbeam_fit_2d(
 
 
 def width_parafit(
-    axes: Union[str, List[str]],
+    axes: Union[str, list[str]],
     movement_type: MovementType,
     stagename: str,
     planes: Sequence[Distance],
@@ -419,7 +419,7 @@ def width_parafit(
 
 
 def peaks_linfit(
-    axes: Union[str, List[str]],
+    axes: Union[str, list[str]],
     first_axis: bool,
     movement_type: MovementType,
     stagename: str,
@@ -599,7 +599,7 @@ def run(
     limits: Optional[
         Sequence[Distance]
     ] = None,  # 2-list of (2-lists of) Distance objects
-    axes: Union[List[str], str] = "xz",
+    axes: Union[list[str], str] = "xz",
     planes: Union[None, int, Sequence[Distance]] = None,  # default 3 planes
     fit_3d: bool = True,
     fit_2d: bool = True,
@@ -892,7 +892,7 @@ def run(
         raise ValueError(
             "center must be None, 'center', 'current', or" + " a 2-tuple of Distances"
         )
-    center = cast(List[Distance], center)
+    center = cast(list[Distance], center)
 
     #   Duck typing
     if isinstance(limits, sequence) and all(

@@ -13,7 +13,7 @@ from collections.abc import Sequence as sequence  # sorry
 from copy import copy
 from datetime import datetime
 from numbers import Real
-from typing import List, Optional, Sequence, Tuple, Type, Union, cast
+from typing import Optional, Sequence, Tuple, Type, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -30,7 +30,7 @@ VALID_AXES = {"x", "y", "z"}
 
 
 def plot_climber(
-    climber_results: List[np.ndarray],
+    climber_results: list[np.ndarray],
     stagename: str,
     axis: str,
     init_step: Distance,
@@ -529,7 +529,7 @@ def run(
     stage: StageDevices,
     movement_type: Union[MovementType, Sequence[MovementType]],
     exposure_time: Union[int, float, Sequence[Union[int, float]]],
-    axes: Union[None, str, List[str]] = None,
+    axes: Union[None, str, list[str]] = None,
     init_step: Union[None, Distance, Sequence[Distance]] = None,
     step_factor: Union[float, Sequence[float]] = 0.5,
     init_positive: Union[bool, Sequence[bool]] = True,

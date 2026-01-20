@@ -26,7 +26,7 @@ import sys
 import traceback  # show traceback in main menu
 import warnings
 from collections.abc import Callable
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union, cast
+from typing import Any, Dict, Literal, Optional, Tuple, Union, cast
 
 import continuous_readout
 import grid_search
@@ -128,7 +128,7 @@ logger = get_logger(__name__)
 
 
 def accept_input_args(
-    input_tuple: List[Union[bool, str, int, None]], input_args: List[str]
+    input_tuple: list[Union[bool, str, int, None]], input_args: list[str]
 ) -> list:
     """
     Parses any command line args passed when starting the script.
@@ -292,7 +292,7 @@ class MenuEntry:
         )
 
     def execute(
-        self, controller: ProgramController, user_input_parts: List[str]
+        self, controller: ProgramController, user_input_parts: list[str]
     ) -> None:
         """
         Interprets user input into kw/args and executes `self.func` with them.
@@ -753,7 +753,7 @@ def main() -> None:
     require_connection = (
         False  # raise exception if device connections fail to establish
     )
-    logging_settings: List[Any] = [None] * 5
+    logging_settings: list[Any] = [None] * 5
 
     if len(sys.argv) > 1:
         InputArgs = sys.argv[1:]

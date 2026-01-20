@@ -13,7 +13,7 @@ import contextlib
 import enum
 import time
 import warnings
-from typing import Dict, List, Literal, Optional, Union
+from typing import Dict, Literal, Optional, Union
 
 import yaml
 from typing_extensions import assert_never
@@ -850,7 +850,7 @@ class StageDevices:
         """Returns `name`."""
         return self.name
 
-    def deenergize(self, axes: Union[str, List[str]]) -> None:
+    def deenergize(self, axes: Union[str, list[str]]) -> None:
         """
         Deenergize the steppers of one or more axes.
 
@@ -866,7 +866,7 @@ class StageDevices:
         for axis in axes:
             self.axes[axis].deenergize()
 
-    def home(self, axes: Union[str, List[str]]) -> None:
+    def home(self, axes: Union[str, list[str]]) -> None:
         """
         Home the steppers of one or more axes.
 
@@ -882,7 +882,7 @@ class StageDevices:
         for axis in axes:
             self.axes[axis].home()
 
-    def energize(self, axes: Union[str, List[str]] = "all") -> None:
+    def energize(self, axes: Union[str, list[str]] = "all") -> None:
         """
         Energize the steppers of one or more axes.
 

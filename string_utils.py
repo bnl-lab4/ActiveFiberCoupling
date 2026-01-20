@@ -6,7 +6,7 @@ help function for the main menu in `main.py`.
 import inspect
 import warnings
 from collections.abc import Callable
-from typing import Any, List, Optional, Sequence, Union
+from typing import Any, Optional, Sequence, Union
 
 from logging_utils import get_logger
 from movement_classes import Distance, StageDevices
@@ -111,7 +111,7 @@ def parse_str_values(value: str) -> Any:
     return value
 
 
-def str_to_dict(tokens: List[str]) -> dict[str, Any]:
+def str_to_dict(tokens: list[str]) -> dict[str, Any]:
     """
     Parses a list of strings into the key-value pairs of a dictionary.
     See `parse_str_values`.
@@ -139,7 +139,7 @@ def str_to_dict(tokens: List[str]) -> dict[str, Any]:
     return kwargs_dict
 
 
-def sequence_to_str(sequence: Sequence, joined: bool = True) -> Union[str, List[str]]:
+def sequence_to_str(sequence: Sequence, joined: bool = True) -> Union[str, list[str]]:
     """
     Turns a sequence into formatted a string for printing. See `dict_to_str`.
     """
@@ -188,7 +188,7 @@ def sequence_to_str(sequence: Sequence, joined: bool = True) -> Union[str, List[
     return sequence_print
 
 
-def dict_to_str(mydict: dict[str, Any], joined: bool = True) -> Union[str, List[str]]:
+def dict_to_str(mydict: dict[str, Any], joined: bool = True) -> Union[str, list[str]]:
     """
     Turns a dict into a formatted string for printing.
 
@@ -212,7 +212,7 @@ def dict_to_str(mydict: dict[str, Any], joined: bool = True) -> Union[str, List[
 
     Returns
     -------
-    str or List[str]
+    str or list[str]
         Single string (``joined=True``) or list of strings
         (``joined=False``) representing `mydict`.
 
