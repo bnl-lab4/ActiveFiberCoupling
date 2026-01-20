@@ -7,11 +7,12 @@
 """
 Defines the `Sensor` class and sensor-type subclasses.
 """
+from __future__ import annotations
 
 import contextlib
 import enum
 import socket
-from typing import Dict, Optional, Union
+from typing import Dict, Literal, Optional, Union
 
 import sigfig
 
@@ -72,7 +73,7 @@ class Piplate:
     `Sensor` (parent).
     """
 
-    def __init__(self, connection_dict: Dict[str, str]):
+    def __init__(self, connection_dict: Dict[str, str]) -> None:
         self.addr = connection_dict["addr"]
         self.channel = connection_dict["channel"]
         DAQ.VerifyADDR(self.addr)
@@ -81,7 +82,7 @@ class Piplate:
             f"Initialized to Pi-Plate at addr {self.addr}, channel {self.channel}"
         )
 
-    def read(self):
+    def read(self) -> float:
         """
         Read the voltage from the Pi-Plate input (once) .
 
@@ -104,7 +105,7 @@ class Piplate:
         #             f"read power {sigfig.round(power, 6, warn=False)}")
         return power
 
-    def integrate(self, exposure_time: Union[int, float], avg: bool = True):
+    def integrate(self, exposure_time: Union[int, float], avg: bool = True) -> float:
         """
         Integrate the voltage of the Pi-plate  over many readings.
 
@@ -178,7 +179,7 @@ class Socket:
     ``get_timestamps.py`` are available for doing this on a windows machine.
     """
 
-    def __init__(self, connection_dict: Dict[str, str]):
+    def __init__(self, connection_dict: Dict[str, str]) -> None:
         self.host = connection_dict["host"]
         self.port = connection_dict["port"]
         self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -192,7 +193,7 @@ class Socket:
             )
         self.exit_stack = contextlib.ExitStack()
 
-    def __enter__(self):
+    def __enter__(self) -> Socket:
         """
         Enables context management of the socket connection to the server.
 
@@ -202,7 +203,7 @@ class Socket:
         logger.debug(f"Entered context of socket host {self.host} at port {self.port}")
         return self
 
-    def __exit__(self, _, __, ___):
+    def __exit__(self, _, __, ___) -> Literal[False]:
         """
         Closes the connection to the socket server.
 
@@ -211,8 +212,9 @@ class Socket:
         self.exit_stack.close()
         logger.info(f"Socket connection to host {self.host} at port {self.port} closed")
         logger.debug(f"Exited context of socket host {self.host} at port {self.port}")
+        return False
 
-    def read(self):
+    def read(self) -> float:
         """
         Get a sensor reading over 1 ms from the server.
 
@@ -229,7 +231,7 @@ class Socket:
         #         f"returned {sigfig.round(power, 6, warn=False)} averaged over 100ms")
         return power
 
-    def integrate(self, exposure_time: Union[int, float], avg: bool = True):
+    def integrate(self, exposure_time: Union[int, float], avg: bool = True) -> float:
         """
         Get a sensor reading over `exposure_time` ms from the server.
 
@@ -284,7 +286,7 @@ class Sensor:
         self,
         connection_dict: Dict[str, str],
         sensor_type: Optional[enum.Enum] = SensorType.PIPLATE,
-    ):
+    ) -> None:
         self._exit_stack = contextlib.ExitStack()
         self.connection_dict = connection_dict
         self.sensor_type = sensor_type
@@ -295,7 +297,7 @@ class Sensor:
         else:
             raise ValueError("sensor_type must be a SensorType enum.")
 
-    def __enter__(self):
+    def __enter__(self) -> Sensor:
         """
         No-op method for use with context management.
 
@@ -305,7 +307,7 @@ class Sensor:
         logger.debug("Entered sensor context")
         return self
 
-    def __exit__(self, _, __, ___):
+    def __exit__(self, _, __, ___) -> Literal[False]:
         """
         No-op method for use with context management.
 
@@ -315,7 +317,7 @@ class Sensor:
         logger.debug("Exited context stack")
         return False
 
-    def read(self):
+    def read(self) -> float:
         """
         Read the value of the sensor.
 
@@ -328,7 +330,7 @@ class Sensor:
         """
         return self.sensor.read()
 
-    def integrate(self, exposure_time: Union[int, float], avg: bool = True):
+    def integrate(self, exposure_time: Union[int, float], avg: bool = True) -> float:
         """
         Returns the value of the sensor over `exposure_time`.
 

@@ -11,7 +11,7 @@ from movement_classes import MovementType, StageDevices
 logger = get_logger(__name__)
 
 
-def energize(stage: StageDevices, axes: Optional[str] = None):
+def energize(stage: StageDevices, axes: Optional[str] = None) -> None:
     """
     Energize one or more steppers. See movement_classes.StageAxis.energize.
 
@@ -27,7 +27,7 @@ def energize(stage: StageDevices, axes: Optional[str] = None):
     stage.energize(axes)
 
 
-def home(stage: StageDevices, axes: Optional[str] = None):
+def home(stage: StageDevices, axes: Optional[str] = None) -> None:
     """
     Home one or more steppers. See movement_classes.StageAxis.home.
 
@@ -43,7 +43,7 @@ def home(stage: StageDevices, axes: Optional[str] = None):
     stage.home(axes)
 
 
-def deenergize(stage: StageDevices, axes: Optional[str] = None):
+def deenergize(stage: StageDevices, axes: Optional[str] = None) -> None:
     """
     Deenergize one or more stepper. See movement_classes.StageAxis.deenergize.
 
@@ -59,7 +59,7 @@ def deenergize(stage: StageDevices, axes: Optional[str] = None):
     stage.deenergize(axes)
 
 
-def center(stage: StageDevices, which: MovementType):
+def center(stage: StageDevices, which: MovementType) -> None:
     """
     Center all piezos' and/or steppers' positions.
 
@@ -86,7 +86,7 @@ def center(stage: StageDevices, which: MovementType):
         _ = stage.goto("z", stage.axes["z"].stepper_center, MovementType.STEPPER)
 
 
-def zero(stage: StageDevices, which: MovementType):
+def zero(stage: StageDevices, which: MovementType) -> None:
     """
     Zero all piezos' and/or steppers' positions.
 
@@ -112,7 +112,7 @@ def zero(stage: StageDevices, which: MovementType):
         _ = stage.goto("z", stage.axes["z"].stepper_limits[0], MovementType.STEPPER)
 
 
-def max(stage: StageDevices, which: MovementType):
+def max(stage: StageDevices, which: MovementType) -> None:
     """
     Maximize all piezos' and/or steppers' positions.
 

@@ -6,7 +6,7 @@ import time
 
 from distance import Distance
 from logging_utils import get_logger
-from movement_classes import MovementType
+from movement_classes import MovementType, StageDevices
 from stage_status import run as status
 
 # unique logger name for this module
@@ -34,7 +34,7 @@ UNITS_ABRV = dict(
 )
 
 
-def run(stage, exposure_time):
+def run(stage: StageDevices, exposure_time: int) -> None:
     """
     Allows for manual control of a stage via text commands.
 

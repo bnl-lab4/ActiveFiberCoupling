@@ -26,7 +26,7 @@ import sys
 import traceback  # show traceback in main menu
 import warnings
 from collections.abc import Callable
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union, cast
 
 import continuous_readout
 import grid_search
@@ -100,7 +100,9 @@ WHICH_DEVICE_MAP = {"p": "piezo", "s": "stepper", "r": "sensor"}
 COMMAND_ARG_VALUE_DICT = dict(t=True, y=True, true=True, f=False, n=False, false=False)
 
 
-def custom_formatwarning(message, category, filename, lineno, _=None):
+def custom_formatwarning(
+    message: str, category: type, filename: str, lineno: int, _=None
+) -> str:
     """
     Custom warning formatter that removes the source line.
 
@@ -109,7 +111,7 @@ def custom_formatwarning(message, category, filename, lineno, _=None):
     Parameters
     ----------
     messages : str
-    category : object
+    category : type
     filename : str
     lineno : int
 
@@ -272,13 +274,13 @@ class MenuEntry:
         func: Optional[Callable] = None,
         args_config: Tuple[str, ...] = (),
         kwargs_config: Dict["str", dict] = {},
-    ):
+    ) -> None:
         self.text = text
         self.func = func
         self.args_config = args_config
         self.kwargs_config = kwargs_config
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         """
         Provides all attributes in the form of a dict.
         """
@@ -443,7 +445,7 @@ class ProgramController:
 
     def __init__(
         self, autohome: bool, require_connection: bool, logging_settings: tuple
-    ):
+    ) -> None:
         self.autohome = autohome
         self.require_connection = require_connection
         self.logging_settings = logging_settings
@@ -454,7 +456,7 @@ class ProgramController:
         self.stack = contextlib.ExitStack()
         self.menu = self._build_menu()
 
-    def __enter__(self):
+    def __enter__(self) -> ProgramController:
         """
         Set up logging and initialize all devices.
         """
@@ -462,7 +464,7 @@ class ProgramController:
         self._initialize_devices()
         return self
 
-    def __exit__(self, _, __, ___):
+    def __exit__(self, _, __, ___) -> Literal[False]:
         """
         Cleanly close and disconnect from devices.
         """
@@ -470,7 +472,7 @@ class ProgramController:
         logger.debug("Device contexts closed cleanly")
         return False
 
-    def _initialize_devices(self):
+    def _initialize_devices(self) -> None:
         """
         Connect to and initialize a sensor, piezo controller, and three
         steppers for each stage.
@@ -523,7 +525,7 @@ class ProgramController:
                 )
             self.stages[i] = stage
 
-    def _build_menu(self):
+    def _build_menu(self) -> dict[str, str | MenuEntry]:
         """
         Builds the menu for the command line interface.
 
@@ -607,7 +609,7 @@ class ProgramController:
             ),
         }
 
-    def _display_menu(self):
+    def _display_menu(self) -> None:
         """
         Prints the main menu.
         """
@@ -620,12 +622,14 @@ class ProgramController:
         whitespace = max_choice_length + 2  # for aligning descriptions
         for key, value in self.menu.items():
             if key.startswith("_"):
+                assert isinstance(value, str)
                 print("\n" + value)
             else:
+                assert isinstance(value, MenuEntry)
                 print(f"{key}:{' ' * (whitespace - len(key))}{value.text}")
         return
 
-    def _reload_menu(self):
+    def _reload_menu(self) -> None:
         """
         Reloads all functions in the main menu.
 
@@ -637,6 +641,7 @@ class ProgramController:
                 continue  # ignore menu section headers and this functions menu entry
 
             # get name of module function comes from
+            assert isinstance(entry, MenuEntry)
             func_module_name = entry.func.__module__
             if func_module_name == "__main__":
                 continue  # can't reload this script itself
@@ -651,11 +656,11 @@ class ProgramController:
                 logger.info(f"{key} function reloaded succesfully")
 
             except (ImportError, AttributeError):
-                logger.warning(f"{key} function was not reloaded succesfully")
+                logger.warning(f"{key} function was not reloaded successfully")
 
         self.menu = self._build_menu()
 
-    def run(self):
+    def run(self) -> None:
         """
         Main logic loop for the main menu command line interface.
 
@@ -727,7 +732,7 @@ class ProgramController:
                 print("KeyboardInterrupt was caught, enter 'q' to quit")
 
 
-def main():
+def main() -> None:
     """
     Configures runtime configuration and initializes a `ProgramController`.
     """

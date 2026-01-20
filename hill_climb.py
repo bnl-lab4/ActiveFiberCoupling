@@ -13,7 +13,7 @@ from collections.abc import Sequence as sequence  # sorry
 from copy import copy
 from datetime import datetime
 from numbers import Real
-from typing import List, Optional, Sequence, Tuple, Type, Union
+from typing import List, Optional, Sequence, Tuple, Type, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -187,7 +187,7 @@ def hill_climb(
     softening: float,
     Ndecrease: int,
     exposure_time: Union[int, float],
-):
+) -> Tuple[np.ndarray, bool]:
     """
     Hill climb along a single step size with a single step size.
 
@@ -460,13 +460,13 @@ def hill_climber(
 
 
 def arg_check(
-    arg,
+    arg: int | float | bool | MovementType | None,
     argname,
     argtype: Type,
-    axes,
+    axes: str | list[str],
     extra: Optional[Callable] = None,
     extra_text: str = "",
-):
+) -> list:
     """
     Used to duck-type many of the arguments of `run`.
 
@@ -518,7 +518,7 @@ def arg_check(
         isinstance(elem, argtype) and extra(elem) for elem in arg
     ):
         if len(arg) == len(axes):
-            return arg
+            return cast(list, arg)
         raise ValueError(f"{argname} ({arg}) must have same length as axes")
     raise ValueError(
         f"{argname} ({arg}) must be a {argtype.__name__} {extra_text} or a sequence thereof"

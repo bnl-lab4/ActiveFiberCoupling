@@ -20,7 +20,7 @@ class HardwareLibMissingStub:
         Name of object in library to provide stub for.
     """
 
-    def __init__(self, lib_name: str, obj_name: Optional[str] = None):
+    def __init__(self, lib_name: str, obj_name: Optional[str] = None) -> None:
         self.lib_name = lib_name
         self.obj_name = obj_name or lib_name
 

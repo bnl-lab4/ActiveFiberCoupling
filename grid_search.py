@@ -38,7 +38,7 @@ VALID_AXES = {"x", "y", "z"}
 WAVELENGTH = 0.65  # microns
 
 
-def accept_fit():
+def accept_fit() -> bool:
     """
     Simple input loop about whether to accept or reject a fit.
 
@@ -71,7 +71,7 @@ def gaussbeam(
     I0: float = 1.0,
     w0: float = 8 * np.pi * WAVELENGTH,
     C: float = 0.0,
-):
+) -> np.ndarray:
     r"""
     Model of a Gaussian beam.
 
@@ -140,7 +140,7 @@ def gaussbeam_fit_3d(
     data_cube: np.ndarray,
     show_plot: bool = False,
     log_plot: bool = True,
-):
+) -> ModelResult:
     """
     Fits 3D intensity data to a single Gaussian beam model.
 
@@ -253,7 +253,7 @@ def gaussbeam_fit_2d(
     plane: Distance,
     show_plot: bool = False,
     log_plot: bool = True,
-):
+) -> ModelResult:
     """
     Fits 2D intensity data to a Gaussian profile.
 
@@ -345,7 +345,7 @@ def width_parafit(
     widths_unc: np.ndarray,
     show_plot: bool = False,
     log_plot: bool = True,
-):
+) -> ModelResult:
     r"""
     Fits a parabola to beam width vs focus-axis distance data.
 
@@ -428,7 +428,7 @@ def peaks_linfit(
     peak_unc: np.ndarray,
     show_plot: bool = False,
     log_plot: bool = True,
-):
+) -> ModelResult:
     """
     Fits a line to beam waist position vs focus-axis position data.
 
@@ -517,7 +517,7 @@ def plane_grid(
     exposure_time: Union[int, float],
     show_plot: bool = False,
     log_plot: bool = True,
-):
+) -> np.ndarray:
     """
     Records the sensor value at a grid of values in a plane normal to the
     focus axis.
@@ -614,7 +614,7 @@ def run(
     fit_2d_kwargs: dict = {},
     fit_widths_kwargs: dict = {},
     fit_lin_kwargs: dict = {},
-):
+) -> None:
     """
     Executes a grid search in one or more planes normal to the focus axis.
 

@@ -7,11 +7,13 @@
 Defines the `StageAxis` and `StageDevices` classes for controlling stages.
 """
 
+from __future__ import annotations
+
 import contextlib
 import enum
 import time
 import warnings
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 
 import yaml
 from typing_extensions import assert_never
@@ -86,7 +88,7 @@ class MoveResult:
         distance: Distance,
         movement_type: MovementType,
         centered_piezos: bool = False,
-    ):
+    ) -> None:
         self.distance = distance
         self.movement_type = movement_type
         self.centered_piezos = centered_piezos
@@ -98,9 +100,13 @@ class MoveResult:
         ), "movement_type cannot be general"
 
     @property
-    def text(self):
+    def text(self) -> str:
         """
-        str : text for a log message regarding the movement.
+        Text for a log message regarding the movement.
+
+        Returns
+        -------
+        str
         """
         values = []
         values.append(f"{self.distance.microns} microns")
@@ -187,7 +193,9 @@ class StageAxis:
         determines the movement type, which defaults to ``GENERAL``.
     """
 
-    def __init__(self, axis: str, piezo, stepper, stepper_sn, autohome: bool = True):
+    def __init__(
+        self, axis: str, piezo, stepper, stepper_sn, autohome: bool = True
+    ) -> None:
         """
         Initializes `StageAxis` and checks stepper settings.
 
@@ -341,7 +349,7 @@ class StageAxis:
             else:
                 logger.debug(f"Stepper {stepper_sn} settings are as expected")
 
-    def __enter__(self):
+    def __enter__(self) -> StageAxis:
         """
         Energize and home (if enabled) the stepper upon entering context.
 
@@ -354,7 +362,7 @@ class StageAxis:
             self.home()
         return self
 
-    def __exit__(self, _, __, ___):
+    def __exit__(self, _, __, ___) -> Literal[False]:
         """
         Deenergize the stepper upon exiting context.
 
@@ -365,7 +373,7 @@ class StageAxis:
         self.deenergize()
         return False
 
-    def _position_uncertain(self):
+    def _position_uncertain(self) -> bool:
         """
         Get the ``position_uncertain`` flag from the stepper control board.
 
@@ -380,7 +388,7 @@ class StageAxis:
         """
         return (self.stepper.get_misc_flags()[0] >> 1) & 1
 
-    def _energized(self):
+    def _energized(self) -> bool:
         """
         Get the ``energized`` flag from the stepper control board.
 
@@ -394,7 +402,7 @@ class StageAxis:
         """
         return (self.stepper.get_misc_flags()[0]) & 1
 
-    def _homing_active(self):
+    def _homing_active(self) -> bool:
         """
         Get the ``homing_active`` flag from the stepper control board.
 
@@ -481,7 +489,7 @@ class StageAxis:
             time.sleep(0.01)
         return MoveResult(Distance(steps, "steps"), MovementType.STEPPER)
 
-    def energize(self):
+    def energize(self) -> None:
         """
         Energize the stepper motor.
 
@@ -498,7 +506,7 @@ class StageAxis:
         self.stepper.exit_safe_start()
         logger.info(f"Axis {self.axis} stepper {self.stepper_sn} energized")
 
-    def deenergize(self):
+    def deenergize(self) -> None:
         """
         Deenergize the stepper motor.
         Set the motor to be in a deenergized state. The control board will
@@ -514,7 +522,7 @@ class StageAxis:
         self.stepper.enter_safe_start()
         logger.info(f"Axis {self.axis} stepper {self.stepper_sn} deenergized")
 
-    def home(self):
+    def home(self) -> None:
         """
         Home the stepper.
 
@@ -547,7 +555,7 @@ class StageAxis:
             + f"zeroed at lower stage limit {self._true_stepper_limits[0].prettyprint()}"
         )
 
-    def get_stepper_position(self):
+    def get_stepper_position(self) -> Distance:
         """
         Get the position of the stepper motor.
 
@@ -560,7 +568,7 @@ class StageAxis:
         position = self.stepper.get_current_position()
         return Distance(position, "steps")
 
-    def get_piezo_position(self):
+    def get_piezo_position(self) -> Distance:
         """
         Get the position of the piezo.
 
@@ -769,7 +777,7 @@ class StageDevices:
         piezo_baud_rate: int = 115200,
         require_connection: bool = False,
         autohome: bool = True,
-    ):
+    ) -> None:
         self.name = name
         self.sensor = sensor
         self.axes: Dict[str, StageAxis] = {}
@@ -810,7 +818,7 @@ class StageDevices:
 
                 self.axes[axis] = StageAxis(axis, piezo, stepper, stepper_sn, autohome)
 
-    def __enter__(self):
+    def __enter__(self) -> StageDevices:
         """
         Enters the context management of each `StageAxis` in `axes`.
 
@@ -824,7 +832,7 @@ class StageDevices:
                 )
         return self
 
-    def __exit__(self, _, __, ___):
+    def __exit__(self, _, __, ___) -> Literal[False]:
         """
         Exits all open contexts.
 
@@ -834,15 +842,15 @@ class StageDevices:
         logger.debug("Exited context stack")
         return False
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Returns `name`."""
         return self.name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Returns `name`."""
         return self.name
 
-    def deenergize(self, axes: Union[str, List[str]]):
+    def deenergize(self, axes: Union[str, List[str]]) -> None:
         """
         Deenergize the steppers of one or more axes.
 
@@ -858,7 +866,7 @@ class StageDevices:
         for axis in axes:
             self.axes[axis].deenergize()
 
-    def home(self, axes: Union[str, List[str]]):
+    def home(self, axes: Union[str, List[str]]) -> None:
         """
         Home the steppers of one or more axes.
 
@@ -874,7 +882,7 @@ class StageDevices:
         for axis in axes:
             self.axes[axis].home()
 
-    def energize(self, axes: Union[str, List[str]] = "all"):
+    def energize(self, axes: Union[str, List[str]] = "all") -> None:
         """
         Energize the steppers of one or more axes.
 
@@ -890,7 +898,9 @@ class StageDevices:
         for axis in axes:
             self.axes[axis].energize()
 
-    def move(self, axis: str, movement: Distance, which: Optional[MovementType] = None):
+    def move(
+        self, axis: str, movement: Distance, which: Optional[MovementType] = None
+    ) -> MoveResult:
         """
         Move `axis` by `movement` using its stepper and/or piezo.
 
@@ -913,7 +923,9 @@ class StageDevices:
         logger.trace(f"{self.name}, Axis {axis} :" + result.text)
         return result
 
-    def goto(self, axis: str, position: Distance, which: Optional[MovementType] = None):
+    def goto(
+        self, axis: str, position: Distance, which: Optional[MovementType] = None
+    ) -> MoveResult:
         """
         Move `axis` to `position` using its stepper and/or piezo.
 
@@ -936,7 +948,7 @@ class StageDevices:
         logger.trace(f"{self.name} Axis {axis} : " + result.text)
         return result
 
-    def read(self):
+    def read(self) -> float | None:
         """
         Read the value of the sensor.
 
@@ -952,7 +964,9 @@ class StageDevices:
             return None
         return self.sensor.read()
 
-    def integrate(self, exposure_time: Union[int, float], avg: bool = True):
+    def integrate(
+        self, exposure_time: Union[int, float], avg: bool = True
+    ) -> float | None:
         """
         Integrate the value of the sensor of `exposure_time`.
 

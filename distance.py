@@ -15,7 +15,7 @@ from logging_utils import get_logger
 logger = get_logger(__name__)
 
 
-def _sfround(number, sigfigs: int = 3, decimals: int = 1):
+def _sfround(number, sigfigs: int = 3, decimals: int = 1) -> str:
     """
     Convinience wrapper on sigfig.round for `Distance.prettyprint`.
 
@@ -114,7 +114,7 @@ class Distance:
 
     ############# Operations
 
-    def __neg__(self):
+    def __neg__(self) -> Distance:
         """
         Negate the value.
 
@@ -125,7 +125,7 @@ class Distance:
         """
         return Distance(-self.microns, "microns")
 
-    def __abs__(self):
+    def __abs__(self) -> Distance:
         """
         Take the absolute value.
 
@@ -320,7 +320,7 @@ class Distance:
     ################# Properties
 
     @property
-    def microns(self):
+    def microns(self) -> float:
         """
         float : The distance in microns.
 
@@ -329,24 +329,24 @@ class Distance:
         return self._microns
 
     @microns.setter
-    def microns(self, value: SupportsFloat):
+    def microns(self, value: SupportsFloat) -> None:
         self._microns = float(value)
         return
 
     @property
-    def volts(self):
+    def volts(self) -> float:
         """
         float : The distance in volts.
         """
         return self._microns / self._MICRONS_PER_VOLT
 
     @volts.setter
-    def volts(self, value: SupportsFloat):
+    def volts(self, value: SupportsFloat) -> None:
         self._microns = float(value) * self._MICRONS_PER_VOLT
         return
 
     @property
-    def steps(self):
+    def steps(self) -> float:
         """
         float : The distance in steps.
 
@@ -355,25 +355,25 @@ class Distance:
         return self._microns / self._MICRONS_PER_STEP
 
     @steps.setter
-    def steps(self, value: SupportsFloat):
+    def steps(self, value: SupportsFloat) -> None:
         self._microns = float(value) * self._MICRONS_PER_STEP
 
     @property
-    def fullsteps(self):
+    def fullsteps(self) -> float:
         """
         float : the distance in full steps.
         """
         return self._microns / self._MICRONS_PER_FULL_STEP
 
     @fullsteps.setter
-    def fullsteps(self, value: SupportsFloat):
+    def fullsteps(self, value: SupportsFloat) -> None:
         self._microns = float(value) * self._MICRONS_PER_FULL_STEP
 
     ######### Functions
 
     def prettyprint(
         self, which: Union[Sequence[str], str, None] = None, stacked: bool = False
-    ):
+    ) -> str | list[str]:
         """
         Print the value nicely formatted and rounded.
 

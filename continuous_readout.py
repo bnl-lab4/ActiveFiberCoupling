@@ -11,7 +11,9 @@ from movement_classes import StageDevices
 logger = get_logger(__name__)
 
 
-def run(stage: StageDevices, exposure_time: Union[int, float], avg: bool = True):
+def run(
+    stage: StageDevices, exposure_time: Union[int, float], avg: bool = True
+) -> None:
     """
     Continuously print the sensor output with the supplied exposure time.
 

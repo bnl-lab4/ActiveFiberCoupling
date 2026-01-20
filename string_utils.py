@@ -6,7 +6,7 @@ help function for the main menu in `main.py`.
 import inspect
 import warnings
 from collections.abc import Callable
-from typing import List, Optional, Sequence, Union
+from typing import Any, List, Optional, Sequence, Union
 
 from logging_utils import get_logger
 from movement_classes import Distance, StageDevices
@@ -15,7 +15,7 @@ from movement_classes import Distance, StageDevices
 logger = get_logger(__name__)
 
 
-def parse_str_values(value):
+def parse_str_values(value: str) -> Any:
     """
     Parse a string into objects such as dicts, lists, and `Distance.Distance`.
 
@@ -111,7 +111,7 @@ def parse_str_values(value):
     return value
 
 
-def str_to_dict(tokens: List[str]):
+def str_to_dict(tokens: List[str]) -> dict[str, Any]:
     """
     Parses a list of strings into the key-value pairs of a dictionary.
     See `parse_str_values`.
@@ -139,7 +139,7 @@ def str_to_dict(tokens: List[str]):
     return kwargs_dict
 
 
-def sequence_to_str(sequence, joined=True) -> Union[str, List[str]]:
+def sequence_to_str(sequence: Sequence, joined: bool = True) -> Union[str, List[str]]:
     """
     Turns a sequence into formatted a string for printing. See `dict_to_str`.
     """
@@ -188,7 +188,7 @@ def sequence_to_str(sequence, joined=True) -> Union[str, List[str]]:
     return sequence_print
 
 
-def dict_to_str(mydict, joined=True) -> Union[str, List[str]]:
+def dict_to_str(mydict: dict[str, Any], joined: bool = True) -> Union[str, List[str]]:
     """
     Turns a dict into a formatted string for printing.
 
@@ -267,7 +267,7 @@ def dict_to_str(mydict, joined=True) -> Union[str, List[str]]:
     return dict_print
 
 
-def menu_help(func_key: Optional[str] = None, menu: Optional[dict] = None):
+def menu_help(func_key: Optional[str] = None, menu: Optional[dict] = None) -> None:
     """
     Prints a help message for the main menu or specific functions in `main.py`.
 

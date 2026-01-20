@@ -2,9 +2,11 @@
 Simulated stage with virtual piezos, steppers, and sensor.
 """
 
+from __future__ import annotations
+
 import contextlib
 import math
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Literal, Optional, Tuple, Union
 
 from typing_extensions import assert_never
 
@@ -172,7 +174,7 @@ class SimulationSensor:
         beam_waist_position: Tuple[float, float, float] = (2000.0, 2000.0, 2000.0),
         angle_of_deviation: float = 0.0,
         peak_intensity: float = 1.0,
-    ):
+    ) -> None:
         self.propagation_axis = propagation_axis.lower()
         self.waist_pos = beam_waist_position
         self.angle = angle_of_deviation
@@ -208,7 +210,7 @@ class SimulationSensor:
         mag = math.sqrt(_vect_mag_sq(unnorm_dir))
         self.k_beam = (unnorm_dir[0] / mag, unnorm_dir[1] / mag, unnorm_dir[2] / mag)
 
-    def _connect_to_stage(self, stage):
+    def _connect_to_stage(self, stage: SimulationStageDevices):
         """Links the sensor to a stage to get position information."""
         self.stage = stage
 
@@ -282,7 +284,7 @@ class SimulationSensor:
         logger.debug(f"{self.stage.name} simulation sensor power: {result:.6f}")
         return result
 
-    def __enter__(self):
+    def __enter__(self) -> SimulationSensor:
         """
         No-op method for use with context management.
 
@@ -291,7 +293,7 @@ class SimulationSensor:
         pass
         return self
 
-    def __exit__(self, _, __, ___):
+    def __exit__(self, _, __, ___) -> Literal[False]:
         """
         No-op method for use with context management.
 
@@ -362,7 +364,7 @@ class SimulationStageAxis:
         No-op dummy method.
     """
 
-    def __init__(self, axis: str, stepper_sn: str):
+    def __init__(self, axis: str, stepper_sn: str) -> None:
         self.axis = axis
         self.stepper_sn = stepper_sn
         self.stepper_position = Distance(0, "microns")
@@ -377,15 +379,15 @@ class SimulationStageAxis:
         self.stepper_limits = (Distance(0, "microns"), Distance(4000, "microns"))
         self.stepper_center = self.stepper_limits[1] / 2
 
-    def get_stepper_position(self):
+    def get_stepper_position(self) -> Distance:
         """Get the current stepper position."""
         return self.stepper_position
 
-    def get_piezo_position(self):
+    def get_piezo_position(self) -> Distance:
         """Get the current piezo position."""
         return self.piezo_position
 
-    def get_current_position(self):
+    def get_current_position(self) -> Distance:
         """Get the current combined stage position."""
         return self.piezo_position + self.stepper_position
 
@@ -552,17 +554,17 @@ class SimulationStageAxis:
             return result
 
     # --- Dummy methods to match the real hardware class interface ---
-    def energize(self):
+    def energize(self) -> None:
         """No-op dummy method."""
         logger.info(f"Axis {self.axis} stepper {self.stepper_sn} energized")
         pass
 
-    def deenergize(self):
+    def deenergize(self) -> None:
         """No-op dummy method."""
         logger.info(f"Stepper {self.stepper_sn} deenergized")
         pass
 
-    def home(self):
+    def home(self) -> None:
         """Set the stepper position to 0 (microns)."""
         self.stepper_position = Distance(0, "microns")
         logger.info(
@@ -570,7 +572,7 @@ class SimulationStageAxis:
             + f"zeroed at lower stage limit {self.stepper_limits[0].prettyprint()}"
         )
 
-    def __enter__(self):
+    def __enter__(self) -> SimulationStageAxis:
         """
         No-op method for use with context management.
 
@@ -578,7 +580,7 @@ class SimulationStageAxis:
         """
         return self
 
-    def __exit__(self, _, __, ___):
+    def __exit__(self, _, __, ___) -> Literal[False]:
         """
         No-op method for use with context management.
 
@@ -642,7 +644,7 @@ class SimulationStageDevices:
     For control of real, physical stages, see `movement_classes.py`.
     """
 
-    def __init__(self, name: str, sensor: Optional[SimulationSensor] = None):
+    def __init__(self, name: str, sensor: Optional[SimulationSensor] = None) -> None:
         self.name = name
         self.stepper_sns = dict(x=f"{name}_simX", y=f"{name}_simY", z=f"{name}_simZ")
         self.axes: Dict[str, SimulationStageAxis] = {}
@@ -743,7 +745,7 @@ class SimulationStageDevices:
         return self.sensor.integrate(exposure_time, avg)
 
     # --- Dummy methods to match the real hardware class interface ---
-    def deenergize(self, axes: Union[str, List[str]] = "all"):
+    def deenergize(self, axes: Union[str, List[str]] = "all") -> None:
         """
         Call `deenergize` (no-op dummy) on one or more axes.
 
@@ -757,7 +759,7 @@ class SimulationStageDevices:
         for axis in list(axes):
             self.axes[axis].deenergize()
 
-    def home(self, axes: Union[str, List[str]] = "all"):
+    def home(self, axes: Union[str, List[str]] = "all") -> None:
         """
         Call `home` on one or more axes.
 
@@ -771,7 +773,7 @@ class SimulationStageDevices:
         for axis in list(axes):
             self.axes[axis].home()
 
-    def energize(self, axes: Union[str, List[str]] = "all"):
+    def energize(self, axes: Union[str, List[str]] = "all") -> None:
         """
         Call `energize` (no-op dummy) on one or more axes.
 
@@ -785,7 +787,7 @@ class SimulationStageDevices:
         for axis in axes:
             self.axes[axis].energize()
 
-    def __enter__(self):
+    def __enter__(self) -> SimulationStageDevices:
         """
         No-op method for use with context management.
 
@@ -793,7 +795,7 @@ class SimulationStageDevices:
         """
         return self
 
-    def __exit__(self, _, __, ___):
+    def __exit__(self, _, __, ___) -> Literal[False]:
         """
         No-op method for use with context management.
 

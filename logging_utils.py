@@ -32,7 +32,7 @@ setattr(logging, "TRACE", TRACE_LEVEL_NUM)
 class CustomLogger(logging.Logger):
     """Adds ``trace`` as a named logging level at 5."""
 
-    def trace(self, message, *args, **kwargs):
+    def trace(self, message: str, *args, **kwargs) -> None:
         """Custom logging level (5) below `logging.debug`."""
         if self.isEnabledFor(TRACE_LEVEL_NUM):
             self._log(
@@ -79,12 +79,12 @@ class OnlyAFCDebugs(logging.Filter):
         Determines whether a log record should be allowed through.
     """
 
-    def __init__(self, name="", safe_modules=None):
+    def __init__(self, name: str = "", safe_modules: Optional[set] = None) -> None:
         super().__init__(name)
         # Convert to a set for fast lookup
         self.safe_modules = set(safe_modules) if safe_modules else set()
 
-    def filter(self, record: logging.LogRecord):
+    def filter(self, record: logging.LogRecord) -> bool:
         """
         Determine whether a log record should be allowed through.
 
@@ -104,7 +104,7 @@ class OnlyAFCDebugs(logging.Filter):
         return (record.levelno > logging.DEBUG) or (record.name in self.safe_modules)
 
 
-def verify_logfile(filepath):
+def verify_logfile(filepath: str) -> bool:
     """
     Check that the filepath is valid to be a log file.
 
@@ -158,7 +158,7 @@ def setup_logging(
     filename: Optional[str] = None,
     log_level: Union[str, int, None] = None,
     console_log_level: Union[str, int, None] = None,
-):
+) -> None:
     """
     Configure the logger, handlers, and filters.
 
@@ -283,7 +283,7 @@ def setup_logging(
             logger.info(f"Logging to {loc} with level {level}")
 
 
-def update_logging():
+def update_logging() -> None:
     """
     Series of questions allowing user to update logging configuration.
 

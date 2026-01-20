@@ -1,8 +1,8 @@
 from typing import List, Union, cast
 
-import lmfit
 import matplotlib.pyplot as plt
 import numpy as np
+from lmfit.model import ModelResult
 from matplotlib.figure import Figure
 
 from logging_utils import get_logger
@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 VALID_AXES = {"x", "y", "z"}
 
 
-def _plane_fit_string(fit_result, axes):
+def _plane_fit_string(fit_result: ModelResult, axes: str | list[str]) -> str:
     """
     Generate a report on the 2D Gaussian fit in a plane. See `plot_2dfit`.
     """
@@ -34,7 +34,7 @@ def _plane_fit_string(fit_result, axes):
     return "\n".join(best_fit)
 
 
-def _para_fit_string(fit_result, axis):
+def _para_fit_string(fit_result: ModelResult, axis: str) -> str:
     """
     Generate a report on the parabola fit to beam width vs distance. See `plot_para_fit`.
     """
@@ -46,7 +46,7 @@ def _para_fit_string(fit_result, axis):
     return "\n".join(best_fit)
 
 
-def _lin_fit_string(fit_result, axes):
+def _lin_fit_string(fit_result: ModelResult, axes: str | list[str]) -> str:
     """
     Generate a report on the linear fit to peak position vs distance. See `plot_lin_fit`.
     """
@@ -57,7 +57,7 @@ def _lin_fit_string(fit_result, axes):
     return "\n".join(best_fit)
 
 
-def _gaussbeam_fit_string(fit_result, axes):
+def _gaussbeam_fit_string(fit_result: ModelResult, axes: str | list[str]) -> str:
     """
     Generate a report of the 3D Gaussian beam fit. See `plot_3dfit`.
     """
@@ -97,7 +97,7 @@ def plot_2dfit(
     axis1_grid: np.ndarray,
     axes: Union[str, List[str]],
     plane: Distance,
-    fit_result: lmfit.model.ModelResult,
+    fit_result: ModelResult,
 ) -> Figure:
     """
     Plot the result of fitting a circular Gaussian to a single plane.
@@ -228,7 +228,7 @@ def plot_para_fit(
     widths: np.ndarray,
     widths_unc: np.ndarray,
     planes_microns: np.ndarray,
-    result: lmfit.model.ModelResult,
+    result: ModelResult,
 ) -> Figure:
     """
     Plot the result of fitting beam width vs focus-axis distance with a parabola.
@@ -310,7 +310,7 @@ def plot_3dfit(
     axis0_cube: np.ndarray,
     axis1_cube: np.ndarray,
     focus_cube: np.ndarray,
-    result: lmfit.model.ModelResult,
+    result: ModelResult,
 ) -> Figure:
     """
     Plot the result of fitting a Gaussian beam to 3D data.
@@ -420,7 +420,7 @@ def plot_lin_fit(
     axis_peak_pos: np.ndarray,
     axis_peak_unc: np.ndarray,
     planes_microns: np.ndarray,
-    result: lmfit.model.ModelResult,
+    result: ModelResult,
 ) -> Figure:
     """
     Plot the result of fitting beam position vs focus-axis distance with a line.

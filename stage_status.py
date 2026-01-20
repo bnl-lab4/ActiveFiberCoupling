@@ -23,7 +23,7 @@ def run(
     expose: bool = True,
     verbose: bool = True,
     log: bool = False,
-):
+) -> None:
     """
     Print the status of all/some of steppers, piezos, and sensor.
 
