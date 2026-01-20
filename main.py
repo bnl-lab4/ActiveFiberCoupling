@@ -26,7 +26,7 @@ import sys
 import traceback  # show traceback in main menu
 import warnings
 from collections.abc import Callable
-from typing import Any, Dict, Literal, Optional, Union, cast
+from typing import Any, Literal, Optional, Union, cast
 
 import continuous_readout
 import grid_search
@@ -66,7 +66,7 @@ STAGENAME_LIST: tuple[str, ...] = (
     "simstage_labtel",
     "simstage_skytel",
 )
-SENSOR_LIST: tuple[Dict[str, Any], ...] = (
+SENSOR_LIST: tuple[dict[str, Any], ...] = (
     PIPLATE0,
     PIPLATE1,
     SIMSENSOR_ASPH,
@@ -80,7 +80,7 @@ PIEZO_PORT_LIST: tuple[Optional[str], ...] = (
     None,
     None,
 )
-STEPPER_DICT_LIST: tuple[Optional[Dict[str, str]], ...] = (
+STEPPER_DICT_LIST: tuple[Optional[dict[str, str]], ...] = (
     STEPPER_DICT0,
     STEPPER_DICT1,
     None,
@@ -273,7 +273,7 @@ class MenuEntry:
         text: str,
         func: Optional[Callable] = None,
         args_config: tuple[str, ...] = (),
-        kwargs_config: Dict["str", dict] = {},
+        kwargs_config: dict["str", dict] = {},
     ) -> None:
         self.text = text
         self.func = func
@@ -497,13 +497,13 @@ class ProgramController:
                     logger.warning(
                         f"One or more of TicUSB, Serial, DAQ is a stub. Loading replacement simulation classes for stage {NAME}."
                     )
-                    sensor_dict = cast(Dict[str, Any], SIMSENSOR_REPLACEMENT)
+                    sensor_dict = cast(dict[str, Any], SIMSENSOR_REPLACEMENT)
                     sensor = self.stack.enter_context(SimulationSensor(**sensor_dict))
                     stage = self.stack.enter_context(
                         SimulationStageDevices(NAME + "_SIMSENSOR", sensor=sensor)
                     )
                 else:
-                    sensor_dict = cast(Dict[str, Any], SENSOR)
+                    sensor_dict = cast(dict[str, Any], SENSOR)
                     sensor = self.stack.enter_context(
                         Sensor(sensor_dict, sensor_dict["sensortype"])
                     )
@@ -518,7 +518,7 @@ class ProgramController:
                         )
                     )
             else:
-                sensor_dict = cast(Dict[str, Any], SENSOR)
+                sensor_dict = cast(dict[str, Any], SENSOR)
                 sensor = self.stack.enter_context(SimulationSensor(**sensor_dict))
                 stage = self.stack.enter_context(
                     SimulationStageDevices(NAME, sensor=sensor)

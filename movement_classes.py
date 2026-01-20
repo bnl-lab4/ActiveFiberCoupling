@@ -13,7 +13,7 @@ import contextlib
 import enum
 import time
 import warnings
-from typing import Dict, Literal, Optional, Union
+from typing import Literal, Optional, Union
 
 import yaml
 from typing_extensions import assert_never
@@ -716,7 +716,7 @@ class StageDevices:
         Name of the stage.
     piezo_port : str
         File path for the piezo controller connection.
-    stepper_sns : Dict[str, str]
+    stepper_sns : dict[str, str]
         Dictionary of strings mapping axis labels (x, y, z) to their
         respective controller boards' serial numbers.
     sensor : `sensor_classes.Sensor`
@@ -737,7 +737,7 @@ class StageDevices:
         Name of the stage.
     sensor : `sensor_classes.Sensor`
         Sensor used with the stage.
-    axes : Dict[str, `StageAxis` or ``None``]
+    axes : dict[str, `StageAxis` or ``None``]
         Dictionary of stage axes, with the axis names as keys and
         `StageAxis` classes as values.
     piezo_port : str
@@ -772,7 +772,7 @@ class StageDevices:
         self,
         name: str,
         piezo_port: Optional[str],
-        stepper_sns: Optional[Dict[str, str]],
+        stepper_sns: Optional[dict[str, str]],
         sensor: Optional[Sensor] = None,
         piezo_baud_rate: int = 115200,
         require_connection: bool = False,
@@ -780,7 +780,7 @@ class StageDevices:
     ) -> None:
         self.name = name
         self.sensor = sensor
-        self.axes: Dict[str, StageAxis] = {}
+        self.axes: dict[str, StageAxis] = {}
         self.piezo_port = piezo_port
         self.piezo_baud_rate = piezo_baud_rate
         self._exit_stack = contextlib.ExitStack()  # for context management

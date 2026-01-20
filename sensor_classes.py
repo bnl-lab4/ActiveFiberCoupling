@@ -12,7 +12,7 @@ from __future__ import annotations
 import contextlib
 import enum
 import socket
-from typing import Dict, Literal, Optional, Union
+from typing import Literal, Optional, Union
 
 import sigfig
 
@@ -54,7 +54,7 @@ class Piplate:
 
     Parameters
     ----------
-    connection_dict : Dict[str, str]
+    connection_dict : dict[str, str]
         A dictionary of the necessary info for reading out the voltage
         from the Pi-Plate. This must include the Pi-Plate address and
         channel (and the `SensorType` `PIPLATE` enum for `Sensor`).
@@ -73,7 +73,7 @@ class Piplate:
     `Sensor` (parent).
     """
 
-    def __init__(self, connection_dict: Dict[str, str]) -> None:
+    def __init__(self, connection_dict: dict[str, str]) -> None:
         self.addr = connection_dict["addr"]
         self.channel = connection_dict["channel"]
         DAQ.VerifyADDR(self.addr)
@@ -156,7 +156,7 @@ class Socket:
 
     Parameters
     ----------
-    connection_dict : Dict[str, str]
+    connection_dict : dict[str, str]
         A dictionary of the necessary info for reading out the voltage
         from the Pi-Plate. This must include the host IP address and port
         (and the `SensorType` `SOCKET` enum for `Sensor`).
@@ -179,7 +179,7 @@ class Socket:
     ``get_timestamps.py`` are available for doing this on a windows machine.
     """
 
-    def __init__(self, connection_dict: Dict[str, str]) -> None:
+    def __init__(self, connection_dict: dict[str, str]) -> None:
         self.host = connection_dict["host"]
         self.port = connection_dict["port"]
         self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -265,7 +265,7 @@ class Sensor:
 
     Parameters
     ----------
-    connection_dict : Dict[str, str]
+    connection_dict : dict[str, str]
         A dictionary of the necessary info for reading out the sensor.
         Must contain the sensor type as a `SensorType` enumeration.
 
@@ -284,7 +284,7 @@ class Sensor:
 
     def __init__(
         self,
-        connection_dict: Dict[str, str],
+        connection_dict: dict[str, str],
         sensor_type: Optional[enum.Enum] = SensorType.PIPLATE,
     ) -> None:
         self._exit_stack = contextlib.ExitStack()

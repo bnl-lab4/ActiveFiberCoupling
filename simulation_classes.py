@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import contextlib
 import math
-from typing import Dict, Literal, Optional, Union
+from typing import Literal, Optional, Union
 
 from typing_extensions import assert_never
 
@@ -610,10 +610,10 @@ class SimulationStageDevices:
         Name of the simulated stage.
     sensor : SimulationSensor
         Simulated sensor used for this simulated stage.
-    axes : Dict[str, `StageAxis` or ``None``]
+    axes : dict[str, `StageAxis` or ``None``]
         Dictionary of stage axes, with the axis names as keys and
         `SimulationStageAxis` classes as values.
-    stepper_sns : Dict[{'x', 'y', 'z'}, str]
+    stepper_sns : dict[{'x', 'y', 'z'}, str]
         Dummy "serial numbers" for the steppers.
 
     Methods
@@ -647,7 +647,7 @@ class SimulationStageDevices:
     def __init__(self, name: str, sensor: Optional[SimulationSensor] = None) -> None:
         self.name = name
         self.stepper_sns = dict(x=f"{name}_simX", y=f"{name}_simY", z=f"{name}_simZ")
-        self.axes: Dict[str, SimulationStageAxis] = {}
+        self.axes: dict[str, SimulationStageAxis] = {}
         self.sensor = sensor
         self._exit_stack = contextlib.ExitStack()  # for context management
         # If a simulation sensor is provided, link it to this stage instance
@@ -659,21 +659,21 @@ class SimulationStageDevices:
             self.axes[axis] = SimulationStageAxis(axis, stepper_sn)
             logger.info(f"{self.name} established SimulationStageAxis {stepper_sn}")
 
-    def get_piezo_position(self) -> Dict[str, Distance]:
+    def get_piezo_position(self) -> dict[str, Distance]:
         """Returns axis-keyed dictionary of piezo positions."""
         return {
             axis: stage_axis.get_piezo_position()
             for axis, stage_axis in self.axes.items()
         }
 
-    def get_stepper_position(self) -> Dict[str, Distance]:
+    def get_stepper_position(self) -> dict[str, Distance]:
         """Returns axis-keyed dictionary of stepper positions."""
         return {
             axis: stage_axis.get_stepper_position()
             for axis, stage_axis in self.axes.items()
         }
 
-    def get_current_position(self) -> Dict[str, Distance]:
+    def get_current_position(self) -> dict[str, Distance]:
         """Returns axis-keyed dictionary of axis positions."""
         return {
             axis: stage_axis.get_current_position()
