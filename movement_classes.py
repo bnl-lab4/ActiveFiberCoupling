@@ -13,7 +13,7 @@ import contextlib
 import enum
 import time
 import warnings
-from typing import Literal, Optional, Union
+from typing import Literal, Optional
 
 import yaml
 from typing_extensions import assert_never
@@ -448,7 +448,7 @@ class StageAxis:
 
         return MoveResult(Distance(clamped, "volts"), MovementType.PIEZO)
 
-    def _goto_stepper(self, steps: Union[int, float]) -> MoveResult:
+    def _goto_stepper(self, steps: int | float) -> MoveResult:
         """
         Set the stepper to the desired position (steps).
 
@@ -850,7 +850,7 @@ class StageDevices:
         """Returns `name`."""
         return self.name
 
-    def deenergize(self, axes: Union[str, list[str]]) -> None:
+    def deenergize(self, axes: str | list[str]) -> None:
         """
         Deenergize the steppers of one or more axes.
 
@@ -866,7 +866,7 @@ class StageDevices:
         for axis in axes:
             self.axes[axis].deenergize()
 
-    def home(self, axes: Union[str, list[str]]) -> None:
+    def home(self, axes: str | list[str]) -> None:
         """
         Home the steppers of one or more axes.
 
@@ -882,7 +882,7 @@ class StageDevices:
         for axis in axes:
             self.axes[axis].home()
 
-    def energize(self, axes: Union[str, list[str]] = "all") -> None:
+    def energize(self, axes: str | list[str] = "all") -> None:
         """
         Energize the steppers of one or more axes.
 
@@ -964,9 +964,7 @@ class StageDevices:
             return None
         return self.sensor.read()
 
-    def integrate(
-        self, exposure_time: Union[int, float], avg: bool = True
-    ) -> float | None:
+    def integrate(self, exposure_time: int | float, avg: bool = True) -> float | None:
         """
         Integrate the value of the sensor of `exposure_time`.
 

@@ -5,7 +5,7 @@ Control logging configuration of ActiveFiberCoupling.
 import logging
 import os
 import warnings
-from typing import Optional, Union, cast
+from typing import Optional, cast
 
 SAFE_MODULES = {
     "movement_classes",
@@ -156,8 +156,8 @@ def setup_logging(
     log_to_console: Optional[bool] = None,
     log_to_file: Optional[bool] = None,
     filename: Optional[str] = None,
-    log_level: Union[str, int, None] = None,
-    console_log_level: Union[str, int, None] = None,
+    log_level: str | int | None = None,
+    console_log_level: str | int | None = None,
 ) -> None:
     """
     Configure the logger, handlers, and filters.

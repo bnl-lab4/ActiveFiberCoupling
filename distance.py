@@ -5,7 +5,7 @@ Defines the `Distance` class as a general quantity with several equivalent units
 from __future__ import annotations
 
 from collections.abc import Sequence as sequence  # sorry
-from typing import Sequence, SupportsFloat, Union
+from typing import Sequence, SupportsFloat
 
 import sigfig
 
@@ -372,7 +372,7 @@ class Distance:
     ######### Functions
 
     def prettyprint(
-        self, which: Union[Sequence[str], str, None] = None, stacked: bool = False
+        self, which: Sequence[str] | str | None = None, stacked: bool = False
     ) -> str | list[str]:
         """
         Print the value nicely formatted and rounded.

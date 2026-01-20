@@ -6,7 +6,7 @@ help function for the main menu in `main.py`.
 import inspect
 import warnings
 from collections.abc import Callable
-from typing import Any, Optional, Sequence, Union
+from typing import Any, Optional, Sequence
 
 from logging_utils import get_logger
 from movement_classes import Distance, StageDevices
@@ -139,7 +139,7 @@ def str_to_dict(tokens: list[str]) -> dict[str, Any]:
     return kwargs_dict
 
 
-def sequence_to_str(sequence: Sequence, joined: bool = True) -> Union[str, list[str]]:
+def sequence_to_str(sequence: Sequence, joined: bool = True) -> str | list[str]:
     """
     Turns a sequence into formatted a string for printing. See `dict_to_str`.
     """
@@ -188,7 +188,7 @@ def sequence_to_str(sequence: Sequence, joined: bool = True) -> Union[str, list[
     return sequence_print
 
 
-def dict_to_str(mydict: dict[str, Any], joined: bool = True) -> Union[str, list[str]]:
+def dict_to_str(mydict: dict[str, Any], joined: bool = True) -> str | list[str]:
     """
     Turns a dict into a formatted string for printing.
 

@@ -2,8 +2,6 @@
 Continuously print the sensor reading until interrupted.
 """
 
-from typing import Union
-
 from logging_utils import get_logger
 from movement_classes import StageDevices
 
@@ -11,9 +9,7 @@ from movement_classes import StageDevices
 logger = get_logger(__name__)
 
 
-def run(
-    stage: StageDevices, exposure_time: Union[int, float], avg: bool = True
-) -> None:
+def run(stage: StageDevices, exposure_time: int | float, avg: bool = True) -> None:
     """
     Continuously print the sensor output with the supplied exposure time.
 

@@ -8,7 +8,7 @@
 import copy
 from collections.abc import Sequence as sequence
 from datetime import datetime
-from typing import Optional, Sequence, SupportsFloat, Union, cast
+from typing import Optional, Sequence, SupportsFloat, cast
 
 import lmfit
 import matplotlib.pyplot as plt
@@ -131,7 +131,7 @@ def gaussbeam(
 
 
 def gaussbeam_fit_3d(
-    axes: Union[str, list[str]],
+    axes: str | list[str],
     movement_type: MovementType,
     stagename: str,
     axis0_cube: np.ndarray,
@@ -244,7 +244,7 @@ def gaussbeam_fit_3d(
 
 
 def gaussbeam_fit_2d(
-    axes: Union[str, list[str]],
+    axes: str | list[str],
     movement_type: MovementType,
     stagename: str,
     axis0_grid: np.ndarray,
@@ -337,7 +337,7 @@ def gaussbeam_fit_2d(
 
 
 def width_parafit(
-    axes: Union[str, list[str]],
+    axes: str | list[str],
     movement_type: MovementType,
     stagename: str,
     planes: Sequence[Distance],
@@ -419,7 +419,7 @@ def width_parafit(
 
 
 def peaks_linfit(
-    axes: Union[str, list[str]],
+    axes: str | list[str],
     first_axis: bool,
     movement_type: MovementType,
     stagename: str,
@@ -514,7 +514,7 @@ def plane_grid(
     axes: list,
     axis0: np.ndarray,
     axis1: np.ndarray,
-    exposure_time: Union[int, float],
+    exposure_time: int | float,
     show_plot: bool = False,
     log_plot: bool = True,
 ) -> np.ndarray:
@@ -592,15 +592,15 @@ def plane_grid(
 def run(
     stage: StageDevices,
     movement_type: MovementType,
-    exposure_time: Union[int, float],
-    spacing: Union[None, Distance, Sequence[Distance]] = None,  # default 10 volts
-    num_points: Union[None, int, Sequence[int]] = None,
-    center: Union[None, str, Sequence[Distance]] = None,
+    exposure_time: int | float,
+    spacing: None | Distance | Sequence[Distance] = None,  # default 10 volts
+    num_points: None | int | Sequence[int] = None,
+    center: None | str | Sequence[Distance] = None,
     limits: Optional[
         Sequence[Distance]
     ] = None,  # 2-list of (2-lists of) Distance objects
-    axes: Union[list[str], str] = "xz",
-    planes: Union[None, int, Sequence[Distance]] = None,  # default 3 planes
+    axes: list[str] | str = "xz",
+    planes: None | int | Sequence[Distance] = None,  # default 3 planes
     fit_3d: bool = True,
     fit_2d: bool = True,
     fit_widths: bool = True,

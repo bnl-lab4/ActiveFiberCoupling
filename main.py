@@ -26,7 +26,7 @@ import sys
 import traceback  # show traceback in main menu
 import warnings
 from collections.abc import Callable
-from typing import Any, Literal, Optional, Union, cast
+from typing import Any, Literal, Optional, cast
 
 import continuous_readout
 import grid_search
@@ -128,7 +128,7 @@ logger = get_logger(__name__)
 
 
 def accept_input_args(
-    input_tuple: list[Union[bool, str, int, None]], input_args: list[str]
+    input_tuple: list[bool | str | int | None], input_args: list[str]
 ) -> list:
     """
     Parses any command line args passed when starting the script.

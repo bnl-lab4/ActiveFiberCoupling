@@ -13,7 +13,7 @@ from collections.abc import Sequence as sequence  # sorry
 from copy import copy
 from datetime import datetime
 from numbers import Real
-from typing import Optional, Sequence, Type, Union, cast
+from typing import Optional, Sequence, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -186,7 +186,7 @@ def hill_climb(
     max_steps: int,
     softening: float,
     Ndecrease: int,
-    exposure_time: Union[int, float],
+    exposure_time: int | float,
 ) -> tuple[np.ndarray, bool]:
     """
     Hill climb along a single step size with a single step size.
@@ -270,7 +270,7 @@ def hill_climb(
 def hill_climber(
     stage: StageDevices,
     axis: str,
-    exposure_time: Union[int, float],
+    exposure_time: int | float,
     movement_type: MovementType,
     init_step: Distance,
     step_factor: float,
@@ -462,7 +462,7 @@ def hill_climber(
 def arg_check(
     arg: int | float | bool | MovementType | None,
     argname,
-    argtype: Type,
+    argtype: type,
     axes: str | list[str],
     extra: Optional[Callable] = None,
     extra_text: str = "",
@@ -480,7 +480,7 @@ def arg_check(
         The argument to check and duck type.
     argname : str
         The name of the arg, for a potential error message.
-    argtype : Type
+    argtype : type
         The type that `arg` or its elements should be.
     axes : str or list thereof
         `arg` is duck-typed to be the same length as `axes`.
@@ -527,22 +527,22 @@ def arg_check(
 
 def run(
     stage: StageDevices,
-    movement_type: Union[MovementType, Sequence[MovementType]],
-    exposure_time: Union[int, float, Sequence[Union[int, float]]],
-    axes: Union[None, str, list[str]] = None,
-    init_step: Union[None, Distance, Sequence[Distance]] = None,
-    step_factor: Union[float, Sequence[float]] = 0.5,
-    init_positive: Union[bool, Sequence[bool]] = True,
-    rel_tol: Union[float, Sequence[float]] = 1e-2,
-    softening: Union[float, Sequence[float]] = 0.0,
-    abs_tol: Union[float, Sequence[float]] = 0.0,
-    Ndecrease: Union[int, Sequence[int]] = 1,
-    max_climbs: Union[int, Sequence[int]] = 16,
-    max_steps: Union[int, Sequence[int]] = 100,
-    min_step: Union[None, Distance, Sequence[Distance]] = None,
+    movement_type: MovementType | Sequence[MovementType],
+    exposure_time: int | float | Sequence[int | float],
+    axes: None | str | list[str] = None,
+    init_step: None | Distance | Sequence[Distance] = None,
+    step_factor: float | Sequence[float] = 0.5,
+    init_positive: bool | Sequence[bool] = True,
+    rel_tol: float | Sequence[float] = 1e-2,
+    softening: float | Sequence[float] = 0.0,
+    abs_tol: float | Sequence[float] = 0.0,
+    Ndecrease: int | Sequence[int] = 1,
+    max_climbs: int | Sequence[int] = 16,
+    max_steps: int | Sequence[int] = 100,
+    min_step: None | Distance | Sequence[Distance] = None,
     order: Optional[tuple[int, ...]] = None,
-    show_plot: Union[bool, Sequence[bool]] = False,
-    log_plot: Union[bool, Sequence[bool]] = True,
+    show_plot: bool | Sequence[bool] = False,
+    log_plot: bool | Sequence[bool] = True,
 ) -> None:
     """
     Hill climb along one or more axes (individually) with successively smaller step sizes.

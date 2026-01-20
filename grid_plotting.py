@@ -1,4 +1,4 @@
-from typing import Union, cast
+from typing import cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -95,7 +95,7 @@ def plot_2dfit(
     response_grid: np.ndarray,
     axis0_grid: np.ndarray,
     axis1_grid: np.ndarray,
-    axes: Union[str, list[str]],
+    axes: str | list[str],
     plane: Distance,
     fit_result: ModelResult,
 ) -> Figure:
@@ -185,7 +185,7 @@ def plot_plane(
     response_grid: np.ndarray,
     axis0_grid: np.ndarray,
     axis1_grid: np.ndarray,
-    axes: Union[str, list[str]],
+    axes: str | list[str],
     plane: Distance,
 ) -> Figure:
     """
@@ -224,7 +224,7 @@ def plot_plane(
 
 
 def plot_para_fit(
-    axes: Union[str, list[str]],
+    axes: str | list[str],
     widths: np.ndarray,
     widths_unc: np.ndarray,
     planes_microns: np.ndarray,
@@ -306,7 +306,7 @@ def plot_para_fit(
 
 
 def plot_3dfit(
-    axes: Union[str, list[str]],
+    axes: str | list[str],
     axis0_cube: np.ndarray,
     axis1_cube: np.ndarray,
     focus_cube: np.ndarray,

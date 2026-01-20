@@ -12,7 +12,7 @@ from __future__ import annotations
 import contextlib
 import enum
 import socket
-from typing import Literal, Optional, Union
+from typing import Literal, Optional
 
 import sigfig
 
@@ -105,7 +105,7 @@ class Piplate:
         #             f"read power {sigfig.round(power, 6, warn=False)}")
         return power
 
-    def integrate(self, exposure_time: Union[int, float], avg: bool = True) -> float:
+    def integrate(self, exposure_time: int | float, avg: bool = True) -> float:
         """
         Integrate the voltage of the Pi-plate  over many readings.
 
@@ -231,7 +231,7 @@ class Socket:
         #         f"returned {sigfig.round(power, 6, warn=False)} averaged over 100ms")
         return power
 
-    def integrate(self, exposure_time: Union[int, float], avg: bool = True) -> float:
+    def integrate(self, exposure_time: int | float, avg: bool = True) -> float:
         """
         Get a sensor reading over `exposure_time` ms from the server.
 
@@ -330,7 +330,7 @@ class Sensor:
         """
         return self.sensor.read()
 
-    def integrate(self, exposure_time: Union[int, float], avg: bool = True) -> float:
+    def integrate(self, exposure_time: int | float, avg: bool = True) -> float:
         """
         Returns the value of the sensor over `exposure_time`.
 

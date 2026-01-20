@@ -3,7 +3,7 @@ Reports the status of a stage (`movement_classes.StageDevices`).
 """
 
 import math
-from typing import Optional, Union
+from typing import Optional
 
 import sigfig
 
@@ -18,7 +18,7 @@ VALID_AXES = ["x", "y", "z"]
 
 def run(
     stage: StageDevices,
-    exposure_time: Union[int, float],
+    exposure_time: int | float,
     which: Optional[str] = None,
     expose: bool = True,
     verbose: bool = True,

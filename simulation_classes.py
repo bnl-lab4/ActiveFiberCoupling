@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import contextlib
 import math
-from typing import Literal, Optional, Union
+from typing import Literal, Optional
 
 from typing_extensions import assert_never
 
@@ -745,7 +745,7 @@ class SimulationStageDevices:
         return self.sensor.integrate(exposure_time, avg)
 
     # --- Dummy methods to match the real hardware class interface ---
-    def deenergize(self, axes: Union[str, list[str]] = "all") -> None:
+    def deenergize(self, axes: str | list[str] = "all") -> None:
         """
         Call `deenergize` (no-op dummy) on one or more axes.
 
@@ -759,7 +759,7 @@ class SimulationStageDevices:
         for axis in list(axes):
             self.axes[axis].deenergize()
 
-    def home(self, axes: Union[str, list[str]] = "all") -> None:
+    def home(self, axes: str | list[str] = "all") -> None:
         """
         Call `home` on one or more axes.
 
@@ -773,7 +773,7 @@ class SimulationStageDevices:
         for axis in list(axes):
             self.axes[axis].home()
 
-    def energize(self, axes: Union[str, list[str]] = "all") -> None:
+    def energize(self, axes: str | list[str] = "all") -> None:
         """
         Call `energize` (no-op dummy) on one or more axes.
 
