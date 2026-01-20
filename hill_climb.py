@@ -13,7 +13,7 @@ from collections.abc import Sequence as sequence  # sorry
 from copy import copy
 from datetime import datetime
 from numbers import Real
-from typing import Optional, Sequence, Tuple, Type, Union, cast
+from typing import Optional, Sequence, Type, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -187,7 +187,7 @@ def hill_climb(
     softening: float,
     Ndecrease: int,
     exposure_time: Union[int, float],
-) -> Tuple[np.ndarray, bool]:
+) -> tuple[np.ndarray, bool]:
     """
     Hill climb along a single step size with a single step size.
 
@@ -540,7 +540,7 @@ def run(
     max_climbs: Union[int, Sequence[int]] = 16,
     max_steps: Union[int, Sequence[int]] = 100,
     min_step: Union[None, Distance, Sequence[Distance]] = None,
-    order: Optional[Tuple[int, ...]] = None,
+    order: Optional[tuple[int, ...]] = None,
     show_plot: Union[bool, Sequence[bool]] = False,
     log_plot: Union[bool, Sequence[bool]] = True,
 ) -> None:

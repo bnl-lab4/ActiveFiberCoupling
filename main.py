@@ -26,7 +26,7 @@ import sys
 import traceback  # show traceback in main menu
 import warnings
 from collections.abc import Callable
-from typing import Any, Dict, Literal, Optional, Tuple, Union, cast
+from typing import Any, Dict, Literal, Optional, Union, cast
 
 import continuous_readout
 import grid_search
@@ -59,28 +59,28 @@ SIMSENSOR_SKYTELE = dict(propagation_axis="y", focal_ratio=7.0, angle_of_deviati
 STEPPER_DICT0 = dict(x="00485175", y="00485185", z="00485159")
 STEPPER_DICT1 = dict(x="00485149", y="00485151", z="00485168")
 
-STAGENAME_LIST: Tuple[str, ...] = (
+STAGENAME_LIST: tuple[str, ...] = (
     "stage0",
     "stage1",
     "simstage_asph",
     "simstage_labtel",
     "simstage_skytel",
 )
-SENSOR_LIST: Tuple[Dict[str, Any], ...] = (
+SENSOR_LIST: tuple[Dict[str, Any], ...] = (
     PIPLATE0,
     PIPLATE1,
     SIMSENSOR_ASPH,
     SIMSENSOR_LABTELE,
     SIMSENSOR_SKYTELE,
 )
-PIEZO_PORT_LIST: Tuple[Optional[str], ...] = (
+PIEZO_PORT_LIST: tuple[Optional[str], ...] = (
     "/dev/ttyACM0",
     "/dev/ttyACM1",
     None,
     None,
     None,
 )
-STEPPER_DICT_LIST: Tuple[Optional[Dict[str, str]], ...] = (
+STEPPER_DICT_LIST: tuple[Optional[Dict[str, str]], ...] = (
     STEPPER_DICT0,
     STEPPER_DICT1,
     None,
@@ -272,7 +272,7 @@ class MenuEntry:
         self,
         text: str,
         func: Optional[Callable] = None,
-        args_config: Tuple[str, ...] = (),
+        args_config: tuple[str, ...] = (),
         kwargs_config: Dict["str", dict] = {},
     ) -> None:
         self.text = text

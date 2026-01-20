@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import contextlib
 import math
-from typing import Dict, Literal, Optional, Tuple, Union
+from typing import Dict, Literal, Optional, Union
 
 from typing_extensions import assert_never
 
@@ -26,30 +26,30 @@ WAVELENGTH = 0.65  # microns
 # ##############################################################################
 
 
-def _vect_sub(v1: Tuple, v2: Tuple) -> Tuple:
+def _vect_sub(v1: tuple, v2: tuple) -> tuple:
     """
     Subtracts vector v2 from v1.
 
     Parameters
     ----------
-    v1, v2 : Tuple[float, float, float]
+    v1, v2 : tuple[float, float, float]
         The two 3-tuplets to be subtracted element-wise.
 
     Returns
     -------
-    Tuple[float, float, float]
+    tuple[float, float, float]
         New 3-tuplet resulting from the element-wise subraction.
     """
     return (v1[0] - v2[0], v1[1] - v2[1], v1[2] - v2[2])
 
 
-def _vect_dot(v1: Tuple, v2: Tuple) -> float:
+def _vect_dot(v1: tuple, v2: tuple) -> float:
     """
     Calculates the dot product of two vectors.
 
     Parameters
     ----------
-    v1, v2 : Tuple[float, float, float]
+    v1, v2 : tuple[float, float, float]
         The two 3-tuplets to take the dot product of.
 
     Returns
@@ -60,13 +60,13 @@ def _vect_dot(v1: Tuple, v2: Tuple) -> float:
     return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2]
 
 
-def _vect_mag_sq(v: Tuple) -> float:
+def _vect_mag_sq(v: tuple) -> float:
     """
     Calculates the squared magnitude of a vector.
 
     Parameters
     ----------
-    v1 : Tuple[float, float, float]
+    v1 : tuple[float, float, float]
         The 3-tuplet to find the squared magnitude of.
 
     Returns
@@ -96,7 +96,7 @@ class SimulationSensor:
     focal_ratio : float, default=4.0
         Focal ratio of the beam. This used to calculate the beam waist.
         The default is that of the aspheric lenses that have been used so far.
-    beam_waist_position : Tuple[float, float, float], default=(2000.0, 2000.0, 2000.0)
+    beam_waist_position : tuple[float, float, float], default=(2000.0, 2000.0, 2000.0)
         The position of the beam waist in microns. Defaults to the center of
         the stepper travel range.
     angle_of_deviation : float, default=0.0
@@ -117,7 +117,7 @@ class SimulationSensor:
     propagation_axis : {'x', 'y', 'z'}
         Axis along which the beam primarily (see `angle_of_deviation`)
         propagates.
-    waist_post : Tuple[float, float, float]
+    waist_post : tuple[float, float, float]
         Position of the beam waist in microns, where the origin (0,0,0) is
         located at the lower limits of the steppers.
     angle : float
@@ -129,7 +129,7 @@ class SimulationSensor:
         Beam waist. See `Notes` for discussion.
     z_R : float
         Rayleigh range. See `Notes` for discussion.
-    k_beam : Tuple[float, float, float]
+    k_beam : tuple[float, float, float]
         Unit vector pointing in the true direction of beam propagation.
     stage : `SimulationStageDevices` or None
         Simulated stage connected to this simulated sensor. The piezo and
@@ -171,7 +171,7 @@ class SimulationSensor:
         self,
         propagation_axis: str,
         focal_ratio: float = 4.0,
-        beam_waist_position: Tuple[float, float, float] = (2000.0, 2000.0, 2000.0),
+        beam_waist_position: tuple[float, float, float] = (2000.0, 2000.0, 2000.0),
         angle_of_deviation: float = 0.0,
         peak_intensity: float = 1.0,
     ) -> None:
