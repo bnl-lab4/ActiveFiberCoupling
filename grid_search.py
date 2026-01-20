@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as stats
 import sigfig
+from lmfit.model import ModelResult
 
 from distance import Distance
 from grid_plotting import (
@@ -175,6 +176,10 @@ def gaussbeam_fit_3d(
         will be
         ``./log_plots/yyyy-mm-dd_hh:mm:ss_<stagename>_<movement_type>_Gaussian_beam_fit.png``.
 
+    Returns
+    -------
+    lmfit.model.ModelResult
+
     Notes
     -----
     This currently assumes that the propagation direction is exactly along
@@ -284,6 +289,10 @@ def gaussbeam_fit_2d(
         Whether to save the plot of the fit result. The plot's filepath
         will be
         ``./log_plots/yyyy-mm-dd_hh:mm:ss_2dfit_<stagename>_<movement_type>_<focus_axis>-{plane in microns}um.png``.
+
+    Returns
+    -------
+    lmfit.model.ModelResult
     """
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
 
@@ -371,6 +380,10 @@ def width_parafit(
         will be
         ``./log_plots/yyyy-mm-dd_hh:mm:ss_parafit_<stagename>_<movement_type>_w-vs-<focus_axis>.png``.
 
+    Returns
+    -------
+    lmfit.model.ModelResult
+
     Notes
     -----
     Throughout, "beam width" usually refers to the $\sigma$ parameter in a
@@ -454,6 +467,10 @@ def peaks_linfit(
         where <axis> is the label of the axis of interest, as determined by
         `axes` and `first_axis`.
 
+    Returns
+    -------
+    lmfit.model.ModelResult
+
     Notes
     -----
     If the beam propagation axis is not exactly colinear with the stage's
@@ -530,6 +547,11 @@ def plane_grid(
         Whether to save the plot of the grid search. The plot's filepath
         will be
         ``./log_plots/yyyy-mm-dd_hh:mm:ss_gridvalues_<stagename>_<movement_type>_<focus_axis>-{plane in microns}um.png``.
+
+    Returns
+    -------
+    np.ndarray
+        Recorded sensor values.
     """
     focus_axis = list(VALID_AXES.difference(set(axes)))[0]
 
