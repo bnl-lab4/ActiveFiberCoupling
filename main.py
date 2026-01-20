@@ -1,11 +1,15 @@
+"""
+Connects to stages and provides a command line interface for them.
+"""
+
 ################ TODO
+# move sensor/piezo/stepper setup to config file (yaml)
 # recursive hill climbing
 # deviation angles in 3d fit
 # parse unit abbreviations in kwargs
 # populate default kwargs dictionaries
-# useful exceptions for input parsing
 # better handling of non-connected stage devices
-# rewrite command line arg handling to be more flexible (dict?)
+# rewrite command line arg handling to be more flexible (argparse?)
 #####################
 
 
@@ -96,20 +100,64 @@ WHICH_DEVICE_MAP = {"p": "piezo", "s": "stepper", "r": "sensor"}
 COMMAND_ARG_VALUE_DICT = dict(t=True, y=True, true=True, f=False, n=False, false=False)
 
 
-# custom warning format to remove the source line
 def custom_formatwarning(message, category, filename, lineno, _=None):
-    # Custom warning formatter that removes the source line.
+    """
+    Custom warning formatter that removes the source line.
+
+    Changes format to match logging config.
+
+    Parameters
+    ----------
+    messages : str
+    category : object
+    filename : str
+    lineno : int
+
+    Returns
+    -------
+    str
+        Reformatted warning message.
+    """
     return f"{filename}-line{lineno}-{category.__name__} :: {message}\n"
 
 
-# Initial logging/warning configuration
+# Initial logging
 logger = get_logger(__name__)
 
 
 def accept_input_args(
     input_tuple: List[Union[bool, str, int, None]], input_args: List[str]
 ) -> list:
-    # relies upon order of input_tuple, should be refactored
+    """
+    Parses any command line args passed when starting the script.
+
+    Valid command line arguments:
+        * autohome: ``bool`` - Whether to automatically home steppers upon connecting to them.
+        * requireconnection: ``bool`` - Whether to raise an exception, instead of a warning, if a device cannot be connected to.
+        * logtoconsole: ``bool`` - Whether to print log messages in the console.
+        * logtofile: ``bool`` - Whether to log to a file.
+        * logfile: ``str`` - File path for the log file.
+        * consoleloglevel: ``str`` - The name of the log level to use for console log messages.
+        * loglevel: ``str`` - The name of the log level to use overall for log messages.
+
+    Paremeters
+    ----------
+    input_tuple : list of bools, strs, ints, or Nones
+        Current or default values of the command line arguments.
+    input_args : list of str
+        Each element should be of the form "<arg name>-<value>" (e.g. "autohome-true").
+
+    Returns
+    -------
+    list
+        The updated values for the arguments.
+
+    Notes
+    -----
+    This is by far the worst-written piece of code. Currently, the logic
+    relies on the order of `input_tuple`. This should be refactored
+    to use argparse for parsing and a dictionary to store values.``
+    """
 
     for arg in input_args:
         if "-" not in arg:
@@ -155,7 +203,30 @@ def accept_input_args(
     return input_tuple
 
 
-def update_exposure_time(texp: float) -> float:
+def update_exposure_time(texp: int) -> int:
+    """
+    Updates the global exposure time.
+
+    The user enters the new exposure time in the command line. If the user
+    input cannot be converted to an integer, the exposure time remains unchanged.
+
+    Parameters
+    ----------
+    texp : int
+        The current exposure time.
+
+    Returns
+    -------
+    int
+        The new exposure time. May be the same as the previous exposure time.
+
+    Notes
+    -----
+    For `sensor_classes.Socket` sensors, the exposure time is the number of
+    milliseconds to integrate for. For `sensor_classes.Piplate`, the
+    exposure time is the number of times to read the sensor value; each
+    reading takes approximately one millisecond.
+    """
     print(
         f"Update default exposure time (currently {texp}):"
         + "(iterations for piplates, milliseconds for sockets)"
@@ -173,6 +244,28 @@ def update_exposure_time(texp: float) -> float:
 
 
 class MenuEntry:
+    """
+    Contains information about and can execute a single main menu option.
+
+    Parameters
+    ----------
+    text : str
+        Text describing the menu entry.
+    func : callable, optional
+        The function this entry will call. Can be ``None`` if the menu
+        entry is just being used for a text description. If `func` accepts
+        more than one of:
+        * stage
+        * movement_type
+        * exposure_time
+        then they must be in the above order.
+    args_config : tuple of strings, default=()
+        The non-keyword arguments that `func` requires.
+    kwargs_config : dict of str-keyed dicts, default={}
+        Each value should be a dictionary of keyword arguments. This can
+        allow the user to choose a common set kwarg values with a single keyword.
+    """
+
     def __init__(
         self,
         text: str,
@@ -186,6 +279,9 @@ class MenuEntry:
         self.kwargs_config = kwargs_config
 
     def to_dict(self):
+        """
+        Provides all attributes in the form of a dict.
+        """
         return dict(
             text=self.text,
             func=self.func,
@@ -196,7 +292,31 @@ class MenuEntry:
     def execute(
         self, controller: ProgramController, user_input_parts: List[str]
     ) -> None:
-        # Handle special case for help function
+        """
+        Interprets user input into kw/args and executes `self.func` with them.
+
+        Interprets the stage number and the movement type, gets the global
+        exposure time from `controller`, and kwarg preset name, if input,
+        and interprets the entered keyword arguments. Each argument must be
+        space separated, and keyword arguments should have the key and
+        value separated by "=". Verifies that each key supplied is a valid
+        part of the function signature. After interpreting, the function
+        call with args and kwargs is printed and the user is asked to
+        confirm that the call is correct. If the user does not confirm,
+        then the function call is aborted.
+
+        If `func` is ``None``, then a warning is raised.
+
+        Parameters
+        ----------
+        controller : ProgramController
+            The active program controller. Used to get the connected
+            stages, exposure time, and all menu entries.
+        user_input_parts : list of strs
+            The list of space-separated (keyword) arguments entered into
+            the command line interface.
+        """
+        # Handle special cases
         if self.func is None:
             logger.warning("No function assigned to this menu entry")
             return
@@ -213,7 +333,7 @@ class MenuEntry:
                 warnings.warn(f"{e} is not an acceptable stage key")
                 print("Function call aborted")
                 return
-        if "MovementType" in self.args_config:
+        if "movement_type" in self.args_config:
             try:
                 resolved_args.append(MOVEMENT_TYPE_MAP[user_input_parts[1]])
             except KeyError as e:
@@ -286,6 +406,41 @@ class MenuEntry:
 
 
 class ProgramController:
+    """
+    Connects to devices, stores state variables, and implements command
+    line interface.
+
+    Parameters
+    ----------
+    autohome : bool
+        Whether to automatically home steppers upon connecting to them.
+    require_connection : bool
+        Whether to raise an exception if a device cannot be connected to.
+    logging_settings : tuple of bools and strings
+        The settings for the logging configuration:
+            * logtoconsole: ``bool`` - Whether to print log messages in the console.
+            * logtofile: ``bool`` - Whether to log to a file.
+            * logfile: ``str`` - File path for the log file.
+            * consoleloglevel: ``str`` - The name of the log level to use for console log messages.
+            * loglevel: ``str`` - The name of the log level to use overall for log messages.
+
+    Attributes
+    ----------
+    autohome : bool
+        Whether to automatically home steppers upon connecting to them.
+    require_connection : bool
+        Whether to raise an exception if a device cannot be connected to.
+    logging_settings : tuple of bools and strings
+        See `Parameters` section.
+    exposure_time : int
+        The exposure time to use for functions if no exposure time is specified.
+    stages : dict(str, movement_classes.StageDevices)
+        Dictionary of all stages available, with names for keys.
+    menu : dict(str, str or MenuEntry)
+        Dictionary of menu entries, with names for keys. Menu section
+        headers have keys starting with "_" and the header text as a value (str).
+    """
+
     def __init__(
         self, autohome: bool, require_connection: bool, logging_settings: tuple
     ):
@@ -293,23 +448,40 @@ class ProgramController:
         self.require_connection = require_connection
         self.logging_settings = logging_settings
 
-        self.running = True
+        self._running = True
         self.exposure_time = 1000  # default value
         self.stages = {}
         self.stack = contextlib.ExitStack()
         self.menu = self._build_menu()
 
     def __enter__(self):
+        """
+        Set up logging and initialize all devices.
+        """
         logging_utils.setup_logging(*self.logging_settings)  # type: ignore [reportOptionalIterable]
         self._initialize_devices()
         return self
 
     def __exit__(self, _, __, ___):
+        """
+        Cleanly close and disconnect from devices.
+        """
         self.stack.close()
         logger.debug("Device contexts closed cleanly")
         return False
 
     def _initialize_devices(self):
+        """
+        Connect to and initialize a sensor, piezo controller, and three
+        steppers for each stage.
+
+        Iterates through global variables containing information about the
+        devices for each stage. For each stage, instantiates the
+        `sensor_classes.Sensor` before instantiating the
+        `movement_classes.StageDevices`. If a sensor cannot be connected to
+        (and `self.require_connection` is ``False``) then a simulation
+        stage instance is established instead.
+        """
         for i, (NAME, SENSOR, PIEZO_PORT, STEPPER_DICT) in enumerate(
             zip(STAGENAME_LIST, SENSOR_LIST, PIEZO_PORT_LIST, STEPPER_DICT_LIST)
         ):
@@ -352,6 +524,15 @@ class ProgramController:
             self.stages[i] = stage
 
     def _build_menu(self):
+        """
+        Builds the menu for the command line interface.
+
+        Returns
+        -------
+        dict(str, str or MenuEntry)
+            Dictionary of menu entries, with names for keys. Menu section
+        headers have keys starting with "_" and the header text as a value (str).
+        """
         return {
             "_stage_control": "Stage Control Options",
             "manual": MenuEntry(
@@ -362,17 +543,17 @@ class ProgramController:
             "zero": MenuEntry(
                 text="Zero piezos or steppers positions",
                 func=movement_utils.zero,
-                args_config=("stage", "MovementType"),
+                args_config=("stage", "movement_type"),
             ),
             "center": MenuEntry(
                 text="Center piezos or steppers positions",
                 func=movement_utils.center,
-                args_config=("stage", "MovementType"),
+                args_config=("stage", "movement_type"),
             ),
             "max": MenuEntry(
                 text="Maximize piezos or steppers positions",
                 func=movement_utils.max,
-                args_config=("stage", "MovementType"),
+                args_config=("stage", "movement_type"),
             ),
             "energize": MenuEntry(
                 text="Energize steppers",
@@ -396,12 +577,12 @@ class ProgramController:
             "grid": MenuEntry(
                 text="Grid search in one or more planes",
                 func=grid_search.run,
-                args_config=("stage", "MovementType", "exposure_time"),
+                args_config=("stage", "movement_type", "exposure_time"),
             ),
             "hillclimb": MenuEntry(
                 text="Hill climbing on one or more axes",
                 func=hill_climb.run,
-                args_config=("stage", "MovementType", "exposure_time"),
+                args_config=("stage", "movement_type", "exposure_time"),
             ),
             "_misc": "Miscellaneous",
             "status": MenuEntry(
@@ -427,6 +608,9 @@ class ProgramController:
         }
 
     def _display_menu(self):
+        """
+        Prints the main menu.
+        """
         # excepting section titles
         max_choice_length = max(
             map(
@@ -442,6 +626,12 @@ class ProgramController:
         return
 
     def _reload_menu(self):
+        """
+        Reloads all functions in the main menu.
+
+        Allows for testing changes made to functions in other modules
+        without disconnecting from stage devices. Useful for debugging.
+        """
         for key, entry in self.menu.items():
             if key.startswith("_") or key == "reload":
                 continue  # ignore menu section headers and this functions menu entry
@@ -466,7 +656,20 @@ class ProgramController:
         self.menu = self._build_menu()
 
     def run(self):
-        while self.running:
+        """
+        Main logic loop for the main menu command line interface.
+
+        Prints the main menu in the console and waits for the user to
+        select an option. After checking for special cases, the arguments
+        are separated by spaces and sent to the selected option's
+        `MenuEntry.execute`.
+
+        Catches *all* errors that occur, converting them to warnings with
+        the full traceback in the warning message. Catches and prevents
+        `KeyboardInterrupt`s, allowing the user to spam them to stop a
+        function call.
+        """
+        while self._running:
             try:
                 print("\n" * 4)
                 self._display_menu()
@@ -480,7 +683,7 @@ class ProgramController:
                 ui_lower = user_input.lower()
                 # special cases
                 if ui_lower == "q":
-                    self.running = False
+                    self._running = False
                 if ui_lower == "exec":  # hidden mode :), pls don't abuse
                     print(
                         "WARNING: IN EXEC MODE\nAnything typed here will be executed as python code."
@@ -525,6 +728,9 @@ class ProgramController:
 
 
 def main():
+    """
+    Configures runtime configuration and initializes a `ProgramController`.
+    """
     # warning configuration
     logging.captureWarnings(True)
     warnings.formatwarning = custom_formatwarning
